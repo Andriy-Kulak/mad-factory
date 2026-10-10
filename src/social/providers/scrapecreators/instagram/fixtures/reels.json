@@ -1,0 +1,95 @@
+{
+  "success": true,
+  "credits_remaining": 58,
+  "credits_charged": 1,
+  "paging_info": {
+    "more_available": false
+  },
+  "items": [
+    {
+      "media": {
+        "id": "3999488182834263933_38826560440",
+        "pk": 3999488182834263933,
+        "code": "SampleReelOne",
+        "product_type": "clips",
+        "media_type": 2,
+        "caption": { "text": "Sample clip with #SampleTag and #sampletag" },
+        "taken_at": 1791146383,
+        "video_duration": 25.533000946044922,
+        "is_paid_partnership": false,
+        "play_count": 133,
+        "ig_play_count": 133,
+        "like_count": 1,
+        "comment_count": 0,
+        "share_count": null,
+        "save_count": null,
+        "clips_metadata": {
+          "music_info": {
+            "music_canonical_id": 18156757657016804,
+            "music_asset_info": {
+              "audio_asset_id": "1974859719441920",
+              "title": "Sample track"
+            }
+          }
+        },
+        "image_versions2": {
+          "candidates": [{ "url": "https://cdn.example.test/instagram-thumb.jpg" }]
+        },
+        "video_versions": [{ "url": "https://cdn.example.test/instagram-video.mp4" }],
+        "video_dash_manifest": "trimmed",
+        "display_uri": "https://cdn.example.test/instagram-fallback.jpg",
+        "unused_field": "preserved in raw"
+      }
+    },
+    {
+      "media": {
+        "id": "3989395279407508278_38826560440",
+        "pk": 3989395279407508278,
+        "code": "SampleReelTwo",
+        "product_type": "clips",
+        "media_type": 2,
+        "caption": { "text": "A second sample reel #AnotherTag" },
+        "taken_at": 1789793028,
+        "video_duration": 68.63600158691406,
+        "is_paid_partnership": true,
+        "play_count": 116,
+        "ig_play_count": 116,
+        "like_count": 1,
+        "comment_count": 0,
+        "share_count": null,
+        "save_count": null,
+        "clips_metadata": {
+          "music_info": null,
+          "original_sound_info": {
+            "audio_asset_id": 28470888172576852,
+            "original_audio_title": "Sample original audio",
+            "dash_manifest": "trimmed"
+          }
+        },
+        "image_versions2": {
+          "candidates": [{ "url": "https://cdn.example.test/instagram-thumb-two.jpg" }]
+        },
+        "video_versions": [{ "url": "https://cdn.example.test/instagram-video-two.mp4" }]
+      }
+    },
+    {
+      "media": {
+        "id": "3988617255779075643_38826560440",
+        "pk": 3988617255779075643,
+        "code": "SampleReelThree",
+        "product_type": "clips",
+        "media_type": 2,
+        "caption": { "text": "A third sample reel" },
+        "taken_at": 1789702998,
+        "video_duration": 14.2,
+        "play_count": 75,
+        "like_count": 2,
+        "comment_count": 1,
+        "image_versions2": {
+          "candidates": [{ "url": "https://cdn.example.test/instagram-thumb-three.jpg" }]
+        },
+        "video_versions": [{ "url": "https://cdn.example.test/instagram-video-three.mp4" }]
+      }
+    }
+  ]
+}

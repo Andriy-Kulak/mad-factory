@@ -1,0 +1,38 @@
+# Runs `pnpm ready` on every PR and push to main: typecheck, tests, db types, web typecheck, diff rules, and private
+# term checks. The term list comes from the PRIVATE_TERMS secret; terms are masked in CI logs. A change only the owner
+# may approve (ad-account write guards, destructive database changes) fails until the owner adds the `owner-approved`
+# label to the PR. The goal section is skipped here.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ready:
+    name: pnpm ready
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm ready --base "origin/${BASE_REF:-main}" $OWNER_APPROVED
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          OWNER_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'owner-approved') && '--owner-approved' || '' }}
+          PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.head_ref }}

@@ -1,0 +1,50 @@
+{
+  "name": "mad-factory",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "packageManager": "pnpm@11.5.3",
+  "scripts": {
+    "scrape": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/scrape.ts",
+    "product": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/product.ts",
+    "db:migrate": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/migrate.ts",
+    "db:check": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/check-db.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --no-warnings=ExperimentalWarning 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'web/lib/**/*.test.ts'",
+    "db:migrate:local": "node --no-warnings=ExperimentalWarning scripts/migrate-local.ts",
+    "web": "pnpm --filter web dev",
+    "web:build": "pnpm --filter web build",
+    "db:types": "node --no-warnings=ExperimentalWarning scripts/gen-types.ts",
+    "db:types:check": "node --no-warnings=ExperimentalWarning scripts/gen-types.ts --check",
+    "db:audit": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/db-audit.ts",
+    "db:types:remote": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/gen-types-remote.ts",
+    "apple-ads": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/apple-ads.ts",
+    "meta-ads": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/meta-ads.ts",
+    "creatives": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/creatives.ts",
+    "social": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/social.ts",
+    "revenuecat": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/revenuecat.ts",
+    "brief": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/brief.ts",
+    "ready": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning scripts/ready.ts",
+    "privacy": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/privacy-check.ts",
+    "hooks": "git config core.hooksPath .githooks",
+    "scorecard": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/scorecard.ts",
+    "experiment": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/experiment.ts",
+    "doctor": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/doctor.ts",
+    "mcp-key": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/mcp-key.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "playwright": "^1.49.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

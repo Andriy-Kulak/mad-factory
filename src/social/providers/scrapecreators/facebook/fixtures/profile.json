@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "credits_remaining": 58,
+  "credits_charged": 1,
+  "id": "1000001",
+  "name": "Sample Page",
+  "url": "https://www.facebook.com/samplepage",
+  "pageIntro": "A sample profile",
+  "category": "Sample page",
+  "followerCount": 3,
+  "likeCount": 3,
+  "talkingAboutCount": 44,
+  "profilePicLarge": "https://cdn.example.test/facebook-avatar.jpg"
+}

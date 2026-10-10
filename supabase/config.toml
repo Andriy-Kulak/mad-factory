@@ -1,0 +1,6 @@
+# Minimal Supabase CLI config so `supabase db push` picks up ./migrations.
+# The project is remote-only; no local stack is configured.
+project_id = "mad-factory"
+
+[db]
+major_version = 15

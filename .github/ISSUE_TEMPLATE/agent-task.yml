@@ -1,0 +1,44 @@
+name: Agent task
+description: A unit of work any agent (Claude, Codex, Devin) can pick up and finish without asking.
+labels: [agent-ready]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Which `pnpm brief` / `pnpm scorecard` number this should move, or which bottleneck in the marketing loop it removes.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Observable acceptance criteria. An agent should be able to check each one itself.
+      placeholder: |
+        - `pnpm brief --product <slug>` shows …
+        - The overview page shows …
+    validations:
+      required: true
+  - type: textarea
+    id: verify
+    attributes:
+      label: How to verify
+      description: Commands to run, pages to open, numbers to compare.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Out of scope
+      description: What not to touch, so the change stays small.
+  - type: dropdown
+    id: approval
+    attributes:
+      label: Needs the owner
+      description: Anything else the agent does on its own, through a PR that passes `pnpm ready`.
+      options:
+        - "No"
+        - Writes to an ad account (plan first)
+        - Destructive database change
+    validations:
+      required: true

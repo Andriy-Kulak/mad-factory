@@ -1,0 +1,87 @@
+{
+  "success": true,
+  "credits_charged": 1,
+  "credits_remaining": 94,
+  "cursor": "fixture-next-cursor",
+  "results": [
+    {
+      "ad_archive_id": "fixture-ad-1",
+      "collation_count": 3,
+      "collation_id": "fixture-collation-1",
+      "is_active": true,
+      "page_id": "fixture-page-1",
+      "page_is_deleted": false,
+      "snapshot": {
+        "page_id": "fixture-page-1",
+        "page_name": "Example advertiser",
+        "body": { "text": "Example ad one" },
+        "title": "Example title one",
+        "link_url": "https://example.invalid/one",
+        "cta_text": "Learn more",
+        "cards": [],
+        "videos": []
+      },
+      "page_name": "Example advertiser",
+      "reach_estimate": null,
+      "currency": "",
+      "spend": null,
+      "end_date": null,
+      "publisher_platform": ["FACEBOOK"],
+      "start_date": 1782457200,
+      "total_active_time": null
+    },
+    {
+      "ad_archive_id": "fixture-ad-2",
+      "collation_count": 1,
+      "collation_id": "fixture-collation-2",
+      "is_active": false,
+      "page_id": "fixture-page-1",
+      "page_is_deleted": false,
+      "snapshot": {
+        "page_id": "fixture-page-1",
+        "page_name": "Example advertiser",
+        "body": { "text": "Example ad two" },
+        "title": "Example title two",
+        "link_url": "https://example.invalid/two",
+        "cta_text": "Download",
+        "cards": [],
+        "videos": []
+      },
+      "page_name": "Example advertiser",
+      "reach_estimate": null,
+      "currency": "",
+      "spend": null,
+      "end_date": null,
+      "publisher_platform": ["FACEBOOK", "INSTAGRAM"],
+      "start_date": 1782457200,
+      "total_active_time": null
+    },
+    {
+      "ad_archive_id": "fixture-ad-3",
+      "collation_count": null,
+      "collation_id": null,
+      "is_active": true,
+      "page_id": "fixture-page-1",
+      "page_is_deleted": false,
+      "snapshot": {
+        "page_id": "fixture-page-1",
+        "page_name": "Example advertiser",
+        "body": { "text": "Example ad three" },
+        "title": "Example title three",
+        "link_url": "https://example.invalid/three",
+        "cta_text": null,
+        "cards": [],
+        "videos": []
+      },
+      "page_name": "Example advertiser",
+      "reach_estimate": null,
+      "currency": "",
+      "spend": null,
+      "end_date": null,
+      "publisher_platform": ["FACEBOOK"],
+      "start_date": 1782457200,
+      "total_active_time": null
+    }
+  ],
+  "searchResultsCount": 3
+}

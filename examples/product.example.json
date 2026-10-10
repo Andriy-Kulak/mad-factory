@@ -1,0 +1,16 @@
+{
+  "_comment": "EXAMPLE ONLY. Fictional placeholder data to show the profile shape. Not real project data. Create with: pnpm product create --file examples/product.example.json",
+  "slug": "example-product",
+  "name": "Example Product",
+  "description": "A fictional mobile app used to illustrate the product profile format.",
+  "customer_desires": ["Feel in control", "Save time every day"],
+  "pain_points": ["Existing tools are confusing", "Too many manual steps"],
+  "target_audience": "Fictional persona: busy adults aged 25-45 who want a simpler routine.",
+  "positioning": "The simplest way to do the thing, with no setup.",
+  "competitors": ["Example Competitor A", "Example Competitor B"],
+  "tone": "Warm, direct, no jargon.",
+  "tracked_sources": [
+    { "source": "meta", "kind": "page", "value": "000000000000000", "country": "US", "label": "Example competitor page (placeholder id)" },
+    { "source": "meta", "kind": "keyword", "value": "example search phrase", "country": "ALL", "label": "Example keyword" }
+  ]
+}

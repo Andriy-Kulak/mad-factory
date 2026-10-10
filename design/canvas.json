@@ -1,0 +1,20 @@
+{
+  "pages": [
+    { "id": "light", "name": "Light directions" },
+    { "id": "explorations", "name": "Earlier explorations" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "L1 · Candy pop", "x": 0, "y": 0, "w": 1440, "h": 900, "page": "light" },
+    { "file": "Riso.dc.html", "title": "L2 · Riso print", "x": 1560, "y": 0, "w": 1440, "h": 900, "page": "light" },
+    { "file": "Sorbet.dc.html", "title": "L3 · Sorbet glass", "x": 3120, "y": 0, "w": 1440, "h": 900, "page": "light" },
+    { "file": "Broadsheet.dc.html", "title": "B · Broadsheet", "x": 0, "y": 0, "w": 1440, "h": 900, "page": "explorations" },
+    { "file": "Scoreboard.dc.html", "title": "C · Leaderboard", "x": 1560, "y": 0, "w": 1440, "h": 900, "page": "explorations" }
+  ],
+  "annotations": [
+    { "id": "light-brief", "x": 0, "y": -300, "w": 560, "page": "light", "text": "Three light, playful takes on the same app shell (sidebar, product switcher, Meta ads table). Only the look changes. Sample advertisers and copy are fictional. Pick one and it gets built into the web app." },
+    { "id": "l1", "x": 600, "y": -220, "w": 380, "page": "light", "text": "L1 · Candy pop\nWarm cream, coral + violet + tangerine, chunky 16px radii, pill controls, tilted brand badge, Bricolage Grotesque.\nWhy: friendly and energetic without noise; colour lives in badges and thumbnails, so data stays readable.\nTradeoff: the most 'consumer app' of the three; may read as less serious." },
+    { "id": "l2", "x": 1560, "y": -220, "w": 380, "page": "light", "text": "L2 · Riso print\nButter-yellow paper, black ink, hard corners, offset drop shadows, one lime accent, Space Grotesk.\nWhy: bold and opinionated; feels like a zine or a poster. Highest contrast, very scannable.\nTradeoff: loud. Long sessions on saturated yellow can tire; hard edges limit how soft it can ever feel." },
+    { "id": "l3", "x": 3120, "y": -220, "w": 380, "page": "light", "text": "L3 · Sorbet glass\nPale lavender wash with blurred colour blobs, translucent cards, violet gradient accent, Outfit.\nWhy: light and airy with depth; the blobs give atmosphere without competing with content.\nTradeoff: trendiest, so it dates fastest; blur and translucency need care on low-end GPUs." }
+  ],
+  "launch": { "view": "canvas", "page": "light" }
+}

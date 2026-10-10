@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+/*
+ * Daylight Console: dark chrome (top bar, sidebar) around a light workspace.
+ * Lime is the chrome signal and the primary action; olive is the data accent on light surfaces.
+ */
+:root {
+  /* workspace */
+  --bg: #ecede6;
+  --bg-2: #ffffff;
+  --bg-3: #f3f4ee;
+  --line: #d5d7cc;
+  --line-2: #e6e8df;
+  --fg: #161712;
+  --fg-2: #4e5046;
+  --fg-3: #6b6d61;
+  --accent: #4f6b00;
+  --accent-soft: #eef3d6;
+  --good: #1f7a3a;
+  --good-soft: #e3f1e1;
+  --warn: #8a5300;
+  --warn-soft: #fff4dc;
+  --danger: #b42318;
+  --danger-soft: #fdece9;
+  /* creative thumbnails while media loads */
+  --pop-1: #e3e5db;
+  --pop-2: #dde3c8;
+  --pop-3: #e9e2cf;
+  --pop-4: #d9e2df;
+
+  /* chrome */
+  --signal: #c6f432;
+  --signal-hover: #d6ff4f;
+  --chrome: #0d0e0b;
+  --chrome-2: #15170f;
+  --chrome-3: #1d2016;
+  --chrome-line: #262820;
+  --chrome-fg: #e7e5d8;
+  --chrome-fg-2: #a3a593;
+  --chrome-fg-3: #6e7062;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 280ms;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-pop-1: var(--pop-1);
+  --color-pop-2: var(--pop-2);
+  --color-pop-3: var(--pop-3);
+  --color-pop-4: var(--pop-4);
+  --color-signal: var(--signal);
+  --color-chrome: var(--chrome);
+  --color-chrome-2: var(--chrome-2);
+  --color-chrome-3: var(--chrome-3);
+  --color-chrome-line: var(--chrome-line);
+  --color-chrome-fg: var(--chrome-fg);
+  --color-chrome-fg-2: var(--chrome-fg-2);
+  --color-chrome-fg-3: var(--chrome-fg-3);
+  --font-sans: var(--font-geist), "Helvetica Neue", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  --ease-out: var(--ease-out);
+  --ease-drawer: var(--ease-drawer);
+}
+
+html { color-scheme: light; interpolate-size: allow-keywords; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+::selection { background: var(--signal); color: var(--chrome); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Component classes sit in the components layer so Tailwind utilities (hidden, w-full, …) can override them. */
+@layer components {
+  /* Type */
+  .label { font-size: 12px; color: var(--fg-3); font-weight: 500; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* Surfaces */
+  .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 3px; }
+
+  /* Inputs */
+  .control {
+    height: 34px; padding: 0 10px; border: 1px solid var(--line); background: var(--bg-2); color: var(--fg);
+    border-radius: 3px; font-size: 13px;
+    transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  }
+  .control:hover { border-color: #b9bcae; }
+  .control:focus { outline: none; border-color: var(--fg); box-shadow: 0 0 0 3px rgb(79 107 0 / 0.16); }
+  .control::placeholder { color: var(--fg-3); }
+
+  /* Buttons */
+  .btn {
+    height: 34px; padding: 0 14px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 13px; font-weight: 500; white-space: nowrap;
+    border: 1px solid var(--line); background: var(--bg-2); color: var(--fg); cursor: pointer; user-select: none;
+    transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out),
+      box-shadow var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .btn:hover { border-color: #a9ac9d; background: var(--bg-3); }
+  .btn:active { transform: translateY(1px) scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+  .btn-primary { background: var(--signal); border-color: var(--fg); color: var(--fg); box-shadow: 0 1px 0 var(--fg); }
+  .btn-primary:hover { background: var(--signal-hover); border-color: var(--fg); box-shadow: 0 2px 0 var(--fg); }
+  .btn-primary:active { box-shadow: 0 0 0 var(--fg); }
+  .btn-ghost { border-color: transparent; background: transparent; color: var(--fg-2); }
+  .btn-ghost:hover { border-color: transparent; background: var(--line-2); color: var(--fg); }
+  .btn-danger { color: var(--danger); }
+  .btn-danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+
+  /* Segmented control: links or buttons in a tray; the active one sits on a raised chip */
+  .segmented { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg-3); }
+  .segmented > * {
+    height: 28px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 2px;
+    font-size: 12.5px; font-weight: 500; color: var(--fg-2); white-space: nowrap;
+    transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  }
+  .segmented > *:hover { color: var(--fg); background: var(--line-2); }
+  .segmented > [aria-current], .segmented > [aria-pressed="true"] { background: var(--fg); color: var(--signal); font-weight: 600; }
+  .segmented-sm > * { height: 26px; padding: 0 8px; font-size: 12px; }
+
+  /* Rows that link somewhere */
+  .row-link { transition: background-color var(--dur-fast) var(--ease-out); }
+  .row-link:hover { background: var(--bg-3); }
+}
+
+/* Disclosure: <details> opens and closes with a height transition where supported */
+details::details-content {
+  height: 0; overflow: clip;
+  transition: height var(--dur-slow) var(--ease-drawer), content-visibility var(--dur-slow) allow-discrete;
+}
+details[open]::details-content { height: auto; }
+
+/* Page content settles in on navigation */
+@keyframes enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.enter { animation: enter 260ms var(--ease-out) both; }
+
+/* Hover tooltip for the collapsed sidebar */
+.tip {
+  position: absolute; left: calc(100% + 10px); top: 50%; translate: -4px -50%; pointer-events: none; opacity: 0; white-space: nowrap;
+  padding: 4px 8px; border-radius: 3px; background: var(--chrome); color: var(--chrome-fg); border: 1px solid var(--chrome-line);
+  font-size: 12px; font-weight: 500; z-index: 50;
+  transition: opacity var(--dur-fast) var(--ease-out), translate var(--dur) var(--ease-out);
+}
+.has-tip:hover .tip, .has-tip:focus-visible .tip { opacity: 1; translate: 0 -50%; transition-delay: 80ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, ::details-content { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
+
+/* Sorted table rows glide to their new place (DataTable) */
+::view-transition-group(*) { animation-duration: 260ms; animation-timing-function: var(--ease-drawer); }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+
+@layer components {
+  /* Switch: a checkbox (or a role="switch" button) drawn as a sliding toggle */
+  .switch { display: inline-flex; align-items: center; gap: 10px; min-height: 34px; cursor: pointer; font-size: 13px; color: var(--fg); user-select: none; }
+  .switch-track {
+    position: relative; width: 36px; height: 20px; flex-shrink: 0; border-radius: 999px; border: 1px solid #b9bcae; background: var(--line-2);
+    transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+  }
+  .switch-track::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg-2);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); transition: translate var(--dur-slow) var(--ease-drawer), background-color var(--dur) var(--ease-out);
+  }
+  .switch:hover .switch-track { border-color: var(--fg-3); }
+  .switch input:checked + .switch-track, .switch[aria-checked="true"] .switch-track { background: var(--fg); border-color: var(--fg); }
+  .switch input:checked + .switch-track::after, .switch[aria-checked="true"] .switch-track::after { translate: 16px 0; background: var(--signal); }
+  .switch input:focus-visible + .switch-track, .switch:focus-visible .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .switch:focus-visible { outline: none; }
+  .switch-track[data-busy]::after { opacity: 0.6; }
+}

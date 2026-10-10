@@ -1,0 +1,51 @@
+{
+  "success": true,
+  "credits_remaining": 56,
+  "credits_charged": 1,
+  "next_page_id": "sample-next-page",
+  "cursor": "sample-cursor",
+  "reels": [
+    {
+      "video_id": "2000001",
+      "creation_time": "2026-10-04T20:05:00.000Z",
+      "url": "https://www.facebook.com/reel/2000001",
+      "view_count": 3,
+      "description": "Sample reel description",
+      "thumbnail": "https://cdn.example.test/facebook-thumb.jpg",
+      "play_time_in_ms": 18333,
+      "video_url": "https://cdn.example.test/facebook-video.mp4",
+      "music": {
+        "id": "38909626028683417",
+        "track_title": "Sample original audio"
+      }
+    },
+    {
+      "video_id": "2000002",
+      "creation_time": "2026-10-04T14:00:49.000Z",
+      "url": "https://www.facebook.com/reel/2000002",
+      "view_count": 6,
+      "description": "Another sample reel",
+      "thumbnail": "https://cdn.example.test/facebook-thumb-two.jpg",
+      "play_time_in_ms": 16200,
+      "video_url": "https://cdn.example.test/facebook-video-two.mp4",
+      "music": {
+        "id": "29638757615726891",
+        "track_title": "Sample original audio"
+      }
+    },
+    {
+      "video_id": "2000003",
+      "creation_time": "2026-10-03T22:38:52.000Z",
+      "url": "https://www.facebook.com/reel/2000003",
+      "view_count": 45,
+      "description": "A third sample reel",
+      "thumbnail": "https://cdn.example.test/facebook-thumb-three.jpg",
+      "play_time_in_ms": 22333,
+      "video_url": "https://cdn.example.test/facebook-video-three.mp4",
+      "music": {
+        "id": "39098404803108714",
+        "track_title": "Sample original audio"
+      }
+    }
+  ]
+}

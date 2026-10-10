@@ -1,0 +1,74 @@
+{
+  "success": true,
+  "credits_remaining": 56,
+  "credits_charged": 1,
+  "max_cursor": "1790996512000",
+  "has_more": false,
+  "aweme_list": [
+    {
+      "aweme_id": "7692271375737720094",
+      "desc": "Sample photo carousel",
+      "create_time": 1790996512,
+      "author": { "unique_id": "sample_creator" },
+      "image_post_info": { "images": [] },
+      "statistics": { "play_count": 199, "digg_count": 2 },
+      "video": { "duration": 0 },
+      "is_ads": false,
+      "aweme_type": 150
+    },
+    {
+      "aweme_id": "7687100769052495134",
+      "desc": "Sample video with #SampleTag",
+      "create_time": 1789792629,
+      "author": { "unique_id": "sample_creator" },
+      "music": {
+        "id_str": "7687100819841878814",
+        "title": "Sample original sound"
+      },
+      "video": {
+        "duration": 68660,
+        "cover": { "url_list": ["https://cdn.example.test/tiktok-thumb.jpg"] },
+        "play_addr": { "url_list": ["https://cdn.example.test/tiktok-video.mp4"] }
+      },
+      "statistics": {
+        "play_count": 653,
+        "digg_count": 72,
+        "comment_count": 3,
+        "share_count": 11,
+        "collect_count": 13,
+        "repost_count": 4,
+        "download_count": 2,
+        "whatsapp_share_count": 1
+      },
+      "is_ads": true,
+      "aweme_type": 0
+    },
+    {
+      "aweme_id": "7686715758063176991",
+      "desc": "Another sample video",
+      "create_time": 1789702998,
+      "author": { "unique_id": "sample_creator" },
+      "music": {
+        "id_str": "7686719331266267935",
+        "title": "Sample audio"
+      },
+      "video": {
+        "duration": 119791,
+        "cover": { "url_list": ["https://cdn.example.test/tiktok-thumb-two.jpg"] },
+        "play_addr": { "url_list": ["https://cdn.example.test/tiktok-video-two.mp4"] }
+      },
+      "statistics": {
+        "play_count": 935,
+        "digg_count": 11,
+        "comment_count": 0,
+        "share_count": 0,
+        "collect_count": 2,
+        "repost_count": 0,
+        "download_count": 0,
+        "whatsapp_share_count": 0
+      },
+      "is_ads": false,
+      "aweme_type": 0
+    }
+  ]
+}

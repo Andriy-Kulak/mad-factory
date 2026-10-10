@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks a push that names a product, competitor or tracked account (pnpm privacy). Enable once per clone: pnpm hooks
+exec pnpm -s privacy

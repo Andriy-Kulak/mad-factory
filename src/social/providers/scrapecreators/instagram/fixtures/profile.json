@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "credits_charged": 1,
+  "data": {
+    "user": {
+      "id": "1000001",
+      "username": "sample_creator",
+      "full_name": "Sample Creator",
+      "biography": "An example profile",
+      "profile_pic_url_hd": "https://cdn.example.test/avatar.jpg",
+      "is_verified": true,
+      "is_professional_account": true,
+      "is_business_account": false,
+      "category_name": "Digital creator",
+      "external_url": "https://example.test",
+      "edge_followed_by": { "count": 42 },
+      "edge_follow": { "count": 19 },
+      "edge_owner_to_timeline_media": { "count": 8 }
+    }
+  }
+}

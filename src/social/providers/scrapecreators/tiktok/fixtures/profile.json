@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "credits_remaining": 58,
+  "credits_charged": 1,
+  "user": {
+    "id": "1000001",
+    "uniqueId": "sample_creator",
+    "nickname": "Sample Creator",
+    "avatarLarger": "https://cdn.example.test/tiktok-avatar.jpg",
+    "signature": "A sample bio",
+    "verified": false
+  },
+  "stats": {
+    "followerCount": 3,
+    "followingCount": 25,
+    "heartCount": 160,
+    "videoCount": 7
+  }
+}

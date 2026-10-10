@@ -1,0 +1,1339 @@
+Apple Ads Complete Course
+
+
+The Apple Ads Guide
+A Practical Guide to Profitable App Store Advertising
+Edition 1
+By Ivan Sparrow
+2025
+________________
+
+
+Table of Contents
+Table of Contents        2
+Background Story        5
+Preface        6
+Why Edition 1?        6
+Who Is This Guide For        7
+Introduction        8
+When Should You Start with Paid Ads?        8
+The Downsides        8
+When Can You Launch Paid Ads?        9
+Apple Ads Overview        10
+Advantages        10
+Disadvantages        10
+MMP and Tracking        11
+Basic vs. Advanced        12
+Ad Placements        13
+Today Tab        13
+Search Tab        13
+Product Pages        13
+Search Results        13
+Launching a Search Results Campaign        15
+Step-by-Step        15
+Ad Group Settings        17
+Name        17
+Default Max CPT Bid        17
+Start and End Dates        17
+Search Match        17
+Keywords        17
+Audience        18
+Ad Creative        18
+Keyword Research        19
+What Popularity Should You Target?        19
+Should You Use "Free" Keywords?        19
+Competitor Keywords        20
+When Competitor Keywords Work        20
+Which Competitor Keyword Variants to Test        20
+When NOT to Bid on Competitors        21
+Will Apple Ban You for This?        21
+Brand Defense: Protecting Your Own Keywords        21
+Brand Keyword Case Study        22
+Product Page Optimization        24
+Your competitors have already done the research        25
+Creating Your First Campaign        26
+Which Countries to Target        26
+Where I Start        26
+Second Tier        26
+Last Priority        26
+Countries I Avoid (For Now)        26
+Tricky Markets        26
+Campaign Structure        27
+SKAG        27
+Classic 4-in-1 Structure        28
+Generic Campaign        28
+Competitors Campaign        28
+Brand Campaign        28
+Discovery Campaign        29
+My 7-in-1 Structure        30
+Top Campaign        30
+Proxy Campaign        30
+Reco Campaign        31
+Value-Based Structure        31
+"General to Specific" Structure        32
+Why this way?        32
+Will such campaigns always work?        33
+Summary: My Campaign Structure        33
+Scaling        34
+Raise Bids        34
+Expanding the payback window        34
+Horizontal growth through adding new countries        34
+Is it worth creating ad campaigns for small countries like Luxembourg, Iceland, Estonia, Latvia, Slovenia, Slovakia, and so on?        35
+When can you combine several countries into 1 campaign?        35
+Splitting one campaign type into several sub-campaigns        35
+Understanding ROAS        36
+What ROAS should be considered good?        36
+Ongoing ROAS        36
+Cohort ROAS        37
+Why do these distinctions matter?        37
+Impression Share        38
+Average Tap-Through Rate (TTR)        38
+Cost Per Tap (CPT) Benchmarks        39
+Optimization Philosophy        40
+Core Principles        40
+What This Means in Practice        40
+The Reality You'll Face        40
+Why Only Financial Metrics Matter        41
+Real Examples from My Campaigns        41
+Finding Your First Win        42
+How This Changes with the Budget        42
+LTV-Based Bidding        44
+Seasonal Bidding        44
+Automation Tools        45
+Automated Rules        45
+Getting Keywords to Spend        45
+Discovery to Exact Match Pipeline        45
+Performance-Based Pausing        45
+Bid Optimization        46
+Important        46
+Custom Product Pages        47
+Deep Links        48
+Types of CPPs with screenshots examples        49
+Brand CPPs        50
+Generic keyword CPPs        51
+Competitor CPPs        52
+Feature-specific CPPs        53
+GEO/Local CPPs        54
+Traffic-source-specific CPPs        55
+Retention Conversion CPPs        56
+Financing Growth        57
+Apple Ads Credit Line        57
+Watch Your VAT        57
+Profitability Benchmarks        58
+Simple Payback Calculator        60
+Common Mistakes        61
+FAQ        61
+Keyword has no impressions?        61
+Discovery campaign stopped performing?        61
+Keyword ROAS dropped?        61
+A country stopped being profitable?        61
+Best keywords at 90–100% IS?        61
+Discovery campaigns don't pay back and search terms are irrelevant?        61
+Quick Start Checklist        62
+
+
+________________
+
+
+Background Story
+2024. My app was going through its first major crisis. Meta Ads – which had allowed us to grow from $30K to $100K in sales in just three months – stopped converting as we needed.
+We were a quarter of a million dollars in debt.
+I was still working my day job while building the business on the side.
+In March, we started cutting Meta Ads spend. By April, we'd shut down all campaigns entirely.
+We had no idea what to do next.
+As a company, as three co-founders, we handled this first crisis poorly. Very poorly. We even started looking for a buyer.
+Launching Apple Ads is what ultimately saved us.
+The initial results were terrible. 
+But after two months of experimenting with minimal budgets, we found profitable campaigns that started bringing in new subscribers.
+Within a few more months, we stopped the revenue decline and stabilized the company. 
+Within six months, we'd paid off all our debts.
+Throughout this period, our budget was minimal – just $10-12K per month. With Meta Ads, spending that little while maintaining stable results would have been impossible.
+If you'd asked me about Apple Ads a couple of years earlier, I would've said without hesitation: it's garbage. Why bother with Apple Ads when you have Meta?
+Every time I heard stories about Apple Ads being someone's primary marketing channel, I just smiled. These were always founder-to-founder whispers – third-hand information at best.
+Not a single story came from a marketer I actually trusted.
+Well. I was wrong.
+________________
+
+
+Preface
+Hi, I'm Ivan Sparrow, and this is my guide on Apple Ads.
+I write about Apple Ads on X, but I wanted to bring everything together in one place. That's how this doc came to be.
+Everything here is based on my experience promoting a project that now generates $850-950K ARR. 
+Apple Ads is my primary channel now – I've spent several hundred thousand dollars of my own company's money on it. Nothing in this course is theoretical. 
+If I say something works, it's because I've spent tens of thousands testing it myself, with my own money on the line.
+I’ve been in marketing for 15 years, serving as a marketing director at small- and mid-sized companies with monthly budgets ranging from $30K to $ 10M. In total, I've managed around $100-200 million in ad spend across six projects.
+But what I consider most valuable is the $1M I spent promoting my own app – a bootstrapped project – with $400K of that going to Apple Ads. 
+We had no outside investment. The only way to reach that level of spend was to be profitable.
+Why Edition 1?
+It's been a month since I first announced this guide. By now, I hate it. I kept adding section after section, tweak after tweak – anything to delay hitting publish.
+The best move is to ship it, collect feedback, revisit with fresh eyes, and update. So stay tuned:
+1. Follow me on X – I post almost daily about marketing and building my app business.
+2. Subscribe to my newsletter – a short weekly email on app growth.
+________________
+
+
+Who Is This Guide For
+I tried to make this course as detailed as possible. Actually, more than detailed – I wanted someone to say I'd overdone it.
+* If you've never run Apple Ads before – this course is for you.
+* If you're spending $5-10K per month but struggling to scale – this course is for you.
+* If you're experienced with paid ads but haven't gone deep on Apple Ads – this course is for you.
+* If you're already spending $50K+ – you might still find something useful.
+________________
+
+
+Introduction
+When Should You Start with Paid Ads?
+If you're reading this, you're probably at least mentally ready to try paid ads. But many people romanticize it, thinking it's a guaranteed way to grow revenue. 
+Let me be clear about the pros and cons.
+Paid ads won't guarantee success. 
+Your chances of launching a profitable campaign on the first try are about as low as launching a successful business in general.
+Whenever I start a new channel, I mentally set aside $10K for initial testing before I expect to find something that works. Sometimes it's less. Often it's more.
+Paid ads aren't a magic pill – especially if you have no prior experience. It all sounds simple in theory, but the devil is in the details.
+You might have a bad product that no amount of advertising can save. 
+Or a great product with poor monetization. 
+Or unit economics that only work after six months of customer lifetime.
+But.
+Paid ads are the fastest way to get real metrics on your product. 
+When my co-founders and I launched our app, first campaigns showed that our funnel-to-paywall was underperforming benchmarks.
+We paused the ads (after spending just $2-3K), rebuilt the onboarding and paywall, then relaunched. 
+The metrics improved immediately – and we knew paid ads could work for us.
+Scaling is straightforward. Once you know you have a working product and profitable campaigns, it becomes a financing problem. That sounds daunting, but it's solvable.
+
+
+The Downsides
+You become dependent on cash flow. You can't just stop spending. If you do, your business might stop too.
+Forget 90% margins. $100K in monthly revenue might mean $50-70K in actual profit – and not right away.
+You'll reinvest for a long time before seeing real profit, especially if your payback window is longer than a few days. Add Apple's net-30 payment terms, and cash gets tight fast.
+After launching, we had zero profit for 18 months. Everything went back into ads or debt repayment. 
+We grew to $100K in MRR with $70-90K in monthly ad spend, then fell to $50K in MRR and $10-15K in monthly ad spend. Only after that did we finally turn profitable.
+But it was worth it. Without paid ads, we would have had nothing.
+Every major project that grew organically on TikTok eventually shifted to paid ads for continued growth. It's simply more stable and predictable.
+I'm not saying abandon influencers or organic content. The best approach combines both. 
+But at some point, the transition to paid ads needs to happen – if you want a sustainable business, not a short-lived trend.
+If you have $10K+ in starting capital, there's nothing wrong with starting with paid ads from day one.
+
+
+When Can You Launch Paid Ads?
+There are three stages, each with different goals:
+1. Tech Launch: Verify your core funnel works and the app functions correctly.
+2. Soft Launch: Gather initial metrics to inform product and page changes.
+3. Global Launch: When your data confirms the entire funnel is optimized.
+Apple Ads may not be ideal for the first two stages, but it can work.
+________________
+
+
+Apple Ads Overview
+At first glance, Apple Ads seem like the simplest way to advertise your app. That's why it attracts thousands of developers – it's far easier to start here than with Meta or Google Ads.
+Advantages
+* Easy to start: You don't need dozens of video creatives to get your first traffic.
+* Flexible budgets: You can start with $1,000 and spread it out over weeks as you gather data.
+* You're capturing existing demand. No need to convince users they want your app – they're already searching.
+* Simple, straightforward mechanics. Classic PPC. No mysterious algorithm to decode. 
+* Stability. No wild swings. Once you find performing keywords and countries, campaigns stay consistent.
+* Full attribution. Apple Ads is the only network that gives you 100% attribution data – critical in the post-iOS 14.5 world.
+Disadvantages
+1. It's expensive. The easiest channel to launch is always the most competitive.
+2. Limited competitive edge. In Meta Ads, you can win with better creatives. In Apple Ads, you have keywords, bids, your store page, and not much else.
+3. Hard to scale aggressively. I know how to scale Meta to millions per month. I still don't see how to do that with Apple Ads.
+4. You can't create demand. This is search advertising. You only capture intent that already exists.
+Apple Ads is far from perfect, and it's not right for everyone. But today, I'd still recommend starting here – especially if you're new to paid ads.
+Stability, small-budget flexibility, and launch speed outweigh the drawbacks for most people starting.
+________________
+
+
+MMP and Tracking
+One of the most common questions: do you need an MMP to work with Apple Ads?
+Yes and no.
+Apple Ads is the only ad network where linking installs to purchases is straightforward. 
+Surprisingly, though, this data isn't shown by default on the dashboard.
+Your options:
+1. Connect an MMP like AppsFlyer or Adjust.
+2. Use RevenueCat or Superwall integration – most subscription tools have Apple Ads built in, at no extra cost.
+3. Build your own attribution using the AdServices Framework.
+You don't need to pay for an MMP upfront, but you absolutely need to connect revenue to installs to calculate ROAS at the campaign, ad group, and keyword level.
+I’m using option 2.
+________________
+
+
+Basic vs. Advanced
+Short answer: use Advanced.
+Apple offers two account types:
+Basic: Apple handles everything – keywords, audience, bids, “fully automated”.
+Advanced: Full control over keywords, bids, targeting, creatives, and reporting.
+Basic is designed for developers with no marketing experience. Apple automates everything.
+And Apple does it poorly.
+Advanced lets you choose keywords manually, set individual bids, use Custom Product Pages, target specific audiences and devices, run A/B tests, and get detailed reports.
+ ALWAYS use the Advanced account type. No exceptions.
+________________
+
+
+Ad Placements
+Apple Ads has four placements: Today Tab, Search Tab, Search Results, and Product Pages.
+  
+
+This course focuses exclusively on Search Results – the only format that reliably drives profitable results.
+Today Tab
+Banner ads on the App Store homepage. Maximum reach, minimal performance. In my experience, close to zero ROI.
+Only worth considering if you're a large company with millions in monthly budget – or you've exhausted every other channel.
+Search Tab
+Ads are shown before users type a search query, in the "Suggested Apps" section.
+Skip it.
+Product Pages
+Your ads appear in "You Might Also Like" on competitor app pages.
+More targeted than the above, but with few proven success stories. Not where you should start.
+Search Results
+This is the core of Apple Ads – and the only format worth your time for performance marketing.
+Your ad appears at the top of search results when someone enters a relevant query.
+The key advantage: You control who sees your ad. Success depends on keyword quality, competition, and your product page – not Apple's algorithm.
+Apple Ads uses a second-price auction: the highest bidder wins but pays the second-highest bid plus one cent.
+Relevance is the other major factor. It's determined by how well your app matches the keyword and how well your listing converts.
+If bids are equal, the more relevant ad wins. If your relevance is significantly higher, you can win even against higher bids.
+________________
+
+
+Launching a Search Results Campaign
+Step-by-Step
+1. Click Create Campaign.
+2. Select your app and choose Search Results.
+  
+
+3. Choose your target country.
+  
+
+4. Name your campaign and set a daily budget.
+Naming matters. Use a convention that clearly indicates what you're looking at. I use: country_campaign-type (e.g., USA_discovery).
+  
+________________
+
+Ad Group Settings
+Name
+I usually mirror the campaign name and add details about how keywords are grouped.
+Default Max CPT Bid
+Your maximum cost per tap. With second-price auctions, you'll usually pay less than your max bid.
+If I have no data, I start 20-30% below Apple's suggested bid, then adjust daily based on spend. Apple Ads reacts slowly to bid changes – give it 24 hours before making new adjustments.
+Start and End Dates
+Leave start as-is. Remove the end date unless you're running a time-limited promotion.
+Search Match
+Turn this off.
+When enabled, Apple automatically picks search terms for you. The algorithm isn't good at this, and you lose control over where your ads appear.
+Keywords
+Add the keywords you want to target. Apple will suggest some – use them if relevant, but don't rely on them.
+You'll choose between broad match (Apple shows your ad for related terms) and exact match (only the precise keyword).
+Default to exact match. I'll explain when broad match makes sense later.
+  
+
+Audience
+I typically select "Reach all Eligible Users" – all devices, new and returning users. Wider targeting generally performs better.
+Ad Creative
+Choose your default product page or a Custom Product Page (more on this later).
+________________
+
+
+Keyword Research
+If you've done ASO, you already have a keyword list. Otherwise, gather them through:
+* ASO tools (pick any you like)
+* Brainstorming
+* ChatGPT-assisted brainstorming
+* App Store search suggestions
+* Apple's suggested keywords during campaign setup
+
+
+Keywords have two peculiarities:
+1. You can collect them endlessly
+2. More isn't always better
+You likely won't be able to test every keyword you find - either because they don't have enough search volume, or because you simply have too many keywords.
+So one ASO tool is enough.
+You can use Astro or AsoSuite. The algorithm is roughly always the same:
+1. add my own ideas
+2. add suggestions from GPT
+3. add recommendations from Apple
+4. check recommendations from ASO tool
+5. take one major competitor and see what keywords they rank for in search
+
+
+What Popularity Should You Target?
+There's no single answer. Test everything: high-competition, low-competition, single words, phrases, typos, keywords with "free." Only real data will tell you what works.
+And localize your keywords for each geo you're targeting.
+Should You Use "Free" Keywords?
+Common advice says no. My data says otherwise – these are often among my most profitable keywords.
+Yes, test them. Competition is lower, and users who start a trial often convert well into weekly subscriptions.
+________________
+Competitor Keywords
+Apple Ads is the only mobile advertising channel that lets you systematically capture competitor traffic.
+Yes, Google Ads exists, but in App Campaigns you don't control which keywords trigger your ads. You'd need to run web campaigns with web2app or web2web funnels to get that control.
+When Competitor Keywords Work
+Users won't confuse Facebook with Google, or YouTube with Amazon – these are fundamentally different products.
+But they'll absolutely confuse these apps:
+  
+
+Or these:
+  
+
+The sweet spot: competitors running heavy influencer campaigns. They're generating massive brand search volume – and you can capture part of it.
+Which Competitor Keyword Variants to Test
+* Exact brand name (Netflix)
+* Brand + app/pro/plus (Netflix app)
+* Common typos and misspellings (Netflx) 
+* Abbreviations if they exist
+When NOT to Bid on Competitors
+Skip competitor keywords when your products are functionally different and users know what they want.
+Example from AI wrappers: If you have a general GPT wrapper, bidding on "Character AI" will likely lose money. Character AI has too many distinctive features – users searching for it want that specific app.
+Will Apple Ban You for This?
+Many developers worry about sanctions, especially given Apple's crackdown on clones and on apps that use competitor brands in titles, subtitles, icons, or screenshots.
+Bidding on competitor keywords is completely safe.
+Half of Apple Ads' business would collapse if they banned competitor keyword targeting. You can do this without fear.
+Brand Defense: Protecting Your Own Keywords
+The flip side: competitors can bid on your brand too.
+If you're small, you don't have enough brand search volume to worry about yet.
+But you NEED brand campaigns if:
+* You have a significant marketing investment
+* You're running influencer marketing or TikTok UGC
+* You're investing in any awareness channels
+Yes, you'll cannibalize organic installs.
+Yes, you'll pay for users who would've found you anyway.
+But brand campaigns protect the ROI of every other channel that drives brand searches.
+Think of it this way: your brand campaigns are an investment in preserving the returns from your influencer spend, your content marketing, your PR – everything that generates brand awareness.
+Below, I'll walk through a detailed case study showing exactly why this matters.
+
+
+Brand Keyword Case Study
+There are plenty of examples of apps winning on competitor brand terms.
+For example, almost the entire AI wrapper niche promotes on keywords related to top LLMs like ChatGPT or Gemini.
+But there's a more interesting case.
+  
+
+
+
+Cal AI disrupted health & fitness and now does $3M+/month – largely thanks to aggressive influencer marketing, which drove massive brand search volume.
+But an app called Calz actively bids on "Cal AI" queries – with a similar name and icon – and earns ~$200K/month from them.
+  
+
+I'm confident they're making solid profit from these brand keywords. 
+What's curious is that their Android revenue isn't much lower than iOS – and not far behind Cal AI's own numbers. These guys are capturing brand organic traffic on both platforms.
+According to AppMafia's course, Cal AI captures only about 50% of impressions for its own brand terms.
+  
+
+The founders apparently think buying more isn't worth it. I suspect they're wrong – likely a difference in how each team calculates long-term LTV.
+The right move is a defensive bid to capture 80-100% of brand impressions.
+There's now even a clone of the clone:
+  
+
+$30-50K/month in revenue. Not bad.
+________________
+Product Page Optimization
+Your product page in Apple Ads is both your landing page and your creative.
+In Meta Ads, you can test hundreds of video variations. In Google Ads, you write custom headlines for each keyword. In Apple Ads, you get one product page (or a Custom Product Page) – and that's it.
+I've seen campaigns with perfect keyword selection and optimal bids fail because the product page converted at 30% when it should've been 60%. I've also seen mediocre keyword strategies succeed because the product page was exceptional.
+The difference between a 30% and 60% conversion rate isn't just double the performance – it's the difference between burning money and printing it.
+Most developers treat their App Store page as an afterthought. They spend weeks perfecting their app, days setting up campaigns, and maybe an hour throwing together screenshots.
+Then they wonder why their CPA is 3x higher than benchmarks.
+Before you spend a single dollar on Apple Ads, your product page needs to be ready for paid traffic. This section will show you how.
+When your ad appears in search results, users see:  
+* Icon
+* App name 
+* Subtitle 
+* First 2-3 screenshots 
+* Ratings & review count
+* "Ad" label
+* Get button
+
+
+
+
+
+
+
+
+
+
+Users have two paths to install:
+1. Direct install from search results – they see your ad (icon, title, first screenshots, rating) and tap "Get" immediately without ever opening your full product page.
+2. Tap to product page – they tap anywhere on your ad (except the "Get" button) to see your full product page with all screenshots, video, description, and reviews, then decide whether to install.
+The icon and the first two screenshots need to convert instantly – users decide whether to tap "Get" in 2-3 seconds based on what they see in the search results.
+Remember: screenshots are your sales pages, your creative. This means you need to show users not features, but:
+1. The outcome they'll achieve – not "AI-powered task management" but "Finally feel in control of your day".
+2. The pain points your app solves – not "Smart notifications" but "Never miss an important deadline again".
+Your competitors have already done the research
+Here's a shortcut that saves weeks of A/B testing: study what successful apps in your category are doing.
+Large companies spend thousands on conversion optimization. They've tested dozens of screenshot variations, hired agencies, and (sometimes) run focus groups. You can learn from their results for free.
+I use Screens Design to analyze competitor screenshots. Instead of guessing what works, you can see patterns across top-performing apps:
+* What do the first two screenshots typically show?
+* How much text do they use?
+* What visual style converts in your category?
+My principle is simple: steal from competitors first, test their creative, then iterate and develop my own.
+There's one more powerful tool we haven't discussed yet: Custom Product Pages. They deserve their own section – you'll find it after the campaign creation and optimization chapters. And big thanks to @Teodora for taking the lead on that section – her expertise in App Store creative made it possible.
+
+
+________________
+Creating Your First Campaign
+Which Countries to Target
+The US is the most valuable market – the most money, the most payers. 
+That's precisely why everyone targets it.
+And that's exactly why you probably shouldn't.
+The US has 350 million people. 
+The rest of the world (excluding India and China) has 5 billion. iPhone ownership already filters for purchasing power.
+If your budget isn't unlimited, you can find your audience outside the US – and do so far more cheaply.
+My project spends $50K+/month on Apple Ads. I still don't run US campaigns. I barely touch tier-1 countries. 
+But I run campaigns in countries with 400K population – and some of my best performers have under 10 million people.
+In Apple Ads, there's no creative edge like in Meta. Targeting smaller countries is an edge you can actually capture.
+Where I Start
+Croatia, Czech Republic, Estonia, Hungary, Latvia, Poland, Romania, Slovakia, and Slovenia.
+Second Tier
+Austria, Belgium, Denmark, Finland, France, Germany, Italy, the Netherlands, Norway, Spain, Sweden, and Switzerland.
+Last Priority
+Southeast Asia, South America,
+and finally the US, UK, Canada, Australia, and New Zealand.
+Countries I Avoid (For Now)
+India, most of Africa, Pakistan, Bangladesh – large populations with low GDP per capita.
+Tricky Markets
+Japan, Korea, Taiwan, Singapore. High income, but they often require specific product pages localization. I haven't cracked these yet.
+________________
+
+
+Campaign Structure
+I'll walk through several approaches:
+4. SKAG (Single Keyword Ad Group)
+5. Classic 4-in-1 – Apple's recommended structure, found in 99% of guides
+6. My 7-in-1 structure – what I actually use
+7. Experimental "General to Specific" – how I started, technically "wrong" but effective
+SKAG
+This approach came from Google Ads, which enabled highly relevant, easy-to-manage campaigns. Without SKAG, you simply couldn't get the best results.
+The core idea: to maximize relevance, you needed the search query in your ad headline. SKAG made that possible – especially since most ads were built from templates rather than written manually.
+Apple Ads is different. 
+Here, your ad is your Product Page (or a Custom Product Page). There's no way to customize the headline per keyword. 
+That's why SKAG is far less common here.
+Still, SKAG fans claim it boosts relevance and helps increase spend within a campaign.
+Here's the thing: one of Apple Ads' biggest frustrations is that most keywords in a campaign get zero spend. So the thinking was – split keywords into separate ad groups, and maybe Apple will distribute the budget more evenly.
+Didn't work.
+Instead of one campaign with a thousand inactive keywords, I got one campaign with a thousand inactive ad groups. Same problem, more complexity.
+That's why I dropped SKAG. It just didn't deliver. I still use it occasionally in specific campaigns – mainly because it makes management easier for me. But that's personal preference, not performance.
+If you're just starting, I wouldn't recommend it. It'll only create unnecessary headaches.
+
+
+
+
+________________
+
+
+Classic 4-in-1 Structure
+The proper structure turns random results into repeatable ones, helping you scale your marketing.
+Apple's recommended setup:
+  
+
+
+
+For each country:
+* 1 Generic campaign – category keywords, exact match
+* 1 Competitors campaign – competitor brand names, exact match
+* 1 Brand campaign – your own brand, exact match
+* 1 Discovery campaign – category keywords, broad match
+Generic Campaign
+Your main testing ground for category keywords.
+The challenge: most keywords won't get impressions. 
+I'll explain how to fix this.
+Competitors Campaign
+A common question: does it even make sense to run ads on competitor brand keywords? Can't users tell two apps apart?
+Users can tell Facebook from Google. But Cal AI from Calz AI? Not so much.
+Test competitor brand keywords. No guarantee they'll be profitable, but you need to find out.
+Brand Campaign
+Competitors will bid on your brand. Users will get confused.
+Brand campaigns protect your organic traffic. 
+While you're small, you can skip these campaigns - they won't get spent and will just clutter your management.
+However, if you're betting on influencer marketing or TikTok UGC, brand campaigns become essential. Otherwise, all that traffic will go to competitors (who may unintentionally show up on your brand keywords through discovery campaigns with broad KWs).
+
+
+Discovery Campaign
+Two purposes: capture low-volume queries, and find new keywords for your Generic campaign.
+This campaign has two ad groups:
+First: Search Match enabled, no keywords added – I don’t recommend testing Search Match until you've figured out all the other campaign types and tested all the countries.
+Second: Your category keywords with broad match – but also add them as negatives (since they're already in Generic with exact match).
+The golden rule: each keyword should only be active in one place. Otherwise, you're bidding against yourself.
+I know many people avoid running broad-match keywords altogether, arguing that Apple pushes the most irrelevant search terms.
+In my niche, discovery campaigns are profitable on their own. They don’t just help find new keywords – they pay off and generate profit. In fact, discovery is one of my MOST profitable campaign types.
+My hypothesis: The larger your niche, the better a broad match works. Narrow niches get more irrelevant matches.
+________________
+
+
+My 7-in-1 Structure
+The classic structure doesn't solve the core problem: 95% of keywords get zero spend.
+What to do with the keywords you found in discovery campaigns?
+What to do with the recommended keywords Apple suggests adding?
+What to do with the top-performing keywords so they don’t get caught by general automated rules (I’ll explain this later) and so I can manage them more manually?
+All these questions were on my mind, and I haven’t found a better way than creating additional campaign types.
+  
+
+I add three campaign types to the standard four:
+Top Campaign
+I move proven winners here. Why separate them?
+* I manage these manually, without automated rules.
+* I can bid more aggressively on keywords I trust.
+* It frees up budget in the Generic for testing new keywords.
+Top performers can become underperformers over time – auctions are dynamic. If something stops working, pause it and retest later.
+Proxy Campaign
+Keywords discovered through Discovery campaigns go here.
+Discovery can't track post-install metrics (trial cost, ROAS). Proxy can.
+After gathering data, I either kill the keyword, move it to Top, or leave it in Proxy.
+Why don’t I move keywords to the Generic campaign? Because it’s already overloaded with inactive keywords.
+Reco Campaign
+Apple's recommended keywords get tested here.
+Treat these as another source of keyword ideas. Many are irrelevant – some turn out to be winners. Test without prejudice.
+I test almost all the keywords that appear in recommendations, and I try not to make a verdict until I have statistics for them.
+In the early stages, you can take a stricter approach to testing and immediately exclude the keywords that seem completely irrelevant.
+Value-Based Structure
+The Value-Based structure distributes keywords based on profitability and ARPU.
+A _top campaign is the “seed” of this structure. In my case, I move all high-profit keywords into a single _top campaign, whereas an actual value-based structure would split them across different campaigns based on their ARPU and ROAS.
+The main advantage is flexible bid management: the higher the ARPU and ROAS, the more aggressively you can increase bids.
+However, the main downside is that you’ll probably never actually get there. You need an enormous amount of keyword data to tier them properly. 
+By the time you accumulate enough data, the season, trends, and competition will have changed, making your data less relevant.
+
+
+________________
+
+
+"General to Specific" Structure
+This is technically "wrong" – but it's how I found my first profitable geos. 
+This is a “non-standard” structure that has shown very high effectiveness for my campaigns. A few others who tested it also achieved excellent results.
+Step 1 
+I create one or two campaigns: tier 1 and tier 2. In tier 1, I add countries like Germany, France, Norway, the Netherlands, and others. In tier 2, I add countries like Slovakia, Romania, Croatia, Hungary, Slovenia, Poland, and so on.
+Step 2 
+In these campaigns, I create one ad group and add all my target keywords with broad match.
+Yes-yes, one campaign, many keywords in one ad group with broad match.
+Everything is not by the book. But now I'll explain everything.
+Step 3 
+After getting the first results, I start "cleaning" the campaigns from countries with poor metrics, leaving only those profitable GEOs.
+Step 4 
+I move the top-performing countries into separate campaigns - also with broad match keywords.
+Step 5 
+For the top-performing countries, I begin creating my usual 7-in-1 structure. And I turn off the starter campaigns, since all profitable geos are moved into separate campaigns, and all poor geos are disabled.
+Why this way?
+The problem with the classic 7-in-1 structure is that it requires significant investment to test all campaigns, geos, and keywords.
+And if, at the initial stage, you don't understand which countries your app performs well in, the "from general to specific" structure helps you address this.
+That is, the goal of these campaigns is to find your first successful geos.
+Each app has its own best geos. It was precisely through such campaigns that I found my first 3-4 very non-obvious countries where I could start scaling.
+The main disadvantage of such campaigns is that they are challenging to manage. 
+Not only do you have broad match keywords, but you also have several countries in 1 campaign. As a result, the spend can go to 1 cheapest country on non-converting keywords. 
+Besides this, with such a structure, you won't be able to scale. You will have to transition to the classic 7-in-1 structure anyway.
+Will such campaigns always work?
+No. More often than not, they won't work.
+The smaller your niche, the higher the chances that irrelevant keywords will end up in search terms.
+
+
+Summary: My Campaign Structure
+For each country, I create 7 campaigns:
+Generic, Discovery, Brand, Competitors, Top, Proxy, Reco.
+Key principles:
+* Exact match everywhere except Discovery
+* No duplicate keywords across campaigns
+* One campaign per country
+* Competitor keywords can be profitable
+* Discovery campaigns can be profitable
+* Apple's recommendations can be profitable
+* "General to Specific" helps find initial winners
+________________
+
+
+Scaling
+Be careful what you wish for. Scaling Apple Ads means more testing spend – not all of it will pay off.
+Raise Bids
+Obvious approach. Remember: higher bids don't always mean proportionally higher costs (second-price auction).
+Expanding the payback window
+This is the most common method used by large corporations because they have the financial capacity to do so. 
+Solo developers or small teams are rarely ready to do this because: 
+1) it's scary 
+2) they don't know how to calculate their unit economics 
+3) they don't have enough money to finance a longer payback window. 
+However, you need to be prepared for the fact that, at some point, this will be the only remaining way to scale further.
+After all, your ultimate goal is to achieve your required rate of return over the course of a year. And if you can invest 1 dollar and get back 1.2 dollars within a year, you need to do it.
+Horizontal growth through adding new countries
+In Apple Ads, you can target 90+ countries. If you create at least 7 campaigns for each country, that's already 630 campaigns. And in almost every country, you can find some profitable keywords.
+It just takes time and money for testing. However, right now, this is the primary scaling method for me.
+Moreover, I constantly find a new country that becomes my top performer. 
+At the same time, if one country starts to pay back well, it doesn't mean it will always be this way. 
+My top-performing countries are constantly rotating - you need to accept this. The auction is dynamic so that everything can change at any time.
+If in your first test a country didn't show signs of profitability, that doesn't mean you need to write it off. In some countries, I launch successful campaigns on the 3rd or 4th attempt, and afterward they become my top performers.
+Is it worth creating ad campaigns for small countries like Luxembourg, Iceland, Estonia, Latvia, Slovenia, Slovakia, and so on?
+Yes.
+Especially if you have a relatively broad and popular niche.
+Each geo goes separately for me - this allows me to maximize spend within one country.
+When can you combine several countries into 1 campaign?
+There are 2 cases when I combine countries into 1 campaign:
+1. I'm launching my first campaigns and looking for my first profitable countries
+2. I have a small niche where there isn't enough traffic for one country
+Some small countries can really surprise you.
+Remember that your competitors won't bother with such hyper-segmentation, which means this is your advantage and opportunity to get that very edge.
+Splitting one campaign type into several sub-campaigns
+I'm testing this method right now, and it's showing promising results. Let me explain with an example from top campaigns (where I put my best keywords for each geo).
+Here's what often happens: I move a keyword to my top campaign, but then it stops spending. Why? Because that campaign already has 10-15 keywords competing for budget, and only the first 3-5 actually get any spend.
+The solution is simple: I create a second version of the campaign (I call it [geo]_top-2) and move all the keywords that aren't getting impressions there.
+This immediately unlocks spend for those keywords.
+You can apply this splitting approach to any campaign type except discovery. The only limit is your budget.
+________________
+Understanding ROAS
+Apple Ads simultaneously has both an overwhelming number of metrics and surprisingly few truly useful ones.
+The main problem with Apple Ads is that they don't have post-install statistics. Which is, of course, surprising, considering that Apple knows approximately 100% of the information about your users - where they came from, how they converted to trials, and how much money they brought in afterwards.
+But for some mysterious reason, all this time these guys still haven't been able to integrate all the available statistics inside their dashboard.
+I won't dwell on each metric - I recommend checking out the glossary instead. I myself return to it from time to time to check how a given metric is calculated.
+In my understanding, there are 4 key metrics:
+* Cost per client
+* Cost per conversion (trial + paid subscription)
+* ROAS
+* Impression Share
+You can narrow it down to ROAS and Impression Share.
+ROAS shows how well your campaign/ad group/keyword is paying back, while Impression Share shows how much further you can scale on a specific keyword.
+All other metrics are, in one way or another, derivatives of ROAS that allow you to make decisions much faster (but not always much more correctly).
+To evaluate ROAS, you need an MMP (either AppsFlyer/Adjust, or Apple Ads attribution model from RevenueCat) or pull this information via API (I talked about this at the beginning).
+What ROAS should be considered good?
+At first glance, it seems like an obvious question. Of course, the one that's above 100%. 
+But not everything is so straightforward.
+First, you need to distinguish between ongoing ROAS and cohort ROAS.
+Ongoing ROAS
+ROAS for a specific campaign or source that changes day by day, depending on new revenue or costs appearing.
+For example, if you look at September's ROAS, this metric will grow over time. Because no new costs for September will appear, but revenue will keep increasing (due to recharges).
+Or ROAS for the last n days - will be higher or lower depending on changes in campaign performance and spend.
+This metric is good for looking retrospectively at old campaigns to see whether they paid back. 
+But it's not ideal for evaluating current performance.
+Cohort ROAS
+The ROAS of a specific cohort (day/week/month) over a defined period.
+For example, a 1d ROAS of September 1st indicates a payback within 1 day, as shown by the cohort from September 1st. 
+In calculating 1d ROAS, we count that day's cost and only one day's revenue.
+7d ROAS is the cohort's payback over 7 days. For the September 1st cohort, we take the cost for September 1st and the revenue for the next 7 days.
+Why do these distinctions matter?
+If your target ROAS of 100% should be achieved not in 1-3 days, but over 3-4 months, then you need to understand that ongoing ROAS won't hit 100% right away. 
+Over time, you'll figure out what metric works for you.
+You should evaluate campaign performance by cohort ROAS. 
+Again, once you have payback statistics, you'll understand what 3-day or 7-day ROAS you need to break even within your target timeframe.
+I've already seen more than once on X how solo developers complained that their ads weren't paying back, citing the ROAS of an active campaign as proof. 
+Though I'm confident that if you look at the ROAS of the past 1-3 months, you'd see those months actually paid back. 
+It just required getting several recharges from weekly or monthly subscriptions.
+If your focus is on yearly subscriptions, then your ROAS should always be 100% - unless you're willing to wait a year to profit from annual subscription renewals.
+
+
+________________
+
+
+Impression Share
+Impression Share (IS) = your impressions ÷ total available impressions.
+Low IS means there's more traffic available – competitors are capturing it.
+High IS (80–100%) means you're maxed out. Growth requires new keywords or new geos.
+Aim for 90–100% IS on your best performers.
+Low IS + good metrics → raise bids.
+High IS + poor metrics → lower bids or pause
+Low spend + low IS → it's a bid problem, not a volume problem
+Average Tap-Through Rate (TTR)
+The TTR measures the percentage of times App Store users tap on an ad compared to its total impressions.
+Here are the benchmarks I found in one of the SplitMetrics reports (for more details, see Appendix 1):
+  
+
+Average Conversion Rate (CR)
+
+
+The CR in Apple Ads is the number of app downloads divided by the total number of ad taps (for more details, see Appendix 1):
+
+
+
+
+  
+
+
+
+
+
+Cost Per Tap (CPT) Benchmarks
+  
+
+These aren't the most relevant numbers, as CPT varies significantly depending on GEO and niche. To give you an understanding of average figures across the board. 
+For smaller geos, you can reduce these by about 1.5x.
+CPA, or CPI (cost per install)
+You don't need benchmarks here - you need to find your own. CPI again varies greatly by geo, niche, and keyword. 
+Additionally, to determine whether your CPI is high or low, you must always compare it with ARPU because that determines what CPI you can afford.
+
+
+
+
+________________
+
+
+Optimization Philosophy
+This section might be the most important – but I can't give you rigid rules.
+Core Principles
+1. The only correct way to decide if a source, campaign, or keyword is successful: financial metrics – specifically ROAS.
+2. What's good for one business may be terrible for another.
+ Different businesses have:
+* Different conversion rates and monetization
+* Different margin requirements
+* Different payback windows (6 months vs 18 months)
+* Different goals entirely (market share, investor spending, product upsells)
+3. The only correct way to make decisions: statistically significant data.
+
+
+What This Means in Practice
+* Decisions based on anything other than financial metrics are suboptimal.
+Intermediate metrics (CPT, CPI, TTR) can guide you, but they're not the goal.
+* You can't rely on benchmarks.
+Benchmarks are directional, not targets. Your numbers will be different.
+The Reality You'll Face
+Reality #1: You won't have enough data.
+
+You'd need infinite budget to wait for perfect ROAS data on every keyword. Auctions change constantly. You'll have to make decisions based on incomplete information.
+Reality #2: Luck plays a role.
+
+Any successful campaign is partly luck. When I first launched Apple Ads, I broke every rule: multiple countries in one campaign, broad match keywords everywhere. It worked. I found my winning geos fast, then refined my structure later.
+The key is getting positive feedback early. Otherwise, you can't scale anything.
+
+
+________________
+
+
+Why Only Financial Metrics Matter
+The world is nonlinear. Not every impression → tap → install → revenue.
+Example from Meta Ads:
+
+
+Optimize for reach → millions of cheap impressions, $0 revenue.
+Optimize for installs → low CPI, minimal revenue.
+Optimize for sales → 3x higher CPI, but profitable ROAS.
+The same logic applies to Apple Ads.
+Low CPI ≠ low trial cost.
+Low trial cost ≠ low cost per paying user.
+Low cost per paying user ≠ high ROAS.
+Different keywords attract different audiences.
+Different geos attract different audiences.
+Different screenshots influence who installs your app.
+That's why intermediate metrics mislead you.
+
+
+Real Examples from My Campaigns
+Example 1: Great metrics, terrible ROAS
+I have keywords with phenomenal TTR, low CPI, cheap trials – every intermediate metric screams "gold mine."
+But users from these keywords barely convert to paid. I've tested this across multiple countries. Same pattern every time.
+I turned them off.
+Example 2: Terrible trial cost, great ROAS
+I have geos with awful cost per action (trial + annual sub). By my benchmarks, these campaigns shouldn't pay back.
+But final ROAS is above average.
+Why? Annual subscriptions dominate in these geos instead of weekly trials.
+Example 3: Low 7d ROAS, cumulative ROAS above KPI
+I mainly use 7d ROAS to decide whether to pause campaigns.
+But some countries have very low 7d ROAS, yet their cumulative ROAS is above my KPIs.
+Why? Users in these countries don't buy annual subs (which spike early ROAS), but they:
+   1. Convert well from trial to weekly subscription
+   2. Have good retention
+   3. Have a below-average cost per trial
+So I can't rely 100% even on metrics closest to ROAS in the funnel. What does that say about CPT, CPI, TTR, CR?
+To calculate everything perfectly, I'd need an analyst building predictive ROAS models. We're a small company. We can't afford that yet.
+Despite all this, I can't wait for complete data. I rely on intermediate metrics even when the data is insufficient.
+Even though CPA doesn't always correlate with final ROAS, I still turn off campaigns with high CPA.
+The smaller your budget, the more you rely on early metrics.
+
+
+Finding Your First Win
+Your job is to find one successful geo and a handful of successful keywords. This proves the channel works and gives you a foundation to test from.
+You'll have to turn off keywords and campaigns based on insufficient data.
+When starting with a limited budget, cut losers fast based on early signals:
+   * TTR too low → pause
+   * CPI above ARPU → pause
+   * Trial cost too high → pause
+   * 7d ROAS too low → pause
+Define "too low" and "too high" based on your own historical data.
+You can always retest later. Early on, finding a signal matters more than being thorough.
+
+
+How This Changes with the Budget
+Small budget ($5-10K/month):
+   * Strict rules and boundaries
+   * Pause aggressively based on intermediate metrics
+   * Rely heavily on early signals
+Large budget ($50K+/month):
+   * More patience with data collection
+   * Focus almost exclusively on financial metrics
+   * Willing to wait for ROAS data even when early metrics look bad
+Key point: You must develop your own rules based on your KPIs.
+Rules should also vary by country. Some geos have lower trial-to-paid conversion – you need stricter thresholds there.
+
+
+________________
+
+
+LTV-Based Bidding
+When launching new keywords, I start 20% below Apple's suggested bid and adjust daily based on early metrics.
+As ROAS data comes in, I get more aggressive:
+   * Profitable countries → start with above-average bids
+   * Profitable keywords → push bids until I hit 90–100% IS
+If a keyword is printing money, capture every impression you can – even if margins get tighter. I optimize for total profit, not ROAS percentage.
+If at some point I see that a high bid turns a profitable keyword into an unprofitable one, I lower the bid to a level where I still get some spend on the keyword while staying profitable.
+Seasonal Bidding
+The framework stays the same: if ads are profitable, raise bids. If not, lower them.
+Don't overthink seasonality. Follow the numbers.
+________________
+
+
+Automation Tools
+Apple's dashboard is slow and clunky. Once you have dozens of campaigns, it becomes painful.
+Third-party tools can help. Most are free under certain spending thresholds.
+What to look for:
+   * Fast, usable interface
+   * Bulk campaign creation
+   * Cohort metrics and custom columns
+   * Automated rules
+   * Keyword research features (nice to have)
+For now, I'm using SplitMetrics. The good news – they have a free tier if you spend less than $25K/month. I can't compare it to other tools since I haven't tested them. If anything changes, I'll update this section later.
+Automated Rules
+Most Apple Ads management tools support automated rules for pausing/launching keywords and adjusting bids. I'm constantly refining these rules, but here's what's working now.
+Getting Keywords to Spend
+Impressions previous 3 days < 20 → increase keyword bid by 10% (once every 2 days, cap $2)
+This helps kickstart spending on keywords that aren't getting traction. Without this, some keywords would sit at zero impressions indefinitely, even when they could be profitable.
+Discovery to Exact Match Pipeline
+New search terms in Discovery campaign → add as keyword (exact match) to ad group in proxy campaign.
+Since you can't collect financial performance statistics in discovery campaigns, all new search terms get automatically tested in a separate campaign where I can track ROAS. 
+I run a separate rule for each country so search terms move to the correct geo-specific campaigns.
+Performance-Based Pausing
+For understanding the metrics:
+   * conversion = trial + yearly subscription
+   * cpa = cost/conversion
+Here are my current thresholds:
+   * Stop if spend > $40, no conversions
+   * Stop if spend > $100, cpa > $30 
+   * Stop if cpa > $100 and spend > $100
+   * Stop if roas < 30% for the last 30 days 
+Bid Optimization
+   * Increase bid if cpa < $13 
+
+
+Important
+These thresholds work for my app economics. Your numbers will differ based on your ARPU, conversion rates, and target payback window. I'm actively testing more ROAS-based rules and refining these triggers as I gather more data.
+________________
+
+
+Custom Product Pages
+
+
+CPPs let you create alternative product pages for specific keywords. You can have up to 70 – though only 2-4 can be in moderation at once (the upside: you can submit them for review anytime, without needing an app update).
+Don't create CPPs just because you can. Create them when your default product page doesn't match what the user is searching for.
+The clearest signals you need a CPP:
+   * Your app solves multiple distinct problems (and users search for each separately)
+   * You're bidding on competitor keywords (show why you're the better choice)
+   * Seasonal or trend keywords drive significant volume in your category
+   * Your generic screenshots don't "answer" specific high-value search queries
+
+
+What You Can Customize:
+
+
+   * Screenshots and video
+   * Promo text
+   * Deep links (iOS 18+)
+   * Focus on the first screenshot. That's what drives conversion. Everything else is secondary.
+CPPs are your "creative" in Apple Ads – one of the few ways to improve relevance and performance.
+________________
+Deep Links
+In CPP settings, you can add deep links so that when users tap "Open," they land on a specific screen or section inside your app – not just the default home screen (works on iOS 18+).
+This lets you customize the entire user journey for each segment:
+Keyword → CPP → Custom onboarding → Tailored paywall
+This level of customization seems excessive, but this is exactly how you build an edge over competitors. 
+Everyone is too lazy to set up segmentation, configure deep links, create custom onboardings and paywalls for smaller segments. Let alone localize all these funnels. Small developers don't bother. Large companies often don't bother either.
+The one who grinds out these extra conversion points – localizing product pages, creating localized CPPs, localizing onboarding and paywalls, routing each user segment to its own flow, building separate paywalls for different keywords, crafting targeted offers, push notifications, and emails – all of this compounds into a real difference.
+This is what makes one app unprofitable and another profitable. Not one big thing. A hundred small things done right.
+
+
+
+
+
+
+
+
+________________
+Types of CPPs with screenshots examples 
+Big thanks to Teodora for agreeing to contribute this section. She's designed hundreds of App Store screenshots across every category you can think of – so when she talks about what converts, she's speaking from actual data, not guesswork.
+Here's her breakdown of CPP types with real examples:
+Now it’s time for me to look at how the biggest players are using CPPs and screenshots, so you can take what works and apply it to your own strategy.
+This section breaks down real examples from brands spending millions on ASA, showing which types of CPPs (Custom Product Pages) combined with App Store screenshots are used and why they work.
+
+
+________________
+Brand CPPs
+Your audience is already familiar with your brand, so there’s no need to reintroduce what you sell.
+Your CPP should immediately signal authority and confidence.
+It should make people think, “Yep, this is exactly where I’m supposed to be.”
+Let’s take a look at how the top brands pull this off.
+
+
+App example - Temu: Shop Like a Billionaire
+
+
+Temu uses branded CPPs for its own keywords, but the messaging changes based on who’s seeing it.  
+That’s where CPPs really shine: a single keyword can trigger completely different experiences depending on the audience you’re targeting. And that matters because the same term doesn’t always mean the same thing to everyone.
+Take fitness, for example. What men look for is often very different from what women want. Men usually aim to build muscle, while women tend to focus on toning without getting bulky. Same word, different intent.
+On the default page, Temu emphasizes timely promotions like seasonal campaigns (such as “Back to School”).
+For new users, the CPP shifts focus to incentives, highlighting welcome offers like a “$100 coupon bundle” or “free delivery,” which remain prominently displayed.
+One keyword, two perspectives.
+
+
+
+
+________________
+Generic keyword CPPs
+Your brand is still unfamiliar to most users, and their main focus is fixing a specific issue. Your app speaks directly to that need.
+
+
+These CPPs are designed around clear intent. Focus on highlighting concrete benefits and addressing common questions, concerns, and uncertainties users may have.
+
+
+App example - Coloring Games for Kids 2-6! (keyword “game for kids”)
+  
+
+Parents looking for this tend to be cautious while also wanting something that keeps their children engaged.
+
+
+At first glance, the product page needs to clearly communicate that it is safe and educational. Parents should be able to picture how their child will interact with the app even if they never use it themselves.
+
+
+This works best when you rely on a show don’t tell approach that quickly reassures parents and helps the app pass their mental filter.
+
+
+
+
+
+
+
+
+________________
+Competitor CPPs  
+These users are already looking at competing apps. The objective is to clearly show why our product is the stronger option.
+
+
+App example - Uber  (keyword “waymo”)
+
+
+When someone looks up “waymo,” they are likely trying to find a ride close to them.
+
+
+Uber’s competing CPP would focus on how easy and fast it is to get a ride, using messages like “Get a ride in minutes” or “Drivers available everywhere.” This frames Uber as the most convenient choice at the moment.
+
+
+
+
+
+
+
+
+________________
+Feature-specific CPPs
+Each individual feature is treated as its own landing page. A single search maps to a single feature, which corresponds to one CPP.
+
+
+
+
+App example - Picsart (“hairstyle try on”, “remove background” keywords)
+
+
+Picsart offers a wide range of tools, which makes feature focused CPPs necessary.
+   * Hairstyle try on highlights virtual hair filters right away.
+   * Remove background emphasizes clean before and after visuals with easy one tap cutouts.
+
+
+These users are looking for a single capability, so that feature should be shown first.
+  
+
+
+
+
+
+
+
+________________
+GEO/Local CPPs
+Different regions respond to their own visuals, wording, cuisine, people, and expectations. These differences come from unique cultural behaviors. Simply translating your screenshots or CPPs does not equal true localization.
+
+
+
+
+App example - Tinder
+
+
+Dating culture changes every 100 km.
+   * US: diverse faces, casual dating.
+   * Spain: social energy, warm interactions, nightlife vibes and average Spanish woman representation.
+   * Switzerland: classy, subtle, and average Swiss woman dating representation.
+   * Japan: soft colors, safety cues, respectful tone. Big Japanese woman faces.
+  
+  
+  
+  
+
+________________
+Traffic-source-specific CPPs  
+These pages are aligned with the ad origin, which makes the App Store experience feel consistent with what the user just viewed.
+
+
+Your TikTok audience is different from your ASA audience, which is also different from your email audience.
+
+
+
+
+App example - Pillow: Sleep Tracker
+
+
+Pillow creates custom product pages tailored to each acquisition path:
+
+
+   * Apple Watch ads highlight screenshots focused on Watch sleep tracking.
+   * iPhone ads emphasize microphone based sleep tracking.
+
+
+When someone taps an ad, they arrive on a page that feels personalized to their intent. This relevance lifts click through rates and increases installs.
+
+
+________________
+Retention Conversion CPPs
+These pages are meant for users who have tried your app in the past and may return, as well as free users who could decide to move to a paid plan.
+
+
+
+
+App example - Starbucks  
+
+
+Starbucks drop off customers only need one push to come back: an incentive.
+
+
+Their reactivation messages should focus on:
+
+
+   * Fresh features
+   * Updated rewards
+   * A free drink for returning
+
+
+Highlight the redesigned app, spotlight seasonal drinks, and make the benefits obvious.
+
+
+The goal is simple. Get people thinking, “Maybe Starbucks is worth another try.”
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Financing Growth
+I'm taking the mic back now.
+The core challenge with paid ads is that you need constant capital to keep growing.
+When my co-founders and I launched our app, this was a huge problem. Our payback window, even at the start, was 1-2 months. Plus, Apple doesn't pay out immediately. We spent all our savings, took out every loan we could get. Then we spent a long time paying them back. It was rough.
+Three options:
+   1. Friends, family, fools. If you have profitable unit economics, you may not need outside money – but early capital helps.
+   2. Focus on annual subscriptions. Faster cash recovery, shorter payback cycles.
+   3. Debt financing. Loans, credit lines, factoring.
+We used loans at 20% APR and factoring (which turned out to be ~40% effective rate). It's how we reached $100K MRR.
+Now that we've paid off all our debts, we've returned to this financing method - but under much better terms.
+Debt financing is an excellent way to fund your growth if you do it carefully.
+However, you need to understand that to get financing, you should already have some revenue history for your project (usually at least 6 months), though it varies case by case.
+Apple Ads Credit Line
+Once you're spending $25K/month, you can request a credit line. Start building your relationship with a partner manager early.
+Watch Your VAT
+Make sure you're not paying 20–25% VAT unnecessarily. Get a VAT ID if applicable.
+We discovered Apple was charging us VAT because we hadn't registered one – a 20% hit to effective ROAS.
+20% can be the difference between profitable and unprofitable.
+________________
+
+
+Profitability Benchmarks
+If you have no data yet, use this formula:
+Cost per paying user = Spend ÷ (Annual subs + Trials × Trial-to-paid rate)
+RevenueCat benchmarks for annual ARPPU:
+  
+
+These are very averaged numbers, and in reality they should be better if you have a good product, of course.
+If your app has trials, you can use trial-to-paid conversion rates from these benchmarks (also from RevenueCat) to forecast your cost per paying user:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Trial-to-paid conversion benchmarks:
+  
+
+Note: The final cost per paying user is based on approximately 2-3 months of data, since not all users convert from trial to paid immediately when the trial ends. 
+In my experience, these "delayed conversions" can be 20-30% - meaning your final cost per paying user can decrease by 20-30% over 2-3 months. 
+You need to account for this when you get your first conversions and calculate your ROAS.
+
+
+________________
+
+
+Simple Payback Calculator
+I've prepared a very simple model to help you forecast when your traffic will pay back.
+The numbers are quite rough - I estimated them based on metrics from my own app with annual subscription and weekly subscription with trial.
+  
+
+In the model, adjust your marketing investment and your actual ROI for the current month at completion.
+For example, if December just ended and December's ongoing ROI is 50%, you'd enter 50% in M0. The rest of the metrics will calculate automatically. With 50% ROI, your marketing spend will fully pay back by the end of M3.
+Again, all these numbers are individual depending on your retention, subscription price, and so on. Over time, you can adjust the retention revenue to better align with your metrics. These numbers are just a starting point to help you get started. This model doesn't forecast with 100% accuracy.
+When my co-founders and I first launched our project, we had no benchmarks, no analyst, and no properly prepared data. So I forecasted our marketing payback this way.
+Later, I hired an analyst who built more accurate models based on cohort ARPU. But the problem with those models is that you need an analyst every time you want to recalibrate them.
+________________
+
+
+Common Mistakes
+   * Using Basic instead of Advanced
+   * Leaving Search Match on
+   * Ignoring small countries
+   * Bidding too low
+   * Not defending brand keywords
+   * Not using CPPs
+   * Skipping Discovery campaigns
+   * Using only broad match
+   * Duplicating keywords across campaigns
+   * Putting multiple countries in one campaign
+   * Not retesting paused keywords
+FAQ
+Keyword has no impressions?
+   * Raise bid daily until it starts spending.
+   * Move it to a separate campaign (not ad group).
+Discovery campaign stopped performing?
+   * Lower bids.
+   * Or pause it – maybe you've exhausted the profitable search terms.
+Keyword ROAS dropped?
+   * Lower bid.
+   * Wait – could be temporary volatility.
+   * If no improvement, pause and retest later.
+A country stopped being profitable?
+   * Usually: pause and revisit later.
+   * Analyze what changed – CPT shifts, keyword mix, bid creep.
+Best keywords at 90–100% IS?
+   * Find new keywords or new countries.
+Discovery campaigns don't pay back and search terms are irrelevant?
+   * Drop discovery campaigns entirely.
+ROAS 7d too low, but ROAS 14-30 catches up?
+   * Turn campaigns back on – this happens in geos with fewer annual subs or delayed trial conversions.
+   * Adjust your KPIs to expect lower 7d ROAS.
+   * Same logic for high CPA/CAC – watch final ROAS.
+High impression share but low spend?
+   * Low-volume keyword. Find new ones.
+Discovery campaign profitable but all search terms are low-volume?
+   * Do nothing. That's the point – capturing long-tail queries.
+TTR and CR are low, but the keyword is profitable?
+   * Try improving with CPP.
+Do keywords need to be localized per geo?
+   * Yes, eventually.
+   * English works at the start for many niches.
+   * Either collect keywords per geo (accurate) or translate English keywords (faster, less precise).
+
+
+Quick Start Checklist
+   1. Connect attribution (MMP or RevenueCat integration)
+   2. Use Advanced mode only
+   3. Disable Search Match
+   4. Skip tier-1 countries initially
+   5. Start with small European markets
+   6. Test all keyword types: category, competitor, long-tail, typos, "free" variants
+   7. "Word + free" keywords are often top performers
+   8. Localize keywords per geo
+   9. Test competitor brand terms
+   10. Evaluate only on ROAS
+   11. Campaign structure: Generic, Competitors, Brand, Reco, Discovery, Proxy, Top
+   12. 95% of Generic keywords won't spend – that's normal
+   13. Move stuck keywords to new campaigns, not ad groups
+   14. One campaign = one country
+   15. One keyword = one location (no duplicates)
+   16. Underperforming top keyword? Lower bid or pause, retest later
+   17. Scale via: higher bids, new geos, longer payback windows
+   18. Geographic expansion is my main growth lever
+   19. 90+ countries × 7 campaigns = 630 opportunities
+   20. Max IS on best keywords? Expand elsewhere
+   21. CPPs = your only creative lever (up to 70)
+   22. First screenshot has the biggest impact
+   23. Build different CPPs for different features
+________________
+
+
+Thanks for reading!
+I started writing this guide because I couldn't find anything like it when I needed it most. Everything out there was either too basic, too theoretical, or written by people who'd never spent their own money on Apple Ads.
+So I wrote what I wish existed – a guide from someone who's been in the trenches, made expensive mistakes, and figured out what actually works.
+This is Edition 1. I'll keep updating it as Apple Ads evolves and as I learn more. If you spot errors, have questions, or just want to share your results – reach out. I read everything.
+Some sections could go much deeper – but then this guide would be twice as long. Maybe we'll get there eventually.
+A few ways to stay in touch:
+   1. Follow me on X – I post almost daily about marketing and building my app business.
+   2. Subscribe to my newsletter – a short weekly email on app growth.
+Now go launch some campaigns.
+
+
+
+
+
+
+
+
+
+
+________________
+
+
+Appendix 1 - charts
+
+
+
+
+TTR by Category:
+  
+________________
+
+CR by category 
+  
+
+Copyright © 2025 Ivan Sparrow. All Rights Reserved. sparrowapps.io
+Page  of
