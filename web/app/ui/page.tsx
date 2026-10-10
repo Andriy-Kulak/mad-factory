@@ -6,14 +6,14 @@ import { DataTable } from "@/components/data-table";
 import { SwitchField } from "@/components/switch";
 import { BrowseDemo } from "./browse-demo";
 
-export const metadata = { title: "Components · mad-factory" };
+export const metadata = { title: "Components · Mad Factory" };
 
 /** Living reference for the shared components. Sample values are placeholders. */
 export default function ComponentsPage() {
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-30 h-12 flex items-center gap-3 px-4 bg-chrome border-b border-chrome-line text-[13px] text-chrome-fg-2">
-        <Link href="/" className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">mad-factory</Link>
+        <Link href="/" className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">Mad Factory</Link>
         <span className="text-chrome-fg-3">/</span>
         <span className="text-chrome-fg">Components</span>
         <Link href="/ui/frame" className="ml-auto hover:text-chrome-fg transition-colors duration-200">App frame preview →</Link>

@@ -64,7 +64,7 @@ export function AppFrame({ products, current, defaultCollapsed, user, needsSetup
 function TopBar({ current, active, products, user }: { current: Product; active: NavItem; products: Product[]; user?: string | null }) {
   return (
     <div className="sticky top-0 z-30 h-12 shrink-0 flex items-center gap-3 px-4 bg-chrome border-b border-chrome-line text-[13px] text-chrome-fg-2">
-      <Link href={`/p/${current.slug}`} className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">mad-factory</Link>
+      <Link href={`/p/${current.slug}`} className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">Mad Factory</Link>
       <span className="hidden sm:flex items-center gap-2 min-w-0">
         <span className="text-chrome-fg-3">/</span>
         <span className="truncate">{current.name}</span>
