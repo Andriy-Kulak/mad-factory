@@ -1,10 +1,15 @@
 /**
  * Apple Ads Platform API client (https://api.ads.apple.com/v1). No dependencies.
  *
- * Credentials are infrastructure only and come from either
- *   - APPLE_ADS_DIR: a directory with credentials.json ({ clientId, teamId, keyId, privateKeyPath })
- *     and a token-cache.json this client maintains, or
- *   - APPLE_ADS_CLIENT_ID, APPLE_ADS_TEAM_ID, APPLE_ADS_KEY_ID, APPLE_ADS_PRIVATE_KEY (PEM text), for CI.
+ * Credentials are infrastructure only and are split by access level:
+ *   - read  (default): APPLE_ADS_READ_DIR or the APPLE_ADS_READ_* four; falls back to the legacy
+ *     APPLE_ADS_DIR / APPLE_ADS_* names until the secrets are renamed. Enough for every sync,
+ *     research call and `read()`/GET, including POSTs to `/query` endpoints.
+ *   - write: APPLE_ADS_WRITE_DIR or the APPLE_ADS_WRITE_* four, set only on the machine where the
+ *     owner approves writes. A client built with read credentials refuses any write call
+ *     (PUT, DELETE or a non-/query POST) before the token exchange.
+ * Each directory holds credentials.json ({ clientId, teamId, keyId, privateKeyPath }) and a
+ * token-cache.json this client maintains; the four-var form takes PEM text, for CI.
  * The ad account id is per call; it lives in tracked_sources.config, never in env or code.
  * Secrets are never printed or stored outside the token cache.
  */
@@ -21,6 +26,8 @@ export interface AppleAdsCredentials {
   teamId: string;
   keyId: string;
   privateKeyPem: string;
+  /** "read" clients refuse write calls; "write" clients may send them. */
+  access: "read" | "write";
   /** Where to cache the access token; undefined keeps it in memory only. */
   tokenCachePath?: string;
 }
@@ -33,8 +40,9 @@ export interface ApiResponse<T = unknown> {
   retryAfterSeconds: number | null;
 }
 
-export function loadCredentials(): AppleAdsCredentials {
-  const dir = optionalEnv("APPLE_ADS_DIR");
+export function loadCredentials(access: "read" | "write" = "read"): AppleAdsCredentials {
+  const prefix = access === "write" ? "APPLE_ADS_WRITE" : "APPLE_ADS_READ";
+  const dir = optionalEnv(`${prefix}_DIR`) ?? (access === "read" ? optionalEnv("APPLE_ADS_DIR") : undefined);
   if (dir) {
     const c = JSON.parse(fs.readFileSync(path.join(dir, "credentials.json"), "utf8")) as Record<string, string>;
     const keyPath = c.privateKeyPath ?? path.join(dir, "private-key.pem");
@@ -43,16 +51,24 @@ export function loadCredentials(): AppleAdsCredentials {
       teamId: need(c.teamId, "teamId"),
       keyId: need(c.keyId, "keyId"),
       privateKeyPem: fs.readFileSync(keyPath, "utf8"),
+      access,
       tokenCachePath: path.join(dir, "token-cache.json"),
     };
   }
-  const clientId = optionalEnv("APPLE_ADS_CLIENT_ID");
-  if (!clientId) throw new Error("Apple Ads credentials missing: set APPLE_ADS_DIR or the APPLE_ADS_* variables (see .env.example)");
+  // Reads fall back to the legacy APPLE_ADS_* names; writes never do.
+  const legacy = access === "read";
+  const clientId = optionalEnv(`${prefix}_CLIENT_ID`) ?? (legacy ? optionalEnv("APPLE_ADS_CLIENT_ID") : undefined);
+  if (!clientId) {
+    const names = access === "write" ? "APPLE_ADS_WRITE_DIR or the APPLE_ADS_WRITE_* variables" : "APPLE_ADS_READ_DIR, the APPLE_ADS_READ_* variables, or the legacy APPLE_ADS_DIR / APPLE_ADS_*";
+    throw new Error(`Apple Ads ${access} credentials missing: set ${names} (see .env.example)`);
+  }
+  const var_ = (name: string) => optionalEnv(`${prefix}_${name}`) ?? (legacy ? optionalEnv(`APPLE_ADS_${name}`) : undefined);
   return {
     clientId,
-    teamId: need(optionalEnv("APPLE_ADS_TEAM_ID"), "APPLE_ADS_TEAM_ID"),
-    keyId: need(optionalEnv("APPLE_ADS_KEY_ID"), "APPLE_ADS_KEY_ID"),
-    privateKeyPem: normalizePem(need(optionalEnv("APPLE_ADS_PRIVATE_KEY"), "APPLE_ADS_PRIVATE_KEY")),
+    teamId: need(var_("TEAM_ID"), `${prefix}_TEAM_ID`),
+    keyId: need(var_("KEY_ID"), `${prefix}_KEY_ID`),
+    privateKeyPem: normalizePem(need(var_("PRIVATE_KEY"), `${prefix}_PRIVATE_KEY`)),
+    access,
   };
 }
 
@@ -132,6 +148,9 @@ export class AppleAdsClient {
   }
 
   async call<T = unknown>(adAccountId: number, method: string, apiPath: string, body?: unknown): Promise<ApiResponse<T>> {
+    if (isWrite(method, apiPath) && this.creds.access !== "write") {
+      throw new Error("Apple Ads write blocked: this client has read credentials; writes need APPLE_ADS_WRITE_* (playbooks/ad-changes.md)");
+    }
     const res = await this.fetchFn(API + apiPath, {
       method,
       headers: {

@@ -165,16 +165,19 @@ Implement `AdSource` in `src/sources/<name>/`, map its payload to `CollectedAd`,
 
 ## Apple Ads and experiments
 Read `playbooks/apple-ads.md` before any Apple Ads work. `pnpm apple-ads sync` only reads; the Devin scheduled
-automation "mad-factory: daily Apple Ads + RevenueCat backfill" runs it daily. The sync uses the same keys
-as the write commands — the keys are not read-only; what makes it read-only is that the automation's prompt
-and the sync code send no writes. Never change the ad
+automation "mad-factory: daily Apple Ads + RevenueCat backfill" runs it daily. Keys are split by access:
+reads use `APPLE_ADS_READ_*` (or the legacy `APPLE_ADS_*` names); any write needs `APPLE_ADS_WRITE_*`,
+which exists only on the machine that runs approved writes — the automation and CI hold read keys only.
+Never change the ad
 account directly: draft a plan document in `product_docs` for the owner with
 `pnpm product docs add <slug> --kind plan --file <path>`. Claude also has `.claude/skills/apple-ads`.
 
 ## Meta Ads (own account)
 Read `playbooks/meta-ads.md` before any Meta Ads work: ABO test campaign, CBO scale campaign, winners graduate on
 their existing post so likes and comments carry over.
-`pnpm meta-ads sync|status|tag|media` reads the owner's ad account into `meta_ads_*` (token in `META_ADS_TOKEN` only).
+`pnpm meta-ads sync|status|tag|media` reads the owner's ad account into `meta_ads_*` (read token in
+`META_ADS_READ_TOKEN`, falling back to the legacy `META_ADS_TOKEN`; writes need `META_ADS_WRITE_TOKEN`,
+which exists only on the machine that runs approved writes).
 `meta-ads media` downloads each creative's video or image into `creatives` and fills `meta_ads_creatives.sha256`;
 `--creative <id> --file <path>` imports a file the owner provides manually instead (no Meta call).
 **NEVER delete or archive Meta ads, ad sets, campaigns or creatives — not even if the owner asks.
@@ -210,7 +213,7 @@ See docs/creative-profile.md.
   (`pnpm mcp-key`). Its tools reuse the same loaders as the pages and `pnpm brief`; keep it read-only, and add new
   data (organic, competitor ads) as tools there rather than a second API.
 - The web app never changes an ad account: nothing under `web/` may import Apple Ads or Meta Ads write code
-  (web/lib/no-ad-writes.test.ts enforces it), and the hosted web server gets no `META_ADS_TOKEN` or Apple Ads keys.
+  (web/lib/no-ad-writes.test.ts enforces it), and the hosted web server gets no Meta or Apple Ads keys at all.
   Ad-account writes stay in the CLIs, run from your machine with owner approval.
 - The pnpm workspace is root + `web/`. Typecheck web with `pnpm --filter web typecheck`.
 - Look and components: dark chrome (top bar, collapsible sidebar in `app/p/[slug]/layout.tsx`) around a light

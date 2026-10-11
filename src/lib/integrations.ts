@@ -87,24 +87,33 @@ export const INTEGRATIONS: Integration[] = [
   {
     key: "meta-ads",
     name: "Meta Ads (your ad account)",
-    env: [["META_ADS_TOKEN"]],
+    env: [["META_ADS_READ_TOKEN"], ["META_ADS_TOKEN"]],
+    optional: ["META_ADS_WRITE_TOKEN"],
     required: false,
     where: "cli",
     summary: "Your Meta ad account",
     enables: "Your own Meta campaigns, ad sets, ads, daily spend and results (`pnpm meta-ads`), and the Meta ads tab.",
     without: "Meta ads stays empty; competitor research from the Ad Library still works.",
-    setup: "Meta Business settings → System users → generate a token with ads_read (ads_management only for approved writes)",
+    setup:
+      "Read: Meta Business settings → System users → token with only ads_read. Write: the current ads_management token as META_ADS_WRITE_TOKEN, set only on the machine where approved writes run.",
   },
   {
     key: "apple-ads",
     name: "Apple Ads",
-    env: [["APPLE_ADS_DIR"], ["APPLE_ADS_CLIENT_ID", "APPLE_ADS_TEAM_ID", "APPLE_ADS_KEY_ID", "APPLE_ADS_PRIVATE_KEY"]],
+    env: [
+      ["APPLE_ADS_READ_DIR"],
+      ["APPLE_ADS_READ_CLIENT_ID", "APPLE_ADS_READ_TEAM_ID", "APPLE_ADS_READ_KEY_ID", "APPLE_ADS_READ_PRIVATE_KEY"],
+      ["APPLE_ADS_DIR"],
+      ["APPLE_ADS_CLIENT_ID", "APPLE_ADS_TEAM_ID", "APPLE_ADS_KEY_ID", "APPLE_ADS_PRIVATE_KEY"],
+    ],
+    optional: ["APPLE_ADS_WRITE_DIR", "APPLE_ADS_WRITE_CLIENT_ID", "APPLE_ADS_WRITE_TEAM_ID", "APPLE_ADS_WRITE_KEY_ID", "APPLE_ADS_WRITE_PRIVATE_KEY"],
     required: false,
     where: "cli",
     summary: "Your Apple Ads campaigns",
     enables: "Your own Apple Ads campaigns, keywords and search terms (`pnpm apple-ads`), and the Apple ads tabs.",
     without: "The Apple ads tabs stay empty.",
-    setup: "ads.apple.com → Account settings → API: invite an API user, upload a public key, copy the client, team and key ids",
+    setup:
+      "Read: ads.apple.com → Account settings → API, an API user with role 'API Account Read Only'. Write: the Campaign Manager API user as APPLE_ADS_WRITE_* (or APPLE_ADS_WRITE_DIR), set only on the machine where approved writes run.",
   },
   {
     key: "revenuecat",

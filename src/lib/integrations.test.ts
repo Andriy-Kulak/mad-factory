@@ -33,8 +33,10 @@ test(".env.example has no variable the registry does not know", () => {
 test("a group counts only when complete; the closest group names what is missing", () => {
   assert.deepEqual(integrationStatus("r2", { R2_ACCOUNT_ID: "a", R2_BUCKET: "b" }), { configured: false, missing: ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"] });
   assert.equal(integrationStatus("apple-ads", { APPLE_ADS_DIR: "/x" }).configured, true);
-  assert.deepEqual(integrationStatus("apple-ads", { APPLE_ADS_CLIENT_ID: "c" }).missing, ["APPLE_ADS_TEAM_ID", "APPLE_ADS_KEY_ID", "APPLE_ADS_PRIVATE_KEY"]);
+  assert.equal(integrationStatus("apple-ads", { APPLE_ADS_READ_DIR: "/x" }).configured, true);
+  assert.deepEqual(integrationStatus("apple-ads", { APPLE_ADS_READ_CLIENT_ID: "c" }).missing, ["APPLE_ADS_READ_TEAM_ID", "APPLE_ADS_READ_KEY_ID", "APPLE_ADS_READ_PRIVATE_KEY"]);
   assert.equal(integrationStatus("meta-ads", { META_ADS_TOKEN: "" }).configured, false);
+  assert.equal(integrationStatus("meta-ads", { META_ADS_READ_TOKEN: "t" }).configured, true);
 });
 
 test("requireIntegration throws a readable MissingConfigError", () => {
@@ -53,5 +55,8 @@ test("requireIntegration throws a readable MissingConfigError", () => {
 
 test("envHint reads naturally", () => {
   assert.equal(envHint(getIntegration("supabase")), "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
-  assert.equal(envHint(getIntegration("apple-ads")), "APPLE_ADS_DIR, or APPLE_ADS_CLIENT_ID, APPLE_ADS_TEAM_ID, APPLE_ADS_KEY_ID and APPLE_ADS_PRIVATE_KEY");
+  assert.equal(
+    envHint(getIntegration("apple-ads")),
+    "APPLE_ADS_READ_DIR, or APPLE_ADS_READ_CLIENT_ID, APPLE_ADS_READ_TEAM_ID, APPLE_ADS_READ_KEY_ID and APPLE_ADS_READ_PRIVATE_KEY, or APPLE_ADS_DIR, or APPLE_ADS_CLIENT_ID, APPLE_ADS_TEAM_ID, APPLE_ADS_KEY_ID and APPLE_ADS_PRIVATE_KEY",
+  );
 });

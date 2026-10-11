@@ -61,7 +61,7 @@ Commands:
 An account is tracked with:
   pnpm product add-source <product> --source ${SOURCE} --kind ad_account --value act_<id>
 
-Credentials: META_ADS_TOKEN (see .env.example).
+Credentials: META_ADS_READ_TOKEN for reads (legacy META_ADS_TOKEN still works), META_ADS_WRITE_TOKEN for any write (see .env.example).
 `;
 
 const { values, positionals } = parseArgs({

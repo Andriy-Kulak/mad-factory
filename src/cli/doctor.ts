@@ -22,6 +22,17 @@ if (values.help) {
 
 const rows = INTEGRATIONS.map((it) => ({ it, ...integrationStatus(it.key) }));
 
+/** Whether the ad-account write key is present on this machine (the key that can change campaigns). */
+function writesHere(key: string): boolean | null {
+  if (key === "meta-ads") return Boolean(process.env.META_ADS_WRITE_TOKEN);
+  if (key === "apple-ads")
+    return Boolean(
+      process.env.APPLE_ADS_WRITE_DIR ||
+        (process.env.APPLE_ADS_WRITE_CLIENT_ID && process.env.APPLE_ADS_WRITE_TEAM_ID && process.env.APPLE_ADS_WRITE_KEY_ID && process.env.APPLE_ADS_WRITE_PRIVATE_KEY),
+    );
+  return null;
+}
+
 /** Reachable and migrated, or why not. Only touches the database when Supabase is configured. */
 async function checkDatabase(): Promise<{ ok: boolean; detail: string }> {
   if (!integrationStatus("supabase").configured) return { ok: false, detail: "skipped: Supabase is not configured" };
@@ -45,7 +56,15 @@ if (values.json) {
     JSON.stringify(
       {
         envFile: existsSync(".env"),
-        integrations: rows.map(({ it, configured, missing }) => ({ key: it.key, name: it.name, required: it.required, where: it.where, configured, missing })),
+        integrations: rows.map(({ it, configured, missing }) => ({
+          key: it.key,
+          name: it.name,
+          required: it.required,
+          where: it.where,
+          configured,
+          missing,
+          ...(writesHere(it.key) === null ? {} : { writes: writesHere(it.key) }),
+        })),
         database: db,
       },
       null,
@@ -59,8 +78,10 @@ const tick = (ok: boolean) => (ok ? "✓" : "✗");
 const width = Math.max(...INTEGRATIONS.map((it) => it.name.length)) + 2;
 const line = ({ it, configured }: { it: Integration; configured: boolean }) => {
   const head = `  ${configured ? "✓" : it.required ? "✗" : "·"} ${it.name.padEnd(width)}${it.summary}`;
-  if (configured) return head;
-  return [head, `      set ${envHint(it)}`, `      without it: ${it.without}`, `      get them: ${it.setup}`].join("\n");
+  const writes = writesHere(it.key);
+  const writesLine = writes === null ? [] : [`      writes: ${writes ? "on (WRITE key set)" : "off (read-only here)"}`];
+  if (configured) return [head, ...writesLine].join("\n");
+  return [head, `      set ${envHint(it)}`, `      without it: ${it.without}`, `      get them: ${it.setup}`, ...writesLine].join("\n");
 };
 
 console.log(existsSync(".env") ? "Reading .env in this folder.\n" : "No .env here yet: cp .env.example .env, then fill in Supabase.\n");

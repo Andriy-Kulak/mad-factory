@@ -54,3 +54,23 @@ test("web/ never imports Apple Ads or Meta Ads write code or CLI-only packages, 
   assert.ok(seen.size > 20, "import walk found too few files");
   assert.deepEqual(offenders, []);
 });
+
+function allWebFiles(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    if (name === "node_modules" || name === ".next") continue;
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) allWebFiles(p, out);
+    else if (!/\.(png|jpe?g|gif|webp|ico|svg|mp4|woff2?)$/i.test(name)) out.push(p);
+  }
+  return out;
+}
+
+test("no file under web/ names an ad-account env variable", () => {
+  const files = allWebFiles(join(ROOT, "web")).filter((f) => !f.endsWith("no-ad-writes.test.ts"));
+  const offenders: string[] = [];
+  for (const file of files) {
+    if (/\b(META_ADS|APPLE_ADS)_[A-Z_]+/.test(readFileSync(file, "utf8"))) offenders.push(relative(ROOT, file));
+  }
+  assert.ok(files.length > 20, "file walk found too few files");
+  assert.deepEqual(offenders, []);
+});

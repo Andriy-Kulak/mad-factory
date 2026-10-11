@@ -102,8 +102,62 @@ test("refuses method overrides and token query parameters", async () =>
     await assert.rejects(client.get("/account", { access_token: "bad" }), /must not be passed as a parameter/);
   }));
 
+test("GET prefers META_ADS_READ_TOKEN over the legacy name", async () =>
+  withEnv({ META_ADS_READ_TOKEN: "read-secret", META_ADS_TOKEN: "legacy-secret" }, async () => {
+    const calls: { headers: HeadersInit }[] = [];
+    const client = new MetaAdsClient({}, (async (_url, init) => {
+      calls.push({ headers: init!.headers! });
+      return response({ data: [] });
+    }) as typeof fetch);
+    await client.get("/act_1/campaigns");
+    assert.equal(new Headers(calls[0]!.headers).get("authorization"), "Bearer read-secret");
+  }));
+
+test("POST sends META_ADS_WRITE_TOKEN and stays unjournaled without it", async () =>
+  withEnv({ META_ADS_READ_TOKEN: "read-secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
+    const calls: { headers: HeadersInit }[] = [];
+    const client = new MetaAdsClient({}, (async (_url, init) => {
+      calls.push({ headers: init!.headers! });
+      return response({ success: true });
+    }) as typeof fetch);
+    await client.pause("12345");
+    assert.equal(new Headers(calls[0]!.headers).get("authorization"), "Bearer write-secret");
+  }));
+
+test("a POST without META_ADS_WRITE_TOKEN makes zero fetches and zero journal entries", async () =>
+  withEnv({ META_ADS_READ_TOKEN: "read-secret", META_ADS_WRITE_TOKEN: undefined }, async () => {
+    let fetches = 0;
+    let journalEntries = 0;
+    const client = new MetaAdsClient(
+      {
+        journal: async () => {
+          journalEntries++;
+        },
+      },
+      (async () => {
+        fetches++;
+        return response({});
+      }) as typeof fetch,
+    );
+    await assert.rejects(client.pause("12345"), /META_ADS_WRITE_TOKEN is not set/);
+    assert.equal(fetches, 0);
+    assert.equal(journalEntries, 0);
+    assert.equal(client.calls, 0);
+  }));
+
+test("the legacy META_ADS_TOKEN alone never authorizes a POST", async () =>
+  withEnv({ META_ADS_TOKEN: "legacy-secret", META_ADS_WRITE_TOKEN: undefined, META_ADS_READ_TOKEN: undefined }, async () => {
+    let fetches = 0;
+    const client = new MetaAdsClient({}, (async () => {
+      fetches++;
+      return response({});
+    }) as typeof fetch);
+    await assert.rejects(client.pause("12345"), /META_ADS_WRITE_TOKEN is not set/);
+    assert.equal(fetches, 0);
+  }));
+
 test("pause POSTs status=PAUSED and journals the write", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const calls: { url: string; method?: string; body?: unknown; headers: HeadersInit }[] = [];
     const journal: { method: string }[] = [];
     const client = new MetaAdsClient(
@@ -135,7 +189,7 @@ test("assertNotDestructive refuses deletes and terminal statuses", async () =>
   }));
 
 test("updateAdset sends only allowed keys and throws when empty", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const calls: { url: string; body?: unknown }[] = [];
     const client = new MetaAdsClient({}, (async (url, init) => {
       calls.push({ url: String(url), body: init?.body });
@@ -152,7 +206,7 @@ test("updateAdset sends only allowed keys and throws when empty", async () =>
   }));
 
 test("copyAdset POSTs /copies without ads and always PAUSED", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const calls: { url: string; body?: unknown }[] = [];
     const client = new MetaAdsClient({}, (async (url, init) => {
       calls.push({ url: String(url), body: init?.body });
@@ -168,7 +222,7 @@ test("copyAdset POSTs /copies without ads and always PAUSED", async () =>
   }));
 
 test("createAd always sends status=PAUSED, plus validate_only when requested", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const bodies: URLSearchParams[] = [];
     const client = new MetaAdsClient({}, (async (_url, init) => {
       bodies.push(new URLSearchParams(String(init?.body)));
@@ -183,7 +237,7 @@ test("createAd always sends status=PAUSED, plus validate_only when requested", a
   }));
 
 test("activate sends status=ACTIVE and write methods stay non-destructive", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const calls: string[] = [];
     const client = new MetaAdsClient({}, (async (_url, init) => {
       calls.push(String(init?.body));
@@ -196,7 +250,7 @@ test("activate sends status=ACTIVE and write methods stay non-destructive", asyn
   }));
 
 test("uploadVideo posts multipart, polls until ready and picks the preferred thumbnail", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const { writeFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const { tmpdir } = await import("node:os");
@@ -253,7 +307,7 @@ test("error messages include subcode and user fields", async () =>
   }));
 
 test("updateAdCreative sends only creative (+ execution_options), never status", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const bodies: URLSearchParams[] = [];
     const client = new MetaAdsClient({}, (async (_url, init) => {
       bodies.push(new URLSearchParams(String(init?.body)));
@@ -268,7 +322,7 @@ test("updateAdCreative sends only creative (+ execution_options), never status",
   }));
 
 test("uploadImage posts multipart and returns the first image hash", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const { writeFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const { tmpdir } = await import("node:os");
@@ -288,7 +342,7 @@ test("uploadImage posts multipart and returns the first image hash", async () =>
   }));
 
 test("uploadImage throws when the response has no image", async () =>
-  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+  withEnv({ META_ADS_TOKEN: "secret", META_ADS_WRITE_TOKEN: "write-secret" }, async () => {
     const { writeFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const { tmpdir } = await import("node:os");

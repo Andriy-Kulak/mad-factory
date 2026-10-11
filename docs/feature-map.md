@@ -39,7 +39,7 @@ journaled to `meta_ads_changes` and requiring a `--plan` document name.
 | `pnpm brief` | Goal, projection, last-N-days per channel, follow-ups due, stale data | DB read | same as scorecard + `experiments`, `experiment_log`, `experiment_campaigns`, `apple_ads_campaigns`, `apple_ads_keywords`, `social_posts`, `scrape_runs` | 0 |
 | `pnpm experiment upsert` / `list` / `log --due` / `resolve` / `history` | Experiment records, dated log and follow-ups | DB read/write | `experiments`, `experiment_campaigns`, `experiment_log` | 0 |
 | `pnpm mcp-key create` / `list` / `revoke` | Per-agent keys for `/api/mcp` (only the SHA-256 is stored) | DB read/write | `mcp_api_keys` | 0 |
-| `pnpm doctor` | Which integrations have keys here (names only), what each missing one turns on, database reachable | env read + DB read | `products` (count) | 0 |
+| `pnpm doctor` | Which integrations have keys here (names only), what each missing one turns on, whether the ad-account write keys are set here, database reachable | env read + DB read | `products` (count) | 0 |
 | `pnpm ready` | Local gate: format, typecheck, tests, db types, web typecheck, diff rules, privacy check and goal | repo checks + private-term sources | `products`, `tracked_sources` (privacy reads only) | 0 |
 | `pnpm format` / `pnpm format:check` | Biome formatting (formatter only; no linter) | repo files | — | 0 |
 | `pnpm privacy [--all]` | Block private terms in changed files (or all tracked files), paths, commit messages, branch names and PR text | DB/local/CI terms + git metadata | `products`, `tracked_sources`, `experiment_campaigns`, `apple_ads_keywords` (read-only) | 0 |

@@ -134,8 +134,8 @@ key, its feature stays off, and the command that needs it says which key to set 
 | ScrapeCreators | Competitor ads (`pnpm scrape`) and organic posts (`pnpm social`) | `SCRAPECREATORS_API_KEY` | `pnpm scrape --collector playwright` uses a local browser instead; no organic sync |
 | Cloudflare R2 | Media storage, so the web app can play videos | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, optional `R2_PUBLIC_URL` | Media is saved to `./data/media`; the web app shows placeholders |
 | Proxy | A rotating proxy for the browser collector | `PROXY_URL` | Direct connection |
-| Meta Ads | Your own Meta ad account (`pnpm meta-ads`) | `META_ADS_TOKEN` | The Meta ads tab stays empty |
-| Apple Ads | Your Apple Ads campaigns (`pnpm apple-ads`) | `APPLE_ADS_DIR`, or `APPLE_ADS_CLIENT_ID`, `APPLE_ADS_TEAM_ID`, `APPLE_ADS_KEY_ID`, `APPLE_ADS_PRIVATE_KEY` | The Apple ads tabs stay empty |
+| Meta Ads | Your own Meta ad account (`pnpm meta-ads`) | `META_ADS_READ_TOKEN` (legacy `META_ADS_TOKEN` still reads); `META_ADS_WRITE_TOKEN` only on the machine running approved writes | The Meta ads tab stays empty |
+| Apple Ads | Your Apple Ads campaigns (`pnpm apple-ads`) | `APPLE_ADS_READ_DIR`, or `APPLE_ADS_READ_CLIENT_ID`, `APPLE_ADS_READ_TEAM_ID`, `APPLE_ADS_READ_KEY_ID`, `APPLE_ADS_READ_PRIVATE_KEY` (legacy `APPLE_ADS_DIR`, `APPLE_ADS_CLIENT_ID`, `APPLE_ADS_TEAM_ID`, `APPLE_ADS_KEY_ID`, `APPLE_ADS_PRIVATE_KEY` still read); `APPLE_ADS_WRITE_DIR` or `APPLE_ADS_WRITE_CLIENT_ID`, `APPLE_ADS_WRITE_TEAM_ID`, `APPLE_ADS_WRITE_KEY_ID`, `APPLE_ADS_WRITE_PRIVATE_KEY` only on the machine running approved writes | The Apple ads tabs stay empty |
 | RevenueCat | Trials and revenue, so the overview shows profit (`pnpm revenuecat`) | `REVENUECAT_API_KEY` | Spend without revenue or profit |
 | Google Gemini | AI breakdowns of creatives (`pnpm creatives profile`) and the web Transcribe button on organic posts | `GEMINI_API_KEY` | The Creatives tab stays empty; posts can't be transcribed |
 | Vercel AI Gateway | `google/…` model ids for creative profiles | `AI_GATEWAY_API_KEY` | Gemini is called directly |
@@ -143,7 +143,8 @@ key, its feature stays off, and the command that needs it says which key to set 
 
 `.env.example` explains where to get each key. On a hosted web server, set only the Supabase and `AUTH_*`
 variables, plus `GEMINI_API_KEY` for the Transcribe button. Keep ad-account keys on the machine that runs the syncs, so a stolen web session has nothing that can
-change a campaign.
+change a campaign. Read keys (`*_READ_*`, or the legacy names) cover every sync; write keys (`*_WRITE_*`) live only
+on the machine where the owner approves writes — a machine without them cannot change an ad account at all.
 
 ## Using it
 
@@ -187,7 +188,8 @@ Most commands only read. The Meta write commands (`pause`, `activate`, `adset-up
 `ad-text`, `launch`) each need a reviewed plan document in `product_docs`, and every request is journaled before it is sent. Read one with
 `pnpm product docs show <slug> <name>`; add or update one with `pnpm product docs add <slug> --kind plan --file <path>`.
 New ads and copied ad sets are always
-created paused. Nothing in the code can delete or archive a campaign, ad set, ad or creative. The web app and the
+created paused. Nothing in the code can delete or archive a campaign, ad set, ad or creative. Every write also needs
+the `*_WRITE_*` key, which lives only on the machine that runs approved writes. The web app and the
 MCP server cannot change an ad account at all.
 
 ## Web app

@@ -1,6 +1,6 @@
 # Ad-account writes only with the owner's hand on the key
 
-Status: plan, not built. One open question (section 6) before the build starts.
+Status: step one is built — ad-account keys are split into READ and WRITE env vars, and WRITE keys live only on the machine that runs approved writes. The Keychain prompt and the approver described below are still the later step.
 
 ## 1. The problem
 

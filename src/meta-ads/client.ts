@@ -107,6 +107,7 @@ function errorMessage(status: number, body: unknown): string | null {
 
 export class MetaAdsClient {
   private readonly token: string;
+  private writeToken: string | undefined;
   private readonly fetchFn: typeof fetch;
   private readonly maxCalls: number;
   private readonly journal: MetaAdsClientOptions["journal"];
@@ -114,8 +115,9 @@ export class MetaAdsClient {
   calls = 0;
 
   constructor(options: MetaAdsClientOptions = {}, fetchFn: typeof fetch = fetch) {
-    this.token = optionalEnv("META_ADS_TOKEN") ?? "";
-    if (!this.token) throw new Error("Meta Ads token missing: set META_ADS_TOKEN (see .env.example)");
+    // META_ADS_TOKEN is the legacy name, kept for reads until the secrets are renamed.
+    this.token = optionalEnv("META_ADS_READ_TOKEN") ?? optionalEnv("META_ADS_TOKEN") ?? "";
+    if (!this.token) throw new Error("Meta Ads read token missing: set META_ADS_READ_TOKEN (see .env.example)");
     this.fetchFn = fetchFn;
     this.maxCalls = options.maxCalls ?? 40;
     if (!Number.isInteger(this.maxCalls) || this.maxCalls < 1) throw new Error("maxCalls must be a positive integer");
@@ -270,13 +272,20 @@ export class MetaAdsClient {
   // there is no public generic post/request method. Applies the call ceiling and
   // usage guard, journals with method POST and runs the shared error handling.
   private async post(path: string, params: Record<string, string>, body?: URLSearchParams | FormData): Promise<{ status: number; body: unknown }> {
+    // Writes need the WRITE key, resolved lazily so a read-only machine constructs and reads fine.
+    // Checked before anything else: no counter bump, no journal entry, no fetch. The legacy
+    // META_ADS_TOKEN is never used for writes.
+    this.writeToken ??= optionalEnv("META_ADS_WRITE_TOKEN");
+    if (!this.writeToken) {
+      throw new Error("Meta write blocked: META_ADS_WRITE_TOKEN is not set here. Writes run only where the owner has approved them (playbooks/ad-changes.md).");
+    }
     assertNotDestructive("POST", params);
     if (this.calls >= this.maxCalls) throw new Error("call ceiling reached");
     if (this.maxUsagePercent >= 90) throw new Error(`Meta usage at ${this.maxUsagePercent}%; stopping`);
     this.calls++;
 
     const journalBase = { method: "POST" as const, path, params, status: null as number | null, usage: null as MetaAdsCallJournalEntry["usage"] };
-    const headers: Record<string, string> = { Authorization: `Bearer ${this.token}` };
+    const headers: Record<string, string> = { Authorization: `Bearer ${this.writeToken}` };
     const payload = body ?? new URLSearchParams(params).toString();
     if (typeof payload === "string") headers["Content-Type"] = "application/x-www-form-urlencoded";
 
