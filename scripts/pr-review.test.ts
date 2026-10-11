@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDiff, reviewChanges, type ChangedFile } from "./pr-review.ts";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { collectChanges, mergeChanges, parseDiff, parseDiffHeader, parseNameStatus, reviewChanges, type ChangedFile } from "./pr-review.ts";
 
 const file = (path: string, added: string[], status: ChangedFile["status"] = "added"): ChangedFile => ({ path, status, added, removed: 0 });
 const levels = (files: ChangedFile[]) => reviewChanges(files).map((f) => `${f.level}:${f.path}`);
@@ -25,6 +29,84 @@ test("parseDiff reads status and added lines, including SQL comments that look l
     { path: "supabase/migrations/1_x.sql", status: "added", added: ["-- a comment", "create table t (id int);"], removed: 0 },
     { path: "src/a.ts", status: "modified", added: ["const x = 1;"], removed: 1 },
   ]);
+});
+
+test("parseDiffHeader reads plain and git-quoted paths", () => {
+  assert.equal(parseDiffHeader("diff --git a/src/a b/c.ts b/src/a b/c.ts"), "src/a b/c.ts");
+  assert.equal(parseDiffHeader('diff --git "a/supabase/migrations/1_\\303\\251.sql" "b/supabase/migrations/1_\\303\\251.sql"'), "supabase/migrations/1_\u00e9.sql");
+  assert.equal(parseDiffHeader('diff --git "a/x\\"y\\\\z\\t.sql" "b/x\\"y\\\\z\\t.sql"'), 'x"y\\z\t.sql');
+  assert.equal(parseDiffHeader("diff --git a/x b/y"), null);
+  assert.equal(parseDiffHeader('diff --git "a/x" b/x'), null);
+  assert.equal(parseDiffHeader("diff --cc x"), null);
+});
+
+test("parseDiff never drops or misattributes a section whose header it can't read", () => {
+  const diff = ["diff --git a/src/a.ts b/src/a.ts", "@@ -1 +1 @@", "+const x = 1;", "diff --cc weird", "@@@ -1 -1 +1 @@@", "+drop table t;"].join("\n");
+  const files = parseDiff(diff);
+  assert.deepEqual(files[0], { path: "src/a.ts", status: "modified", added: ["const x = 1;"], removed: 0 });
+  assert.equal(files.length, 2);
+  assert.ok(files[1]!.unreadable);
+  assert.deepEqual(levels(files), ["block:diff --cc weird"]);
+});
+
+test("mergeChanges blocks paths missing from either the name list or the diff", () => {
+  const names = parseNameStatus("A\0supabase/migrations/1_x.sql\0M\0src/a.ts\0");
+  assert.deepEqual(names, [
+    { path: "supabase/migrations/1_x.sql", status: "added" },
+    { path: "src/a.ts", status: "modified" },
+  ]);
+  const merged = mergeChanges(names, [file("src/a.ts", ["x"], "modified"), file("src/b.ts", ["y"], "modified")]);
+  assert.deepEqual(
+    merged.map((f) => [f.path, Boolean(f.unreadable)]),
+    [
+      ["supabase/migrations/1_x.sql", true],
+      ["src/a.ts", false],
+      ["src/b.ts", true],
+    ],
+  );
+});
+
+test("collectChanges sees migrations whose names git quotes, and reviewChanges blocks them", () => {
+  const root = mkdtempSync(join(tmpdir(), "pr-review-"));
+  try {
+    const git = (...args: string[]) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { cwd: root, encoding: "utf8" });
+    git("init", "-q");
+    mkdirSync(join(root, "supabase/migrations"), { recursive: true });
+    writeFileSync(join(root, "supabase/migrations/1_ok.sql"), "select 1;\n");
+    git("add", ".");
+    git("commit", "-qm", "base");
+    const base = git("rev-parse", "HEAD").trim();
+    const names = ["supabase/migrations/2_\u00e9.sql", 'supabase/migrations/3_a"b.sql', "supabase/migrations/4_a\\b.sql"];
+    for (const name of names) writeFileSync(join(root, name), "drop table ads;\n");
+    git("add", ".");
+    git("commit", "-qm", "change");
+    const { files } = collectChanges(base, root);
+    assert.deepEqual(
+      files.map((f) => [f.path, f.status, f.added, Boolean(f.unreadable)]),
+      names.map((n) => [n, "added", ["drop table ads;"], false]),
+    );
+    const findings = reviewChanges(files);
+    for (const name of names) {
+      assert.ok(
+        findings.some((f) => f.path === name && f.level === "block"),
+        `name blocked: ${name}`,
+      );
+      assert.ok(
+        findings.some((f) => f.path === name && f.level === "owner"),
+        `destructive SQL flagged: ${name}`,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("migration names must match <digits>_<lowercase_words>.sql", () => {
+  assert.deepEqual(levels([file("supabase/migrations/20261101000000_add_x.sql", ["select 1;"])]), []);
+  for (const name of ["supabase/migrations/x.sql", "supabase/migrations/1_X.sql", "supabase/migrations/1_a-b.sql", "supabase/migrations/1_x.SQL", "supabase/migrations/sub/1_x.sql"]) {
+    assert.deepEqual(levels([file(name, ["select 1;"])]), [`block:${name}`], name);
+  }
+  assert.deepEqual(levels([file("supabase/migrations/x.sql", [], "deleted")]), ["block:supabase/migrations/x.sql"]);
 });
 
 test("migrations: append-only, RLS required, destructive SQL needs the owner", () => {
