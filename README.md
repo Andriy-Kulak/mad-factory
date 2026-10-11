@@ -134,7 +134,7 @@ key, its feature stays off, and the command that needs it says which key to set 
 | RevenueCat | Trials and revenue, so the overview shows profit (`pnpm revenuecat`) | `REVENUECAT_API_KEY` | Spend without revenue or profit |
 | Google Gemini | AI breakdowns of creatives (`pnpm creatives profile`) and the web Transcribe button on organic posts | `GEMINI_API_KEY` | The Creatives tab stays empty; posts can't be transcribed |
 | Vercel AI Gateway | `google/…` model ids for creative profiles | `AI_GATEWAY_API_KEY` | Gemini is called directly |
-| Web sign-in (GitHub) | Sign in to the hosted web app | `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_ALLOWED_GITHUB_USERS`, optional `AUTH_URL` | The web app serves only `/setup`; `AUTH_DISABLED=true` skips sign-in in local `next dev` |
+| Web sign-in (GitHub) | Sign in to the hosted web app | `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_ALLOWED_GITHUB_IDS`, optional `AUTH_URL` | The web app serves only `/setup`; `AUTH_DISABLED=true` skips sign-in in local `next dev` |
 
 `.env.example` explains where to get each key. On a hosted web server, set only the Supabase and `AUTH_*`
 variables, plus `GEMINI_API_KEY` for the Transcribe button. Keep ad-account keys on the machine that runs the syncs, so a stolen web session has nothing that can
@@ -194,7 +194,7 @@ MCP server cannot change an ad account at all.
 - Meta ads, Apple ads, Apple keywords and My accounts for your own channels
 - Brand, for the product's profile and brand/research documents (`product_docs`; `pnpm product docs import|add|show|export`)
 
-Hosted, it signs in with GitHub and lets in only the usernames in `AUTH_ALLOWED_GITHUB_USERS`.
+Hosted, it signs in with GitHub and lets in only the numeric GitHub user IDs in `AUTH_ALLOWED_GITHUB_IDS` (an ID never changes, a username can be renamed and taken by someone else; find yours at `https://api.github.com/users/<username>`).
 
 ### MCP for agents
 

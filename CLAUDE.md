@@ -201,8 +201,8 @@ See docs/creative-profile.md.
 
 ## Web app
 - `pnpm web` starts the dev server; `pnpm web:build` builds. Shares the repo-root `.env` via next.config.ts.
-- Keep all Supabase access server-side (`server-only`). Sign-in is GitHub OAuth for the usernames in
-  `AUTH_ALLOWED_GITHUB_USERS` (web/lib/auth, web/proxy.ts gates every route); every new server action starts with
+- Keep all Supabase access server-side (`server-only`). Sign-in is GitHub OAuth for the numeric GitHub user IDs in
+  `AUTH_ALLOWED_GITHUB_IDS` (web/lib/auth, web/proxy.ts gates every route); every new server action starts with
   `await requireOwner()`. `AUTH_DISABLED=true` skips sign-in in local `next dev` only.
 - `/api/mcp` (web/lib/mcp/server.ts) is the read-only MCP server for outside agents, one key per agent
   (`pnpm mcp-key`). Its tools reuse the same loaders as the pages and `pnpm brief`; keep it read-only, and add new

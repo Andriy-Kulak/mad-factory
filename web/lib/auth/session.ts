@@ -1,5 +1,6 @@
 /**
- * Owner sign-in: GitHub OAuth, allowlisted by GitHub username, kept in an HMAC-signed cookie.
+ * Owner sign-in: GitHub OAuth, allowlisted by numeric GitHub user ID (usernames can be renamed and re-registered),
+ * kept in an HMAC-signed cookie.
  * Web Crypto only, so the proxy, route handlers and node --test can all import it.
  */
 
@@ -8,7 +9,9 @@ export const STATE_COOKIE = "mf_oauth_state";
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface Session {
-  /** GitHub username, lowercase. */
+  /** Numeric GitHub user ID; the allowlist is checked against this. */
+  id: number;
+  /** GitHub username at sign-in, lowercase; for display only. */
   login: string;
   /** Expiry, unix seconds. */
   exp: number;
@@ -18,8 +21,11 @@ export interface AuthConfig {
   clientId: string;
   clientSecret: string;
   secret: string;
+  /** Numeric GitHub user IDs, as decimal strings. */
   allowed: string[];
 }
+
+const ALLOWED_IDS_VAR = "AUTH_ALLOWED_GITHUB_IDS";
 
 /**
  * Sign-in settings, or the name of what is missing. AUTH_DISABLED=true turns the gate off outside
@@ -27,21 +33,22 @@ export interface AuthConfig {
  */
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): { disabled: true } | { disabled: false; config: AuthConfig | null; missing: string[] } {
   if (env.AUTH_DISABLED === "true" && env.NODE_ENV !== "production") return { disabled: true };
-  const allowed = (env.AUTH_ALLOWED_GITHUB_USERS ?? "")
+  const allowed = (env[ALLOWED_IDS_VAR] ?? "")
     .split(",")
-    .map((s) => s.trim().toLowerCase())
+    .map((s) => s.trim())
     .filter(Boolean);
+  const idsOk = allowed.length > 0 && allowed.every((id) => /^[1-9]\d*$/.test(id));
   const missing = [
     !env.AUTH_GITHUB_CLIENT_ID && "AUTH_GITHUB_CLIENT_ID",
     !env.AUTH_GITHUB_CLIENT_SECRET && "AUTH_GITHUB_CLIENT_SECRET",
     (env.AUTH_SECRET ?? "").length < 32 && "AUTH_SECRET (32+ characters)",
-    !allowed.length && "AUTH_ALLOWED_GITHUB_USERS",
+    !idsOk && `${ALLOWED_IDS_VAR} (numeric GitHub user IDs)`,
   ].filter((m): m is string => Boolean(m));
   if (missing.length) return { disabled: false, config: null, missing };
   return { disabled: false, missing, config: { clientId: env.AUTH_GITHUB_CLIENT_ID!, clientSecret: env.AUTH_GITHUB_CLIENT_SECRET!, secret: env.AUTH_SECRET!, allowed } };
 }
 
-export const isAllowed = (config: AuthConfig, login: string) => config.allowed.includes(login.toLowerCase());
+export const isAllowed = (config: AuthConfig, id: unknown) => typeof id === "number" && Number.isSafeInteger(id) && id > 0 && config.allowed.includes(String(id));
 
 const encoder = new TextEncoder();
 
@@ -76,8 +83,8 @@ export async function verifySession(token: string | undefined, config: AuthConfi
     const ok = await crypto.subtle.verify("HMAC", await hmacKey(config.secret, "verify"), fromBase64url(sig) as BufferSource, encoder.encode(payload));
     if (!ok) return null;
     const s = JSON.parse(new TextDecoder().decode(fromBase64url(payload))) as Partial<Session>;
-    if (typeof s.login !== "string" || typeof s.exp !== "number" || s.exp <= nowSeconds || !isAllowed(config, s.login)) return null;
-    return { login: s.login, exp: s.exp };
+    if (typeof s.login !== "string" || typeof s.exp !== "number" || s.exp <= nowSeconds || !isAllowed(config, s.id)) return null;
+    return { id: s.id as number, login: s.login, exp: s.exp };
   } catch {
     return null;
   }

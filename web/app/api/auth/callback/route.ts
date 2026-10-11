@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { appOrigin, cookieOptions } from "@/lib/auth/server";
 import { isAllowed, readAuthConfig, safeNext, SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, STATE_COOKIE } from "@/lib/auth/session";
 
-/** GitHub sends the owner back here: check the state, swap the code for a token, read the username, check the allowlist. */
+/** GitHub sends the owner back here: check the state, swap the code for a token, read the numeric user ID, check the allowlist. */
 export async function GET(req: NextRequest) {
   const origin = appOrigin(req.nextUrl.origin);
   const fail = (error: string) => {
@@ -30,11 +30,11 @@ export async function GET(req: NextRequest) {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": "mad-factory" },
     cache: "no-store",
   });
-  const login = userRes.ok ? ((await userRes.json()) as { login?: string }).login : undefined;
-  if (!login) return fail("github");
-  if (!isAllowed(auth.config, login)) return fail("not_allowed");
+  const user = userRes.ok ? ((await userRes.json()) as { id?: unknown; login?: unknown }) : undefined;
+  if (typeof user?.id !== "number" || typeof user.login !== "string") return fail("github");
+  if (!isAllowed(auth.config, user.id)) return fail("not_allowed");
 
-  const session = await signSession({ login: login.toLowerCase(), exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }, auth.config.secret);
+  const session = await signSession({ id: user.id, login: user.login.toLowerCase(), exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }, auth.config.secret);
   const res = NextResponse.redirect(new URL(safeNext(decodeURIComponent(nextEncoded ?? "")), origin));
   res.cookies.set(SESSION_COOKIE, session, cookieOptions(origin, SESSION_TTL_SECONDS));
   res.cookies.delete({ name: STATE_COOKIE, path: "/api/auth" });
