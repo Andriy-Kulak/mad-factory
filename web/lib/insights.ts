@@ -3,7 +3,7 @@ import type { AdRelation } from "../../src/lib/tracked-source-input.ts";
 
 /*
  * Competitor insights: per angle, persona, hook type, format or landing page, how many ad cards use it, how many of
- * those are working, and whether working ads over-index on it (lift). Two windows: all time (working = running 21+
+ * those are working, and which advertisers they come from. Two windows: all time (working = running 21+
  * days and top 10 or 5+ versions) and the last 14 days (cards launched since, early signal = still running and
  * already top 10 by impressions). Pure, so it runs on server and client; the page loads every card once (lib/queries.ts).
  */
@@ -34,11 +34,8 @@ export interface InsightRow {
   working: number;
   /** Still running after 21+ days (all time) or still running (last 14 days), whatever the rank: the softer signal. */
   alive: number;
-  /** Share of all ads in scope, and of all working ads. */
+  /** Share of all ads in scope. */
   adShare: number;
-  workingShare: number;
-  /** workingShare ÷ adShare; null when nothing in scope is working. */
-  lift: number | null;
   advertisers: number;
   /** The advertiser behind most of this row's working ads, when there are any. */
   top: { name: string; working: number } | null;
@@ -88,7 +85,6 @@ export interface WorkingHook {
   text: string;
 }
 
-export const LOW_N = 3;
 const DAY_MS = 86_400_000;
 const WINDOWS: InsightWindow[] = ["all", "14d"];
 
@@ -101,7 +97,7 @@ export function parseInsightFilters(sp: SearchParams): InsightFilters {
   const relation = one(sp.rel);
   return {
     dim: isInsightDim(dim) ? dim : "angle",
-    view: one(sp.view) === "advertisers" ? "advertisers" : "totals",
+    view: one(sp.view) === "totals" ? "totals" : "advertisers",
     window: WINDOWS.includes(window) ? window : "all",
     relation: relation === "all" ? null : relation === "inspiration" ? "inspiration" : "competitor",
     value: one(sp.v) || null,
@@ -112,7 +108,7 @@ export function parseInsightFilters(sp: SearchParams): InsightFilters {
 export function insightFiltersHref(f: InsightFilters): string {
   const s = new URLSearchParams();
   if (f.dim !== "angle") s.set("tab", f.dim);
-  if (f.view !== "totals") s.set("view", f.view);
+  if (f.view !== "advertisers") s.set("view", f.view);
   if (f.window !== "all") s.set("window", f.window);
   if (f.relation !== "competitor") s.set("rel", f.relation ?? "all");
   if (f.value) s.set("v", f.value);
@@ -159,7 +155,6 @@ export function insightTable(cards: AdCard[], f: InsightFilters, now = Date.now(
     const [topName, topCount] = [...byAdvertiser].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? [];
     const running = group.filter((c) => c.isActive === true && c.days != null).map((c) => c.days!);
     const adShare = group.length / total;
-    const workingShare = working ? work.length / working : 0;
     return {
       value,
       label: dimValueLabel(f.dim, value),
@@ -167,8 +162,6 @@ export function insightTable(cards: AdCard[], f: InsightFilters, now = Date.now(
       working: work.length,
       alive: group.filter((c) => isAliveIn(c, f.window)).length,
       adShare,
-      workingShare,
-      lift: working ? workingShare / adShare : null,
       advertisers: new Set(group.map((c) => c.advertiserId ?? c.advertiserName)).size,
       top: topName ? { name: topName, working: topCount! } : null,
       longest: running.length ? Math.max(...running) : null,

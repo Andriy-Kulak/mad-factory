@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { INSIGHT_DIMS, type AdCard, type InsightDim } from "@/lib/ad-cards";
 import {
-  advertiserMatrix, browseHref, drillCards, insightFiltersHref, insightTable, LOW_N, workingHooks,
+  advertiserMatrix, browseHref, drillCards, insightFiltersHref, insightTable, workingHooks,
   type DrillMode, type InsightFilters, type InsightRow, type InsightView, type InsightWindow,
 } from "@/lib/insights";
 import { DataTable, type Column, type Row } from "@/components/data-table";
@@ -24,8 +24,8 @@ const WINDOWS: { key: InsightWindow; label: string }[] = [
   { key: "14d", label: "Last 14 days" },
 ];
 const VIEWS: { key: InsightView; label: string }[] = [
-  { key: "totals", label: "Totals" },
   { key: "advertisers", label: "By advertiser" },
+  { key: "totals", label: "Totals" },
 ];
 const RULE: Record<InsightWindow, string> = {
   all: "Working = still running after 21+ days and top 10 by impressions or 5+ versions.",
@@ -63,7 +63,7 @@ export function InsightsView({ cards, slug, productId, favoriteIds, initial, has
             active={f.relation ?? "all"} onChange={(k) => rescope({ relation: k === "all" ? null : (k as InsightFilters["relation"]) })} />
         )}
       </div>
-      <p className="text-[13px] text-fg-3 mb-4 max-w-[760px]">{RULE[f.window]} Lift = share of working ads ÷ share of all ads; 2.0 means twice as common among working ads. Click a row or a cell to see its ads.</p>
+      <p className="text-[13px] text-fg-3 mb-4 max-w-[760px]">{RULE[f.window]} Click a row or a cell to see its ads.</p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <Stat label={f.dim === "landing" ? "Ads" : "Profiled ads"} value={table.total} hint={f.window === "14d" ? "launched in 14 days" : "ad cards"} />
@@ -93,15 +93,12 @@ function TotalsTable({ rows, f, onSelect }: { rows: InsightRow[]; f: InsightFilt
     { label: INSIGHT_DIMS[f.dim] },
     { label: "Ads", align: "right" },
     { label: WORKING[f.window], align: "right" },
-    { label: "Lift", align: "right", title: "Share of working ads ÷ share of all ads" },
     { label: ALIVE[f.window], align: "right", title: "Still running, whatever the rank: a softer signal than working" },
     { label: "Advertisers", align: "right" },
     { label: "Longest running", align: "right", title: "Among this row's ads that are still running" },
     ...(f.window === "all" ? [{ label: "New in 30d", align: "right" as const }] : []),
   ];
   const data: Row[] = rows.map((r) => {
-    const low = r.working > 0 && r.working < LOW_N;
-    const strong = r.lift != null && r.lift >= 1.2 && !low;
     const active = f.value === r.value && !f.advertiserId;
     return {
       id: r.value,
@@ -111,15 +108,9 @@ function TotalsTable({ rows, f, onSelect }: { rows: InsightRow[]; f: InsightFilt
       cells: [
         { node: rowName(f, r.label, active), value: r.label },
         { node: <Pair top={<span className="num">{r.ads}</span>} sub={`${pct(r.adShare)} of ads`} />, value: r.ads },
-        { node: r.working ? <Pair strong top={<span className="num">{r.working}</span>} sub={`${pct(r.workingShare)} of working`} /> : "–", value: r.working, dim: !r.working },
         {
-          node: r.lift == null || !r.working ? <span className="text-fg-3">–</span> : (
-            <span className="inline-flex flex-col items-end leading-tight">
-              <span className="inline-flex items-center gap-1.5">{low && <Badge tone="warn">low n</Badge>}<span className={`num ${strong ? "text-accent font-semibold" : ""}`}>{r.lift.toFixed(2)}</span></span>
-              {r.top && <span className="text-[11px] text-fg-3">{r.working === 1 ? r.top.name : `${r.top.working} of ${r.working}: ${r.top.name}`}</span>}
-            </span>
-          ),
-          value: r.working ? r.lift : null,
+          node: r.working ? <Pair strong top={<span className="num text-accent">{r.working}</span>} sub={r.top && (r.working === 1 ? r.top.name : r.top.working === r.working ? `all ${r.top.name}` : `${r.top.working} from ${r.top.name}`)} /> : "–",
+          value: r.working, dim: !r.working,
         },
         { node: r.alive ? <span className="num">{r.alive}</span> : "–", value: r.alive, dim: !r.alive },
         { node: <span className="num">{r.advertisers}</span>, value: r.advertisers },

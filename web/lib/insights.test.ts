@@ -25,7 +25,7 @@ function cards(rows: AdSourceRow[], ranks: Record<string, number>, profiles: Rec
     profiles[c.id] === null ? c : { ...c, profile: { fields: fields(profiles[c.id] ?? {}), hook: hooks[c.id] ?? null } });
 }
 
-const ALL: InsightFilters = { dim: "angle", view: "totals", window: "all", relation: null, value: null, advertiserId: null };
+const ALL: InsightFilters = { dim: "angle", view: "advertisers", window: "all", relation: null, value: null, advertiserId: null };
 const DEFAULTS: InsightFilters = { ...ALL, relation: "competitor" };
 
 const sample = cards(
@@ -43,18 +43,17 @@ const sample = cards(
   { w1: "Ever go blank?", new: "Try this" },
 );
 
-test("all time: working share, lift and concentration per angle", () => {
+test("all time: ads, working ads and who they come from per angle", () => {
   const t = insightTable(sample, ALL, NOW);
   assert.equal(t.total, 6);
   assert.equal(t.working, 2);
   assert.equal(t.unprofiled, 1);
   const a1 = t.rows.find((r) => r.value === "a1")!;
   assert.deepEqual([a1.ads, a1.working, a1.alive, a1.advertisers], [2, 2, 2, 2]);
-  assert.equal(a1.lift, (2 / 2) / (2 / 6));
   assert.deepEqual(a1.top, { name: "Page one", working: 1 });
   assert.equal(t.rows[0]!.value, "a1");
   const a2 = t.rows.find((r) => r.value === "a2")!;
-  assert.deepEqual([a2.working, a2.lift, a2.longest], [0, 0, sample.find((c) => c.id === "old")!.days]);
+  assert.deepEqual([a2.working, a2.top, a2.longest], [0, null, sample.find((c) => c.id === "old")!.days]);
 });
 
 test("last 14 days: only cards launched since, early signal counts as working", () => {
@@ -84,7 +83,7 @@ test("working hooks follow the window", () => {
 });
 
 test("filters round-trip through the URL, and counts link into Competitor ads", () => {
-  const f: InsightFilters = { dim: "hook", view: "advertisers", window: "14d", relation: "inspiration", value: "demo_first", advertiserId: "p3" };
+  const f: InsightFilters = { dim: "hook", view: "totals", window: "14d", relation: "inspiration", value: "demo_first", advertiserId: "p3" };
   const qs = new URLSearchParams(insightFiltersHref(f).slice(1));
   assert.deepEqual(parseInsightFilters(Object.fromEntries(qs)), f);
   assert.deepEqual(parseInsightFilters({ tab: "bogus" }), DEFAULTS);
