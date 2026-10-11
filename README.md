@@ -74,8 +74,9 @@ stays generic. Every integration except the database is optional: turn on only w
 | **SEO** | 🛠 Next | Search rankings and organic traffic for your site and app store pages. |
 
 **Automations.** The syncs and the daily review (`playbooks/daily-review.md`) run on a schedule. Today that
-scheduling lives in Devin and isn't part of this repository; it may be open-sourced later. Every step is a plain
-`pnpm` command, so cron, GitHub Actions or any agent that can run a shell works too.
+schedule is a Devin automation (see [What Devin does here today](#what-devin-does-here-today)) and isn't part of
+this repository. Every step is a plain `pnpm` command, so cron, GitHub Actions or any agent that can run a shell
+works too.
 
 ## How it works
 
@@ -217,6 +218,26 @@ The repository is set up for coding and marketing agents working side by side:
 - [playbooks/](playbooks) holds the operating method: a daily review, plus Meta Ads and Apple Ads playbooks.
 - `pnpm ready` runs every gate before a change merges: typecheck, tests, database types, and the repository's
   review rules.
+
+### What Devin does here today
+
+[Devin](https://devin.ai) does most of the day-to-day work. The rules it follows are the same ones in CLAUDE.md, so
+Claude or Codex could do any of it.
+
+- **Every morning, on a schedule.** A Devin automation starts a session once a day. The session follows a prompt
+  that first runs the syncs as plain `pnpm` commands (Apple Ads, RevenueCat, Meta Ads, Ad Library, organic), each
+  once with at most one retry. Then it follows `playbooks/daily-review.md`: it reads `pnpm brief`, checks each
+  running experiment against its rules, drafts plans, logs observations and follow-ups, and sends a short report
+  that is easy to read on a phone. That session never changes an ad account. Its prompt forbids write commands,
+  and its network allowlist only reaches the APIs it syncs from. The only writes it makes are `experiment_log`
+  rows.
+- **Ad-account changes you approve in chat.** You ask for a change, Devin writes a plan to `product_docs`, and after
+  you say yes it runs the write command (`pnpm meta-ads pause|activate|launch|...`). Every write is journaled before
+  it is sent, and nothing is ever deleted.
+- **Research.** Adding competitor and inspiration accounts, backfilling their ads and reels, and breaking down
+  creatives with Gemini to find the hooks and angles that keep running.
+- **Building Mad Factory itself.** Devin opens a branch and a PR for each change and runs `pnpm ready`. The owner
+  merges.
 
 ## Development
 
