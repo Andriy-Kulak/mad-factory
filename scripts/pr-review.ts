@@ -58,14 +58,109 @@ const GENERATED = /(^|\/)(database\.types\.ts|pnpm-lock\.yaml)$/;
 const MIGRATION = /^supabase\/migrations\/.+\.sql$/;
 /** Where the ad-account write allowlists live. Widening them widens what any agent can do to a live account. */
 const AD_WRITE_GUARDS = ["src/meta-ads/client.ts", "src/apple-ads/client.ts"];
-const DESTRUCTIVE_SQL =
-  /\b(drop\s+(table|column|schema|view|materialized\s+view|function|type)|truncate|delete\s+from|disable\s+row\s+level\s+security)\b|\balter\s+table\b[^;]*\bdrop\b(?!\s+(constraint|default|not\s+null))|\bupdate\s+\w+\s+set\b/i;
-const DELETE_CALL = /\.delete\(\s*\)/;
+const IDENT = String.raw`(?:"(?:[^"]|"")*"|[a-z_][\w$]*)`;
+const NAME = String.raw`${IDENT}(?:\s*\.\s*${IDENT})*`;
+const DESTRUCTIVE_SQL = new RegExp(
+  [
+    String.raw`\bdrop\s+(?!(?:trigger|index|constraint|default|not\s+null|identity|expression)\b)`,
+    String.raw`\btruncate\b`,
+    String.raw`\bdelete\s+from\b`,
+    String.raw`\bupdate\s+(?:only\s+)?${NAME}\s*\*?(?:\s+(?:as\s+)?${IDENT})?\s+set\b`,
+    String.raw`\bmerge\s+into\b`,
+    String.raw`\b(?:disable|no\s+force)\s+row\s+level\s+security\b`,
+    String.raw`\bgrant\b`,
+    String.raw`\b(?:create|alter)\s+(?:or\s+replace\s+)?policy\b`,
+  ].join("|"),
+  "i",
+);
+const CREATE_TABLE = new RegExp(String.raw`\bcreate\s+(?:(?:global|local)\s+)?(?:(?:temp|temporary|unlogged)\s+)?table\s+(?:if\s+not\s+exists\s+)?(${NAME})`, "gi");
+const ENABLE_RLS = new RegExp(String.raw`\balter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?(${NAME})\s+enable\s+row\s+level\s+security\b`, "gi");
 const LARGE_DIFF = 600;
 const LARGE_NEW_FILE = 400;
 const FEATURE_MAP = "docs/feature-map.md";
 
 const isTest = (p: string) => /\.test\.ts$/.test(p);
+
+/**
+ * SQL with comments removed, read the way Postgres lexes it, so `--` or `/*` inside a string or quoted name is not a
+ * comment. String and dollar-quoted bodies are either kept (themselves cleaned, since `do '...'`, `do $$...$$` and
+ * `execute '...'` run them) or blanked. `backslash` reads `\'` as an escaped quote in every string, as Postgres does
+ * with standard_conforming_strings off. Unterminated strings and comments are read as code.
+ */
+export function sqlCode(sql: string, opts: { strings: "keep" | "blank"; backslash: boolean }, depth = 0): string {
+  const identChar = (c: string | undefined) => !!c && /[\w$]/.test(c);
+  const body = (content: string) => (opts.strings === "blank" ? " " : ` ${depth < 8 ? sqlCode(content, opts, depth + 1) : content} `);
+  let out = "";
+  let i = 0;
+  while (i < sql.length) {
+    const c = sql[i]!;
+    const next = sql[i + 1];
+    if (c === "-" && next === "-") {
+      const end = sql.indexOf("\n", i);
+      i = end < 0 ? sql.length : end;
+      out += " ";
+    } else if (c === "/" && next === "*") {
+      let level = 0;
+      let j = i;
+      while (j < sql.length) {
+        if (sql.startsWith("/*", j)) level++, (j += 2);
+        else if (sql.startsWith("*/", j)) {
+          level--;
+          j += 2;
+          if (level === 0) break;
+        } else j++;
+      }
+      if (level > 0) (out += c), i++;
+      else (out += " "), (i = j);
+    } else if (c === "'") {
+      const escapes = opts.backslash || (/[eE]/.test(sql[i - 1] ?? "") && !identChar(sql[i - 2]));
+      let content = "";
+      let j = i + 1;
+      for (; j < sql.length; j++) {
+        if (escapes && sql[j] === "\\") content += sql[++j] ?? "";
+        else if (sql[j] === "'" && sql[j + 1] === "'") (content += "'"), j++;
+        else if (sql[j] === "'") break;
+        else content += sql[j];
+      }
+      out += body(content);
+      i = j + 1;
+    } else if (c === '"') {
+      const m = /^"(?:[^"]|"")*"/.exec(sql.slice(i));
+      const quoted = m ? m[0] : c;
+      out += quoted;
+      i += quoted.length;
+    } else if (c === "$" && !identChar(sql[i - 1]) && /^\$(?:[A-Za-z_][\w]*)?\$/.test(sql.slice(i))) {
+      const tag = /^\$(?:[A-Za-z_][\w]*)?\$/.exec(sql.slice(i))![0];
+      const end = sql.indexOf(tag, i + tag.length);
+      out += body(sql.slice(i + tag.length, end < 0 ? sql.length : end));
+      i = end < 0 ? sql.length : end + tag.length;
+    } else (out += c), i++;
+  }
+  return out;
+}
+
+/** Schema-qualified, case-folded table names captured by group 1 of a global regex. */
+function tableNames(code: string, re: RegExp): string[] {
+  return [...code.matchAll(re)].map((m) => {
+    const parts = (m[1]!.match(/"(?:[^"]|"")*"|[^\s."]+/g) ?? []).map((p) => (p.startsWith('"') ? p.slice(1, -1).replace(/""/g, '"') : p.toLowerCase()));
+    return (parts.length === 1 ? ["public", ...parts] : parts).join(".");
+  });
+}
+
+/**
+ * A supabase-js `.delete(...)` (any arguments, also `["delete"]`). A `name.delete(arg)` on a plain variable is a
+ * Map/Set/cookie delete unless its argument is empty or an object literal (the supabase-js options form).
+ */
+function addsDbDelete(line: string): boolean {
+  if (/\[\s*["'`]delete["'`]\s*\]/.test(line)) return true;
+  for (const m of line.matchAll(/\.\s*delete\s*\(\s*(.?)/g)) {
+    const receiver = line.slice(0, m.index).trimEnd();
+    if (!receiver || /[)\]]$/.test(receiver)) return true;
+    if (/(^|\.)cookies$/.test(receiver)) continue;
+    if (m[1] === ")" || m[1] === "{" || m[1] === "") return true;
+  }
+  return false;
+}
 
 /** Checks a diff against the repo's hard rules. */
 export function reviewChanges(files: ChangedFile[]): Finding[] {
@@ -77,15 +172,18 @@ export function reviewChanges(files: ChangedFile[]): Finding[] {
 
     if (MIGRATION.test(f.path)) {
       if (f.status !== "added") out.push({ level: "block", path: f.path, message: "Migrations are append-only once committed: add a new migration instead of editing or deleting this one." });
-      const sql = f.added.map((l) => l.replace(/--.*$/, "")).join("\n");
-      if (DESTRUCTIVE_SQL.test(sql)) out.push({ level: "owner", path: f.path, message: "Destructive SQL (drop/truncate/delete/update): needs the owner's approval." });
-      if (/\bcreate\s+table\b/i.test(sql) && !/enable\s+row\s+level\s+security/i.test(sql))
-        out.push({ level: "block", path: f.path, message: "Every new table must `enable row level security` in its migration." });
+      const sql = f.added.join("\n");
+      // Read both ways a string can end (standard_conforming_strings on or off), and flag what either reading finds.
+      const code = [false, true].map((backslash) => sqlCode(sql, { strings: "keep", backslash }));
+      if (code.some((c) => DESTRUCTIVE_SQL.test(c))) out.push({ level: "owner", path: f.path, message: "Destructive SQL (drop/truncate/delete/update/grant/policy): needs the owner's approval." });
+      const enabled = [false, true].map((backslash) => tableNames(sqlCode(sql, { strings: "blank", backslash }), ENABLE_RLS));
+      const missing = [...new Set(code.flatMap((c) => tableNames(c, CREATE_TABLE)))].filter((t) => !enabled.every((e) => e.includes(t)));
+      if (missing.length) out.push({ level: "block", path: f.path, message: `Every new table must \`enable row level security\` in its migration (missing: ${missing.join(", ")}).` });
     }
 
     if (AD_WRITE_GUARDS.includes(f.path)) out.push({ level: "owner", path: f.path, message: "Changes the ad-account write guard: needs the owner's approval." });
 
-    if (CODE_DIRS.test(f.path) && !isTest(f.path) && f.path !== "scripts/pr-review.ts" && f.added.some((l) => DELETE_CALL.test(l))) {
+    if (CODE_DIRS.test(f.path) && !isTest(f.path) && f.path !== "scripts/pr-review.ts" && f.added.some(addsDbDelete)) {
       out.push({ level: "owner", path: f.path, message: "Adds a database delete: needs the owner's approval." });
     }
 
