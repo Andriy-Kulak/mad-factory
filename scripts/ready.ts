@@ -25,7 +25,8 @@ const { values } = parseArgs({
 let failed = false;
 
 // 1. Verification.
-const CHECKS: [string, string[]][] = [
+const CHECKS: [string, string[], string?][] = [
+  ["format", ["format:check"], "run `pnpm format` to fix formatting"],
   ["typecheck", ["typecheck"]],
   ["tests", ["test"]],
   ["db types up to date", ["db:types:check"]],
@@ -34,13 +35,21 @@ const CHECKS: [string, string[]][] = [
 console.log("== Checks");
 if (values["skip-checks"]) console.log("  skipped (--skip-checks): not ready until they run");
 else {
-  for (const [name, args] of CHECKS) {
+  for (const [name, args, hint] of CHECKS) {
     const r = spawnSync("pnpm", ["-s", ...args], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     const ok = r.status === 0;
     console.log(`  ${ok ? "ok  " : "FAIL"} ${name}`);
     if (!ok) {
       failed = true;
-      console.log(`${r.stdout}${r.stderr}`.trim().split("\n").slice(-25).map((l) => `       ${l}`).join("\n"));
+      console.log(
+        `${r.stdout}${r.stderr}`
+          .trim()
+          .split("\n")
+          .slice(-25)
+          .map((l) => `       ${l}`)
+          .join("\n")
+      );
+      if (hint) console.log(`       ${hint}`);
     }
   }
 }

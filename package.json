@@ -14,6 +14,8 @@
     "db:migrate": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/migrate.ts",
     "db:check": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts scripts/check-db.ts",
     "typecheck": "tsc --noEmit",
+    "format": "biome format --write",
+    "format:check": "biome format",
     "test": "node --test --no-warnings=ExperimentalWarning 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'web/lib/**/*.test.ts'",
     "db:migrate:local": "node --no-warnings=ExperimentalWarning scripts/migrate-local.ts",
     "web": "pnpm --filter web dev",
@@ -43,6 +45,7 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^22.10.0",
     "typescript": "^5.7.0"
