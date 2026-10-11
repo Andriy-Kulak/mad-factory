@@ -137,13 +137,13 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
   const db = getDb();
   const cols = `tracked_source_id,ad:ads(id,external_id,advertiser_id,advertiser_name,body_text,title,cta_text,link_url,start_date,end_date,is_active,platforms,collation_id,collation_count,first_seen_at,
     avatar:raw->snapshot->>page_profile_picture_url,caption:raw->snapshot->>caption,format:raw->snapshot->>display_format,
-    ad_creatives(position,creatives(public_url,media_type)))`;
+    ad_creatives(position,creatives(sha256,public_url,media_type)))`;
   const page = (from: number) => db.from("product_ads").select(cols).eq("product_id", productId).order("ad_id").range(from, from + 999);
   type Row = {
     id: string; external_id: string; advertiser_id: string | null; advertiser_name: string | null; body_text: string | null; title: string | null; cta_text: string | null;
     link_url: string | null; start_date: string | null; end_date: string | null; is_active: boolean | null; platforms: string[]; collation_id: string | null;
     collation_count: number | null; first_seen_at: string; avatar: string | null; caption: string | null; format: string | null;
-    ad_creatives: { position: number; creatives: { public_url: string | null; media_type: string } | null }[];
+    ad_creatives: { position: number; creatives: { sha256: string; public_url: string | null; media_type: string } | null }[];
   };
   const [count, ranks, relations] = await Promise.all([
     db.from("product_ads").select("ad_id", { count: "exact", head: true }).eq("product_id", productId),
@@ -183,7 +183,7 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
         collationId: ad.collation_id,
         collationCount: ad.collation_count,
         firstSeenAt: ad.first_seen_at,
-        media: media?.public_url ? { url: media.public_url, type: media.media_type } : null,
+        media: media?.public_url ? { url: media.public_url, type: media.media_type, sha256: media.sha256 } : null,
         relation,
       });
     }

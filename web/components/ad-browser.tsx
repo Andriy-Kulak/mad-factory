@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { activeAdFilterCount, adFiltersHref, applyAdFilters, NO_AD_FILTERS, sortAdCards, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
-import { AdGrid, AdPreview, AdTable, PageAvatar } from "@/components/ad-card";
-import { ActiveFilters, BrowseLayout, Chips, FilterSection, LoadMore, MultiSelect, NoMatches, ResultsBar, SearchInput, Toggle, useInfiniteList, useUrlState, type ActiveFilter } from "@/components/controls";
+import { AdGrid, AdPreview, AdTable, PageAvatar, type Favorites } from "@/components/ad-card";
+import { setFavorite } from "@/lib/favorite-actions";
+import { ActiveFilters, BrowseLayout, Chips, FilterSection, LoadMore, MultiSelect, NoMatches, ResultsBar, SearchInput, Toggle, useFavoriteSet, useInfiniteList, useUrlState, type ActiveFilter } from "@/components/controls";
 
 /*
  * Competitor ads browser. Every tracked ad arrives once from the server as a card; filters and sorts run here so
@@ -24,10 +25,16 @@ const LAUNCHED = [7, 30, 90];
 const MIN_DAYS = [7, 30, 90];
 const PAGE_SIZE = 36;
 
-export function AdBrowser({ ads, slug, initial }: { ads: AdCard[]; slug: string; initial: AdFilters }) {
+export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads: AdCard[]; slug: string; productId: string; favoriteIds: string[]; initial: AdFilters }) {
   const [f, setF] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
-  const matched = useMemo(() => sortAdCards(applyAdFilters(ads, f), f.sort), [ads, f]);
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "ad", ids, on));
+  // The favorites filter uses the set as of when it was applied, so unstarring a card doesn't make it vanish mid-browse.
+  const [filterFavs, setFilterFavs] = useState(favs);
+  const matched = useMemo(() => sortAdCards(applyAdFilters(ads, f, Date.now(), filterFavs), f.sort), [ads, f, filterFavs]);
+  const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
+  const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
+  const favCount = useMemo(() => ads.filter((a) => a.memberIds.some((id) => favs.has(id))).length, [ads, favs]);
   const list = useInfiniteList(matched.length, PAGE_SIZE);
   const shown = useMemo(() => matched.slice(0, list.limit), [matched, list.limit]);
   const count = activeAdFilterCount(f);
@@ -35,6 +42,7 @@ export function AdBrowser({ ads, slug, initial }: { ads: AdCard[]; slug: string;
 
   const update = (patch: Partial<AdFilters>) => {
     setF((cur) => ({ ...cur, ...patch }));
+    setFilterFavs(favs);
     list.reset();
   };
   const clear = () => update(NO_AD_FILTERS);
@@ -89,6 +97,9 @@ export function AdBrowser({ ads, slug, initial }: { ads: AdCard[]; slug: string;
         <Chips items={[{ key: "", label: "All" }, { key: "video", label: "Video" }, { key: "image", label: "Image" }]} active={f.format ?? ""}
           onChange={(k) => update({ format: (k || null) as AdFilters["format"] })} />
       </FilterSection>
+      <FilterSection label="Favorites" hint="star an ad to save it">
+        <Chips items={[{ key: "", label: "All ads" }, { key: "1", label: `Favorites only (${favCount})` }]} active={f.favorites ? "1" : ""} onChange={(k) => update({ favorites: k === "1" })} />
+      </FilterSection>
       <FilterSection label="Winners" hint="top 10 by impressions, running 21+ days">
         <Chips items={[{ key: "", label: "All ads" }, { key: "1", label: "Winners only" }]} active={f.winners ? "1" : ""} onChange={(k) => update({ winners: k === "1" })} />
       </FilterSection>
@@ -104,6 +115,7 @@ export function AdBrowser({ ads, slug, initial }: { ads: AdCard[]; slug: string;
   );
 
   const chips: ActiveFilter[] = [
+    ...(f.favorites ? [{ key: "fav", label: "Favorites", remove: () => update({ favorites: false }) }] : []),
     ...(f.relation ? [{ key: "rel", label: f.relation === "competitor" ? "Direct competitors" : "Adjacent niches", remove: () => update({ relation: null }) }] : []),
     ...f.advertisers.map((id) => ({ key: `adv:${id}`, label: advertiserById.get(id)?.name ?? "Unknown advertiser", remove: () => update({ advertisers: f.advertisers.filter((a) => a !== id) }) })),
     ...(f.q ? [{ key: "q", label: <>“{f.q}”</>, remove: () => update({ q: "" }) }] : []),
@@ -126,10 +138,10 @@ export function AdBrowser({ ads, slug, initial }: { ads: AdCard[]; slug: string;
       ) : f.view === "table" ? (
         <AdTable ads={shown} slug={slug} onOpen={setOpenId} />
       ) : (
-        <AdGrid ads={shown} slug={slug} onOpen={setOpenId} />
+        <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} />
       )}
       <LoadMore list={list} total={matched.length} noun="ads" />
-      <AdPreview ad={openAd} slug={slug} position={openAd ? `${openIndex + 1} / ${matched.length}` : ""}
+      <AdPreview ad={openAd} slug={slug} fav={fav} position={openAd ? `${openIndex + 1} / ${matched.length}` : ""}
         onClose={() => setOpenId(null)}
         onPrev={openIndex > 0 ? () => step(-1) : null}
         onNext={openIndex >= 0 && openIndex < matched.length - 1 ? () => step(1) : null} />

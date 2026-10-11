@@ -5,7 +5,10 @@ import type { OrganicAccount, OrganicPost } from "@/lib/social";
 import { fmtAgoShort } from "@/lib/organic-filters";
 import { fmtDate } from "@/lib/format";
 import { fmtCount, OUTLIER_MIN, platformLabel } from "@/components/social";
-import { HoverVideo, Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
+import { FavoriteStar, HoverVideo, Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
+import type { Favorites } from "@/components/ad-card";
+import { Transcript } from "@/components/transcript";
+import { loadPostTranscript } from "@/lib/transcript-actions";
 import { Modal, previewClick } from "@/components/controls";
 
 export function PlatformIcon({ platform, size = 26 }: { platform: string; size?: number }) {
@@ -43,7 +46,7 @@ const TREND = <svg {...ICON}><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /
 const EYE = <svg {...ICON}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>;
 const SPARK = <svg {...ICON}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" /></svg>;
 
-export function PostCard({ p, now, onOpen }: { p: OrganicPost; now: number; onOpen: () => void }) {
+export function PostCard({ p, now, onOpen, fav }: { p: OrganicPost; now: number; onOpen: () => void; fav?: Favorites<OrganicPost> }) {
   const hot = (p.outlier ?? 0) >= OUTLIER_MIN;
   const title = firstLine(p.caption);
   const dur = fmtDuration(p.durationS);
@@ -60,6 +63,7 @@ export function PostCard({ p, now, onOpen }: { p: OrganicPost; now: number; onOp
         <span className="absolute top-2 right-2"><PlatformIcon platform={p.account.platform} /></span>
         {hot && <span className="absolute top-2 left-2"><MediaTag tone="signal">{fmtOutlier(p.outlier)}</MediaTag></span>}
         {dur && <span className="absolute bottom-2 right-2"><MediaTag>{dur}</MediaTag></span>}
+        {fav && <span className="absolute bottom-2 left-2"><FavoriteStar on={fav.has(p)} onToggle={() => fav.toggle(p)} /></span>}
       </div>
       <div className="pt-2 px-0.5 min-w-0">
         <div className="font-semibold text-[14px] leading-snug truncate" title={p.caption ?? undefined}>{title ?? "(no caption)"}</div>
@@ -77,10 +81,10 @@ export function PostCard({ p, now, onOpen }: { p: OrganicPost; now: number; onOp
   );
 }
 
-export function PostGrid({ posts, now, onOpen }: { posts: OrganicPost[]; now: number; onOpen: (id: string) => void }) {
+export function PostGrid({ posts, now, onOpen, fav }: { posts: OrganicPost[]; now: number; onOpen: (id: string) => void; fav?: Favorites<OrganicPost> }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-6">
-      {posts.map((p) => <PostCard key={p.id} p={p} now={now} onOpen={() => onOpen(p.id)} />)}
+      {posts.map((p) => <PostCard key={p.id} p={p} now={now} onOpen={() => onOpen(p.id)} fav={fav} />)}
     </div>
   );
 }
@@ -95,9 +99,9 @@ function Metric({ label, value, tone, wide = false }: { label: string; value: Re
 }
 
 /** One post in a Modal: the stored video with sound and controls, the full caption and every number. */
-export function PostPreview({ post, account, now, position, onClose, onPrev, onNext }: {
+export function PostPreview({ post, account, now, position, onClose, onPrev, onNext, fav }: {
   post: OrganicPost | null; account: OrganicAccount | null; now: number; position: string;
-  onClose: () => void; onPrev: (() => void) | null; onNext: (() => void) | null;
+  onClose: () => void; onPrev: (() => void) | null; onNext: (() => void) | null; fav?: Favorites<OrganicPost>;
 }) {
   const hot = (post?.outlier ?? 0) >= OUTLIER_MIN;
   const extra = post ? ([["Likes", post.likes], ["Comments", post.comments], ["Shares", post.shares], ["Saves", post.saves]] as const).filter(([, v]) => v != null) : [];
@@ -134,12 +138,16 @@ export function PostPreview({ post, account, now, position, onClose, onPrev, onN
               {post.durationS != null && <Metric label="Length" value={fmtDuration(post.durationS)} />}
               <Metric wide label="Posted" value={<span className="text-[14px]" title={post.postedAt ?? undefined}>{fmtDate(post.postedAt)} <span className="text-fg-3">· {fmtAgoShort(post.postedAt, now)}</span></span>} />
             </div>
-            <div className="px-5 py-4 flex-1 min-h-0 overflow-y-auto">
-              <div className="label mb-1.5">Caption</div>
-              <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{post.caption?.trim() || <span className="text-fg-3">(no caption)</span>}</p>
+            <div className="px-5 py-4 flex-1 min-h-0 overflow-y-auto flex flex-col gap-4">
+              <div>
+                <div className="label mb-1.5">Caption</div>
+                <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{post.caption?.trim() || <span className="text-fg-3">(no caption)</span>}</p>
+              </div>
+              <Transcript id={post.id} load={loadPostTranscript} />
             </div>
             <div className="px-5 py-3 border-t border-line-2 flex items-center gap-2">
               {post.url && <a href={post.url} target="_blank" rel="noreferrer" className="btn btn-primary">Open on {platformLabel(post.account.platform)} ↗</a>}
+              {fav && <FavoriteStar variant="button" on={fav.has(post)} onToggle={() => fav.toggle(post)} />}
               {post.videoUrl && <a href={post.videoUrl} download className="btn">Download video</a>}
               <span className="ml-auto text-[12px] text-fg-3 hidden xl:inline whitespace-nowrap">← → browse · Esc close</span>
             </div>

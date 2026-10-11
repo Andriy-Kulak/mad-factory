@@ -38,7 +38,7 @@ export interface AdSourceRow {
   collationId: string | null;
   collationCount: number | null;
   firstSeenAt: string;
-  media: { url: string; type: string } | null;
+  media: { url: string; type: string; sha256: string } | null;
   /** Direct competitor or adjacent niche, from the tracked source that surfaced the ad. */
   relation: AdRelation;
 }
@@ -50,6 +50,8 @@ export interface AdCard extends AdSourceRow {
   versions: number;
   /** Days from start to end (or today while running). */
   days: number | null;
+  /** Every stored ad in the card's group; the card counts as a favorite when any of them is starred. */
+  memberIds: string[];
 }
 
 /** Winner = top-ranked by impressions in its latest scrape, still running, and running for weeks. */
@@ -82,6 +84,7 @@ export function groupAdCards(rows: AdSourceRow[], ranks: Map<string, ImpressionR
       winner: isWinner(rep, rank, now),
       versions: Math.max(g.length, ...g.map((r) => r.collationCount ?? 1)),
       days: rep.startDate ? (daysBetween(rep.startDate, rep.isActive ? null : rep.endDate) ?? null) : null,
+      memberIds: g.map((r) => r.id),
     };
   });
 }
@@ -100,6 +103,7 @@ export interface AdFilters {
   status: AdStatus | null;
   format: AdFormat | null;
   winners: boolean;
+  favorites: boolean;
   /** Launched within the last N days. */
   launchedDays: number | null;
   /** Running for at least N days. */
@@ -110,7 +114,7 @@ export interface AdFilters {
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
-export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = { relation: null, advertisers: [], q: "", status: null, format: null, winners: false, launchedDays: null, minDays: null };
+export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = { relation: null, advertisers: [], q: "", status: null, format: null, winners: false, favorites: false, launchedDays: null, minDays: null };
 const SORTS: AdSort[] = ["impressions", "newest", "longest", "variants"];
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
@@ -132,6 +136,7 @@ export function parseAdFilters(sp: SearchParams): AdFilters {
     status: status === "active" || status === "ended" ? status : null,
     format: format === "video" || format === "image" ? format : null,
     winners: one(sp.winners) === "1",
+    favorites: one(sp.fav) === "1",
     launchedDays: posInt(sp.launched),
     minDays: posInt(sp.mindays),
     sort: SORTS.includes(sort) ? sort : "impressions",
@@ -148,6 +153,7 @@ export function adFiltersHref(f: AdFilters): string {
   if (f.status) s.set("status", f.status);
   if (f.format) s.set("format", f.format);
   if (f.winners) s.set("winners", "1");
+  if (f.favorites) s.set("fav", "1");
   if (f.launchedDays) s.set("launched", String(f.launchedDays));
   if (f.minDays) s.set("mindays", String(f.minDays));
   if (f.sort !== "impressions") s.set("sort", f.sort);
@@ -157,13 +163,14 @@ export function adFiltersHref(f: AdFilters): string {
 }
 
 export function activeAdFilterCount(f: AdFilters): number {
-  return [!!f.relation, f.advertisers.length > 0, !!f.q, !!f.status, !!f.format, f.winners, !!f.launchedDays, !!f.minDays].filter(Boolean).length;
+  return [!!f.relation, f.advertisers.length > 0, !!f.q, !!f.status, !!f.format, f.winners, f.favorites, !!f.launchedDays, !!f.minDays].filter(Boolean).length;
 }
 
 export const mediaFormat = (c: Pick<AdCard, "media" | "format">): AdFormat | null =>
   c.media ? (c.media.type === "image" ? "image" : "video") : c.format === "IMAGE" ? "image" : c.format === "VIDEO" ? "video" : null;
 
-export function applyAdFilters(cards: AdCard[], f: AdFilters, now = Date.now()): AdCard[] {
+/** `favorites` holds starred ad ids; a card matches the favorites filter when any ad in its group is starred. */
+export function applyAdFilters(cards: AdCard[], f: AdFilters, now = Date.now(), favorites: ReadonlySet<string> = new Set()): AdCard[] {
   const advertisers = new Set(f.advertisers);
   const q = f.q.toLowerCase();
   const since = f.launchedDays ? new Date(now - f.launchedDays * DAY_MS).toISOString().slice(0, 10) : null;
@@ -174,6 +181,7 @@ export function applyAdFilters(cards: AdCard[], f: AdFilters, now = Date.now()):
     (!f.status || (f.status === "active" ? c.isActive === true : c.isActive === false)) &&
     (!f.format || mediaFormat(c) === f.format) &&
     (!f.winners || c.winner) &&
+    (!f.favorites || c.memberIds.some((id) => favorites.has(id))) &&
     (!since || (c.startDate != null && c.startDate.slice(0, 10) >= since)) &&
     (!f.minDays || (c.days ?? 0) >= f.minDays),
   );

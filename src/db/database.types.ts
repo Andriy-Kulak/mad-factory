@@ -632,6 +632,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      favorites: {
+        Row: {
+          product_id: string;
+          kind: string;
+          target_id: string;
+          favorited: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          product_id: string;
+          kind: string;
+          target_id: string;
+          favorited?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          product_id?: string;
+          kind?: string;
+          target_id?: string;
+          favorited?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       mcp_api_keys: {
         Row: {
           id: string;

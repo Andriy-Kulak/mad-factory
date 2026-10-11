@@ -14,6 +14,7 @@ export interface OrganicFilters {
   /** Percent, e.g. 2.5 for 2.5%. */
   engagement: Range;
   postedWithin: { n: number; unit: AgeUnit } | null;
+  favorites: boolean;
   sort: OrganicSort;
   view: OrganicView;
 }
@@ -51,6 +52,7 @@ export function parseOrganicFilters(sp: SearchParams): OrganicFilters {
     views: { min: parseNum(sp.vmin), max: parseNum(sp.vmax) },
     engagement: { min: parseNum(sp.emin), max: parseNum(sp.emax) },
     postedWithin: age && age > 0 ? { n: age, unit: UNITS.includes(unit) ? unit : "months" } : null,
+    favorites: one(sp.fav) === "1",
     sort: SORTS.includes(sort) ? sort : "outlier",
     view: one(sp.view) === "table" ? "table" : "grid",
   };
@@ -63,7 +65,8 @@ function inRange(v: number | null, r: Range): boolean {
   return (r.min == null || v >= r.min) && (r.max == null || v <= r.max);
 }
 
-export function applyOrganicFilters(posts: OrganicPost[], f: OrganicFilters, now = Date.now()): OrganicPost[] {
+/** `favorites` holds starred post ids. */
+export function applyOrganicFilters(posts: OrganicPost[], f: OrganicFilters, now = Date.now(), favorites: ReadonlySet<string> = new Set()): OrganicPost[] {
   const channels = new Set(f.channels);
   const q = f.q.toLowerCase();
   const since = f.postedWithin ? now - f.postedWithin.n * UNIT_DAYS[f.postedWithin.unit] * DAY_MS : null;
@@ -71,6 +74,7 @@ export function applyOrganicFilters(posts: OrganicPost[], f: OrganicFilters, now
     (!channels.size || channels.has(p.account.id)) &&
     (!f.platform || p.account.platform === f.platform) &&
     (!q || (p.caption ?? "").toLowerCase().includes(q)) &&
+    (!f.favorites || favorites.has(p.id)) &&
     inRange(p.outlier, f.outlier) &&
     inRange(p.views, f.views) &&
     inRange(p.engagement == null ? null : p.engagement * 100, f.engagement) &&
@@ -80,7 +84,7 @@ export function applyOrganicFilters(posts: OrganicPost[], f: OrganicFilters, now
 
 export const NO_FILTERS: Omit<OrganicFilters, "sort" | "view"> = {
   channels: [], q: "", platform: null, outlier: { min: null, max: null }, views: { min: null, max: null },
-  engagement: { min: null, max: null }, postedWithin: null,
+  engagement: { min: null, max: null }, postedWithin: null, favorites: false,
 };
 
 export function sortPosts(posts: OrganicPost[], sort: OrganicSort): OrganicPost[] {
@@ -95,7 +99,7 @@ export function sortPosts(posts: OrganicPost[], sort: OrganicSort): OrganicPost[
 /** Number of filters that narrow the posts (sort and view don't count). */
 export function activeFilterCount(f: OrganicFilters): number {
   const ranges = [f.outlier, f.views, f.engagement].filter((r) => r.min != null || r.max != null).length;
-  return (f.channels.length ? 1 : 0) + (f.q ? 1 : 0) + (f.platform ? 1 : 0) + (f.postedWithin ? 1 : 0) + ranges;
+  return (f.channels.length ? 1 : 0) + (f.q ? 1 : 0) + (f.platform ? 1 : 0) + (f.postedWithin ? 1 : 0) + (f.favorites ? 1 : 0) + ranges;
 }
 
 /** Query string for `f` with `patch` applied; defaults are left out so URLs stay short. */
@@ -116,6 +120,7 @@ export function organicHref(f: OrganicFilters, patch: Partial<OrganicFilters> = 
     s.set("age", String(n.postedWithin.n));
     s.set("unit", n.postedWithin.unit);
   }
+  if (n.favorites) s.set("fav", "1");
   if (n.sort !== "outlier") s.set("sort", n.sort);
   if (n.view !== "grid") s.set("view", n.view);
   const str = s.toString();

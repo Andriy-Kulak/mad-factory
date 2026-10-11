@@ -70,3 +70,30 @@ export function MediaTag({ tone = "dark", dot = false, children, title }: { tone
     </span>
   );
 }
+
+/** Star toggle for favorites. Inside a card link it stops the click so the card doesn't open. */
+export function FavoriteStar({ on, onToggle, variant = "overlay" }: { on: boolean; onToggle: () => void; variant?: "overlay" | "button" }) {
+  const click = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggle();
+  };
+  const star = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+    </svg>
+  );
+  if (variant === "button") {
+    return (
+      <button type="button" onClick={click} aria-pressed={on} title={on ? "Remove from favorites" : "Add to favorites"} className={`btn ${on ? "text-warn" : ""}`}>
+        {star}{on ? "Favorited" : "Favorite"}
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={click} aria-pressed={on} aria-label={on ? "Remove from favorites" : "Add to favorites"} title={on ? "Remove from favorites" : "Add to favorites"}
+      className={`w-7 h-7 rounded-full grid place-items-center bg-black/55 transition-opacity duration-150 hover:bg-black/75 ${on ? "text-[#ffc83d] opacity-100" : "text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}>
+      {star}
+    </button>
+  );
+}

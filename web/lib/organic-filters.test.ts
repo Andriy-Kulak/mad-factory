@@ -55,16 +55,17 @@ test("applyOrganicFilters narrows by channel, platform, keyword, ranges and age"
   assert.deepEqual(run({ emin: "5" }), ["a1"]);
   assert.deepEqual(run({ age: "1", unit: "weeks" }), ["a1"]);
   assert.deepEqual(run({ age: "2", unit: "months" }), ["a1", "a2"]);
+  assert.deepEqual(applyOrganicFilters(posts, parseOrganicFilters({ fav: "1" }), NOW, new Set([posts[1]!.id])).map((p) => p.account.id), ["a2"]);
 });
 
 test("organicHref round-trips and omits defaults", () => {
-  const f = parseOrganicFilters({ ch: ["a1", "a2"], q: "talk", omin: "3", age: "1", unit: "months", sort: "views" });
+  const f = parseOrganicFilters({ ch: ["a1", "a2"], q: "talk", omin: "3", age: "1", unit: "months", fav: "1", sort: "views" });
   const href = organicHref(f);
   const back = parseOrganicFilters(Object.fromEntries([...new URLSearchParams(href.slice(1)).keys()].map((k) => [k, new URLSearchParams(href.slice(1)).getAll(k)])));
   assert.deepEqual(back, f);
   assert.equal(organicHref(parseOrganicFilters({})), "?");
-  assert.equal(organicHref(f, { sort: "outlier", channels: [], q: "", outlier: { min: null, max: null }, postedWithin: null }), "?");
-  assert.equal(activeFilterCount(f), 4);
+  assert.equal(organicHref(f, { sort: "outlier", channels: [], q: "", outlier: { min: null, max: null }, postedWithin: null, favorites: false }), "?");
+  assert.equal(activeFilterCount(f), 5);
 });
 
 test("fmtAgoShort buckets", () => {

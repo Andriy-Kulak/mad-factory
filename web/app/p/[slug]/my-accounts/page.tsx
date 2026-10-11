@@ -9,6 +9,7 @@ import { fmtCount } from "@/components/social";
 import { OrganicBrowser } from "@/components/organic-browser";
 import { Card, Empty, SectionHead, Stat } from "@/components/ui";
 import { addSocialAccount } from "@/lib/source-actions";
+import { favoriteIds } from "@/lib/favorites";
 import { listTrackedSourceItems } from "@/lib/tracked-sources";
 import { SourceForm } from "@/components/source-form";
 import { SocialAccountFields, TrackedSourcesPanel } from "@/components/tracked-sources";
@@ -50,9 +51,10 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [{ accounts, posts }, tracked] = await Promise.all([
+  const [{ accounts, posts }, tracked, favorites] = await Promise.all([
     organicOverview(product.id, { relations: ["own"], kinds: SHORT_FORM_KINDS }),
     listTrackedSourceItems(product.id, { kind: "social", relations: ["own"] }),
+    favoriteIds(product.id, "post"),
   ]);
   const panel = (
     <TrackedSourcesPanel productId={product.id} slug={slug} title="Your accounts" items={tracked} open={tracked.length === 0}
@@ -82,7 +84,7 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
           </Card>
 
           {panel}
-          <OrganicBrowser posts={posts} accounts={accounts} initial={parseOrganicFilters(sp)} now={Date.now()} />
+          <OrganicBrowser posts={posts} accounts={accounts} productId={product.id} favoriteIds={favorites} initial={parseOrganicFilters(sp)} now={Date.now()} />
         </>
       )}
     </Shell>
