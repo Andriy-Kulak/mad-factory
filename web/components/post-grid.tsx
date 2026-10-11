@@ -8,7 +8,7 @@ import { fmtCount, OUTLIER_MIN, platformLabel } from "@/components/social";
 import { FavoriteStar, HoverVideo, Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
 import type { Favorites } from "@/components/ad-card";
 import { Transcript } from "@/components/transcript";
-import { loadPostTranscript } from "@/lib/transcript-actions";
+import { loadPostTranscript, transcribePost } from "@/lib/transcript-actions";
 import { Modal, previewClick } from "@/components/controls";
 
 export function PlatformIcon({ platform, size = 26 }: { platform: string; size?: number }) {
@@ -143,7 +143,7 @@ export function PostPreview({ post, account, now, position, onClose, onPrev, onN
                 <div className="label mb-1.5">Caption</div>
                 <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{post.caption?.trim() || <span className="text-fg-3">(no caption)</span>}</p>
               </div>
-              <Transcript id={post.id} load={loadPostTranscript} />
+              <Transcript id={post.id} load={loadPostTranscript} transcribe={transcribePost} />
             </div>
             <div className="px-5 py-3 border-t border-line-2 flex items-center gap-2">
               {post.url && <a href={post.url} target="_blank" rel="noreferrer" className="btn btn-primary">Open on {platformLabel(post.account.platform)} ↗</a>}
