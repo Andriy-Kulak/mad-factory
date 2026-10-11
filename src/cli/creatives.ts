@@ -4,6 +4,7 @@ import { applyAngles, tagAngles } from "../creative-profiles/angles.ts";
 import { latestFlashModel } from "../creative-profiles/gemini.ts";
 import { pickComplete, profileCreatives } from "../creative-profiles/profile.ts";
 import { defaultDeps as anglesDefaultDeps } from "../creative-profiles/angles.ts";
+import { transcribePosts } from "../creative-profiles/transcribe.ts";
 
 const HELP = `Usage: pnpm creatives <command> [options]
 
@@ -24,6 +25,12 @@ Commands:
     --limit <n>                      Re-tag at most n profiles.
     --model <id>                     Same routing as profile (default: latest stable Gemini Flash).
     --concurrency <n>                Parallel re-tags (default 3).
+  transcribe --product <slug>        Transcribe tracked organic videos into social_posts.transcript (videos whose
+                                     creative profile already has a transcript are skipped).
+    --limit <n>                      Transcribe at most n videos, newest first.
+    --model <id>                     Same routing as profile (default: latest stable Gemini Flash).
+    --concurrency <n>                Parallel calls (default 3).
+    --dry-run                        Print transcripts instead of writing them.
   show <sha256>                      Print the stored profile for a media file.
 
 Credentials: GEMINI_API_KEY (AI_GATEWAY_API_KEY only for google/… model ids; see .env.example).
@@ -118,6 +125,23 @@ async function anglesCommand(): Promise<void> {
   });
 }
 
+async function transcribeCommand(): Promise<void> {
+  if (!values.product) throw new Error("transcribe needs --product <slug>");
+  const limit = values.limit === undefined ? undefined : Number(values.limit);
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+    throw new Error("--limit must be a positive integer");
+  }
+  const concurrency = Number(values.concurrency);
+  if (!Number.isInteger(concurrency) || concurrency < 1) {
+    throw new Error("--concurrency must be a positive integer");
+  }
+  const model = values.model ?? (await latestFlashModel());
+  const stats = await transcribePosts(values.product, { limit, model, concurrency, dryRun: values["dry-run"] });
+  console.log(
+    `Done: ${stats.transcribed} transcribed, ${stats.silent} without speech, ${stats.skipped} skipped, ${stats.failures} failed · tokens in ${stats.promptTokens}, out ${stats.outputTokens}`,
+  );
+}
+
 async function showCommand(): Promise<void> {
   const sha = args[0];
   if (!sha) throw new Error("show needs a sha256");
@@ -132,6 +156,9 @@ switch (command) {
     break;
   case "angles":
     await anglesCommand();
+    break;
+  case "transcribe":
+    await transcribeCommand();
     break;
   case "show":
     await showCommand();
