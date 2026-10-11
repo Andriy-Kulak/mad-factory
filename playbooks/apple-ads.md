@@ -13,17 +13,12 @@ Design and schema: `docs/apple-ads-plan.md`.
 3. Find the running experiment (`pnpm experiment list --product <slug>`), read its write-up with MCP `product_docs`
    or `pnpm product docs show <slug> <name>`, its `rules` and the last few log entries
    (`pnpm experiment history --product <slug> --experiment <slug>`) to know what was decided last time.
-4. Apply the rules below to the numbers. If a change is warranted, add a plan document to `product_docs`
-   with a one-line reason per change (`pnpm product docs add <slug> --kind plan --file <path>`). Do not change the ad account yourself unless the owner
-   explicitly asks you to apply that change.
-5. The owner reviews the plan and applies it locally, or explicitly asks the agent to apply it. Every write is
-   journaled in `apple_ads_changes` with the experiment it served. Append a dated entry to the experiment's log saying what was read, what was changed and why:
-   `pnpm experiment log --product <slug> --experiment <slug> --kind change --plan <plan name> "<text>"`.
-   Every analysis session ends with a log entry, even when the decision is "no change" (`--kind observation`).
+4. Apply the rules below to the numbers. If a change is warranted, follow `playbooks/ad-changes.md` — it owns the
+   plan-document, approval, apply, read-back and log steps (Apple writes are journaled in `apple_ads_changes` with
+   the experiment they served). Every analysis session ends with an `experiment_log` entry, even when the decision
+   is "no change" (`--kind observation`).
 
-The ad account changes only through an approved plan. The owner either applies it locally or explicitly asks an agent
-to apply that specific change; that request is the approval, so the agent applies it without asking again, then
-records the owner's words and the result in the plan document. Never apply a change the owner did not ask for.
+The ad account changes only per `playbooks/ad-changes.md`. Never apply a change the owner did not ask for.
 
 ## Keeping the data fresh
 

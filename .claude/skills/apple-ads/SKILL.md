@@ -11,7 +11,5 @@ The method lives in one place: read `playbooks/apple-ads.md` first and follow it
 2. `pnpm experiment list --product <slug>`, then read the running experiment's write-up from `product_docs` with
    MCP `product_docs` or `pnpm product docs show <slug> <name>`, and its log: `pnpm experiment history --product <slug> --experiment <slug>`.
 3. Answer from the database, not from raw API calls.
-4. Change the ad account only when the owner explicitly asks for that change (then apply it, journal every write and
-   record it in the plan document). Otherwise add a plan document to `product_docs` for the owner to approve with
-   `pnpm product docs add <slug> --kind plan --file <path>`.
+4. Change the ad account only by following `playbooks/ad-changes.md`.
 5. End with `pnpm experiment log --product <slug> --experiment <slug> --kind <observation|decision|change> "<text>"`.
