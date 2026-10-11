@@ -8,8 +8,9 @@ import {
   type DrillMode, type InsightFilters, type InsightRow, type InsightView, type InsightWindow,
 } from "@/lib/insights";
 import { DataTable, type Column, type Row } from "@/components/data-table";
-import { AdGrid, AdPreview } from "@/components/ad-card";
-import { Chips, Toggle, useUrlState } from "@/components/controls";
+import { AdGrid, AdPreview, type Favorites } from "@/components/ad-card";
+import { setFavorite } from "@/lib/favorite-actions";
+import { Chips, Toggle, useFavoriteSet, useUrlState } from "@/components/controls";
 import { Badge, Pair, SectionHead, Stat } from "@/components/ui";
 
 /*
@@ -36,8 +37,14 @@ const DRILL_PAGE = 12;
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? "<1%" : `${Math.round(x * 100)}%`);
 
-export function InsightsView({ cards, slug, initial, hasAdjacent }: { cards: AdCard[]; slug: string; initial: InsightFilters; hasAdjacent: boolean }) {
+export function InsightsView({ cards, slug, productId, favoriteIds, initial, hasAdjacent }: {
+  cards: AdCard[]; slug: string; productId: string; favoriteIds: string[]; initial: InsightFilters; hasAdjacent: boolean;
+}) {
   const [f, setF] = useState(initial);
+  // Same favorites as Competitor ads: a card is starred when any ad in its group is.
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "ad", ids, on));
+  const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
+  const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
   useUrlState(insightFiltersHref(f));
   const update = (patch: Partial<InsightFilters>) => setF((cur) => ({ ...cur, ...patch }));
   /** A new grouping, window or scope closes the drill-down; its row may not exist there. */
@@ -71,7 +78,7 @@ export function InsightsView({ cards, slug, initial, hasAdjacent }: { cards: AdC
       </div>
 
       {f.view === "totals" ? <TotalsTable rows={table.rows} f={f} onSelect={select} /> : <AdvertiserTable cards={cards} f={f} onSelect={select} />}
-      {f.value && <DrillPanel key={`${f.dim}:${f.value}:${f.advertiserId}:${f.window}:${f.relation}`} cards={cards} f={f} slug={slug} onClose={() => update({ value: null, advertiserId: null })} />}
+      {f.value && <DrillPanel key={`${f.dim}:${f.value}:${f.advertiserId}:${f.window}:${f.relation}`} cards={cards} f={f} slug={slug} fav={fav} onClose={() => update({ value: null, advertiserId: null })} />}
       {f.dim === "hook" && <TopHooks cards={cards} f={f} slug={slug} />}
     </>
   );
@@ -167,7 +174,7 @@ function AdvertiserTable({ cards, f, onSelect }: { cards: AdCard[]; f: InsightFi
 }
 
 /** The selected row's or cell's ads, as feed cards: working first, then the softer signal, then everything. */
-function DrillPanel({ cards, f, slug, onClose }: { cards: AdCard[]; f: InsightFilters; slug: string; onClose: () => void }) {
+function DrillPanel({ cards, f, slug, fav, onClose }: { cards: AdCard[]; f: InsightFilters; slug: string; fav: Favorites<AdCard>; onClose: () => void }) {
   const drill = useMemo(() => drillCards(cards, f), [cards, f]);
   const [mode, setMode] = useState<DrillMode>(drill?.working.length ? "working" : drill?.alive.length ? "alive" : "all");
   const [limit, setLimit] = useState(DRILL_PAGE);
@@ -203,13 +210,13 @@ function DrillPanel({ cards, f, slug, onClose }: { cards: AdCard[]; f: InsightFi
         {INSIGHT_DIMS[f.dim]}: {drill.label}{drill.advertiser ? ` · ${drill.advertiser}` : ""}
       </SectionHead>
       <div className="mb-3"><Toggle size="sm" label="Which ads" items={modes} active={mode} onChange={(m) => { setMode(m); setLimit(DRILL_PAGE); }} /></div>
-      {shown.length ? <AdGrid ads={shown} slug={slug} onOpen={setOpenId} /> : <p className="text-[13px] text-fg-3 py-6">None of these ads {mode === "working" ? `count as ${WORKING[f.window].toLowerCase()}` : "are still running"} yet.</p>}
+      {shown.length ? <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} /> : <p className="text-[13px] text-fg-3 py-6">None of these ads {mode === "working" ? `count as ${WORKING[f.window].toLowerCase()}` : "are still running"} yet.</p>}
       {list.length > limit && (
         <div className="mt-4 flex justify-center">
           <button type="button" className="btn btn-sm" onClick={() => setLimit((l) => l + DRILL_PAGE)}>Show {Math.min(DRILL_PAGE, list.length - limit)} more of {list.length - limit}</button>
         </div>
       )}
-      <AdPreview ad={openAd} slug={slug} position={openAd ? `${openIndex + 1} / ${list.length}` : ""} onClose={() => setOpenId(null)}
+      <AdPreview ad={openAd} slug={slug} fav={fav} position={openAd ? `${openIndex + 1} / ${list.length}` : ""} onClose={() => setOpenId(null)}
         onPrev={openIndex > 0 ? () => step(-1) : null} onNext={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null} />
     </section>
   );
