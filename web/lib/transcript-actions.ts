@@ -10,7 +10,7 @@ export async function loadMediaTranscript(sha256: string): Promise<string | null
   return (await getCreativeProfile(sha256))?.script?.transcript ?? null;
 }
 
-/** An organic post's transcript: the post's own, else its video's creative profile. */
+/** An organic post's transcript: the post's own ("" = no speech), else its video's creative profile. */
 export async function loadPostTranscript(postId: string): Promise<string | null> {
   await requireOwner();
   const db = getDb();
@@ -20,6 +20,6 @@ export async function loadPostTranscript(postId: string): Promise<string | null>
   ]);
   if (post.error) throw new Error(`social_posts: ${post.error.message}`);
   if (media.error) throw new Error(`social_post_media: ${media.error.message}`);
-  if (post.data?.transcript) return post.data.transcript;
+  if (post.data && post.data.transcript !== null) return post.data.transcript;
   return media.data ? ((await getCreativeProfile(media.data.sha256))?.script?.transcript ?? null) : null;
 }

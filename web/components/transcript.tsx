@@ -40,7 +40,8 @@ export function Transcript({ id, load }: { id: string | null; load: (id: string)
       {!id ? <p className="text-[13px] text-fg-3">No video stored.</p>
         : state === "error" ? <p className="text-[13px] text-danger">Couldn't load the transcript.</p>
         : state === null || state.id !== id ? <p className="text-[13px] text-fg-3">Loading…</p>
-        : text ? <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{text}</p>
+        : text === "" ? <p className="text-[13px] text-fg-3">No speech in this video.</p>
+           : text ? <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{text}</p>
         : <p className="text-[13px] text-fg-3">Not transcribed yet.</p>}
     </div>
   );
