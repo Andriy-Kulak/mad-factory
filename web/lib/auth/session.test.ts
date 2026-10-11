@@ -56,5 +56,33 @@ test("AUTH_DISABLED only works outside production, and missing settings are name
 
 test("safeNext keeps same-site paths only", () => {
   assert.equal(safeNext("/p/x?days=7"), "/p/x?days=7");
-  for (const bad of [null, "", "https://evil.example", "//evil.example", "/\\evil.example"]) assert.equal(safeNext(bad), "/");
+  assert.equal(safeNext("/p/x#ads"), "/p/x#ads");
+  const bad = [
+    null,
+    "",
+    "p/x",
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    "/\t/evil.example",
+    "/\n/evil.example",
+    "/\r/evil.example",
+    "/\r\\evil.example",
+    "\t//evil.example",
+    "/\u0000/evil.example",
+    "/\u007f/evil.example",
+    "/p/x\\..\\..\\evil",
+  ];
+  for (const value of bad) assert.equal(safeNext(value), "/", JSON.stringify(value));
+});
+
+test("whatever safeNext returns resolves on the app's own origin", () => {
+  const origin = "https://app.example";
+  const tricky = ["\t", "\n", "\r", "\\", "/", "%09", "%2f", "%5c", ".", "..", "@", ":", " ", "\u3000", "\uff0f"];
+  for (const a of tricky)
+    for (const b of tricky)
+      for (const c of tricky) {
+        const value = `/${a}${b}${c}evil.example`;
+        assert.equal(new URL(safeNext(value), origin).origin, origin, JSON.stringify(value));
+      }
 });

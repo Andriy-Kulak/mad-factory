@@ -94,7 +94,18 @@ export function randomToken(bytes = 32): string {
   return base64url(crypto.getRandomValues(new Uint8Array(bytes)));
 }
 
-/** Only same-site paths survive a login round trip ("/p/x", not "//evil.com" or "https://…"). */
+const SAME_SITE = "http://same-site.invalid";
+
+/**
+ * Only same-site paths survive a login round trip ("/p/x", not "//evil.com" or "https://…").
+ * The URL parser drops tabs and newlines and reads "\\" as "/", so "/\t/evil.com" would pass a prefix
+ * check and still leave the site: reject control characters and backslashes, then check the parsed origin.
+ */
 export function safeNext(next: string | null | undefined): string {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/";
+  if (!next || !next.startsWith("/") || next.startsWith("//") || /[\u0000-\u001f\u007f\\]/.test(next)) return "/";
+  try {
+    return new URL(next, SAME_SITE).origin === SAME_SITE ? next : "/";
+  } catch {
+    return "/";
+  }
 }
