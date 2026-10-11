@@ -1,13 +1,5 @@
 import { getDb, unwrap } from "./client.ts";
-import type {
-  AppleAdsCampaignInsert,
-  AppleAdsKeywordDailyInsert,
-  AppleAdsKeywordInsert,
-  AppleAdsSearchTermDailyInsert,
-  AppleAdsTermPopularityInsert,
-  Json,
-  TrackedSourceRow,
-} from "./types.ts";
+import type { AppleAdsCampaignInsert, AppleAdsKeywordDailyInsert, AppleAdsKeywordInsert, AppleAdsSearchTermDailyInsert, AppleAdsTermPopularityInsert, Json, TrackedSourceRow } from "./types.ts";
 
 const CHUNK = 500;
 const PAGE_SIZE = 1000;
@@ -40,19 +32,11 @@ export function upsertAppleAdsKeywordDaily(rows: AppleAdsKeywordDailyInsert[]): 
 }
 
 export function upsertAppleAdsSearchTermsDaily(rows: AppleAdsSearchTermDailyInsert[]): Promise<number> {
-  return upsertChunks(
-    rows,
-    (c) => getDb().from("apple_ads_search_terms_daily").upsert(c, { onConflict: "date,campaign_id,keyword_id,search_term,country" }),
-    "upsertAppleAdsSearchTermsDaily",
-  );
+  return upsertChunks(rows, (c) => getDb().from("apple_ads_search_terms_daily").upsert(c, { onConflict: "date,campaign_id,keyword_id,search_term,country" }), "upsertAppleAdsSearchTermsDaily");
 }
 
 export async function setAppleAdsBidRecommendation(keywordId: number, recommendation: Json, at: string): Promise<void> {
-  const { error } = await getDb()
-    .from("apple_ads_keywords")
-    .update({ bid_recommendation: recommendation, bid_recommendation_at: at })
-    .eq("id", keywordId)
-    .eq("is_negative", false);
+  const { error } = await getDb().from("apple_ads_keywords").update({ bid_recommendation: recommendation, bid_recommendation_at: at }).eq("id", keywordId).eq("is_negative", false);
   if (error) throw new Error(`setAppleAdsBidRecommendation: ${error.message}`);
 }
 
@@ -66,7 +50,11 @@ export async function listTermPopularityTerms(productId: string): Promise<Set<st
   const terms = new Set<string>();
   for (let from = 0; ; from += PAGE_SIZE) {
     const rows = unwrap(
-      await db.from("apple_ads_term_popularity").select("term").eq("product_id", productId).range(from, from + PAGE_SIZE - 1),
+      await db
+        .from("apple_ads_term_popularity")
+        .select("term")
+        .eq("product_id", productId)
+        .range(from, from + PAGE_SIZE - 1),
       "listTermPopularityTerms",
     );
     for (const row of rows) terms.add(row.term);

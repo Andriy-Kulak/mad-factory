@@ -27,9 +27,7 @@ export async function storeSocialMedia(
     bytes = await download(url);
   } catch (error) {
     const status = error instanceof Error ? error.message.match(/download (\d+)/)?.[1] : null;
-    throw new SocialMediaDownloadError(
-      status ? `Social media download failed with HTTP ${status}` : "Social media download failed",
-    );
+    throw new SocialMediaDownloadError(status ? `Social media download failed with HTTP ${status}` : "Social media download failed");
   }
   const hash = sha256(bytes);
   const isNew = !(await socialStore.creativeExists(hash));

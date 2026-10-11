@@ -58,18 +58,31 @@ function Goal({ o }: { o: Overview }) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="label">Goal</span>
           <span className="text-[20px] leading-tight font-semibold tracking-[-0.01em]">
-            {sc.goal ? <><span className="num">{fmtMoney(sc.goal.target, c)}</span> profit per month</> : "Not set"}
+            {sc.goal ? (
+              <>
+                <span className="num">{fmtMoney(sc.goal.target, c)}</span> profit per month
+              </>
+            ) : (
+              "Not set"
+            )}
           </span>
           {status}
-          <span className="ml-auto text-[12px] text-fg-3 cursor-help underline decoration-dotted underline-offset-2"
-            title={`Profit is RevenueCat proceeds (after store fees) minus Apple and Meta ad spend minus fixed costs. Find what earns more than it costs over the last ${o.window.days} days and put more money behind it; attribution older than about 10 days is not reliable.`}>
+          <span
+            className="ml-auto text-[12px] text-fg-3 cursor-help underline decoration-dotted underline-offset-2"
+            title={`Profit is RevenueCat proceeds (after store fees) minus Apple and Meta ad spend minus fixed costs. Find what earns more than it costs over the last ${o.window.days} days and put more money behind it; attribution older than about 10 days is not reliable.`}
+          >
             How profit is counted
           </span>
         </div>
         {sc.goal && <Meter value={projected / sc.goal.target} tone="accent" className="mt-3" />}
       </Card>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat label="Projected this month" value={fmtMoney(projected, c)} hint={sc.projected ? `at the pace of ${sc.daysElapsed} day(s) so far` : "at the 7-day pace"} tone={projected < 0 ? "warn" : "neutral"} />
+        <Stat
+          label="Projected this month"
+          value={fmtMoney(projected, c)}
+          hint={sc.projected ? `at the pace of ${sc.daysElapsed} day(s) so far` : "at the 7-day pace"}
+          tone={projected < 0 ? "warn" : "neutral"}
+        />
         <Stat label="Gap to goal" value={sc.gap == null ? "–" : fmtMoney(sc.gap, c)} hint={sc.goal ? `goal ${fmtMoney(sc.goal.target, c)}` : "set a goal: pnpm scorecard goal"} />
         <Stat label="Month to date" value={fmtMoney(sc.monthToDate.profit, c)} hint={`${fmtMoney(sc.monthToDate.proceeds, c)} in, ${fmtMoney(sc.monthToDate.spendTotal, c)} spent`} />
         <Stat label={`Last ${o.window.days} days`} value={fmtMoney(o.windowProfit, c)} hint="proceeds minus ad spend" tone={o.windowProfit < 0 ? "warn" : "neutral"} />
@@ -82,34 +95,57 @@ function Goal({ o }: { o: Overview }) {
 function Attention({ o, slug }: { o: Overview; slug: string }) {
   const c = o.scorecard.currency;
   const items: { key: string; tone: "red" | "warn"; label: string; body: string; href?: string }[] = [
-    ...o.followUps.filter((f) => f.daysOverdue >= 0).map((f) => ({
-      key: `f:${f.id}`, tone: "warn" as const, label: f.daysOverdue > 0 ? `${f.daysOverdue}d overdue` : "due today", body: f.body,
-      href: f.experiment.startsWith("apple_ads/") ? `/p/${slug}/apple-ads?view=experiments` : undefined,
-    })),
-    ...o.freshness.filter((f) => f.stale).map((f) => ({ key: `s:${f.source}`, tone: "red" as const, label: "stale", body: `${f.source}: last successful sync ${f.lastDone ? fmtAgo(f.lastDone) : "never"}` })),
+    ...o.followUps
+      .filter((f) => f.daysOverdue >= 0)
+      .map((f) => ({
+        key: `f:${f.id}`,
+        tone: "warn" as const,
+        label: f.daysOverdue > 0 ? `${f.daysOverdue}d overdue` : "due today",
+        body: f.body,
+        href: f.experiment.startsWith("apple_ads/") ? `/p/${slug}/apple-ads?view=experiments` : undefined,
+      })),
+    ...o.freshness
+      .filter((f) => f.stale)
+      .map((f) => ({ key: `s:${f.source}`, tone: "red" as const, label: "stale", body: `${f.source}: last successful sync ${f.lastDone ? fmtAgo(f.lastDone) : "never"}` })),
     ...o.warnings.map((w, i) => ({ key: `w:${i}`, tone: "warn" as const, label: "data", body: w })),
     ...(o.proceedsPerTrial != null
-      ? o.ads.filter((a) => a.status === "ACTIVE" && a.costPerTrial != null && a.costPerTrial > 2 * o.proceedsPerTrial! && a.spend >= 20).map((a) => ({
-          key: `a:${a.id}`, tone: "red" as const, label: "expensive", href: `/p/${slug}/meta-ads`,
-          body: `${a.name}: ${fmtMoney(a.costPerTrial!, c, true)} per trial, over 2× the ${fmtMoney(o.proceedsPerTrial!, c, true)} a trial earns`,
-        }))
+      ? o.ads
+          .filter((a) => a.status === "ACTIVE" && a.costPerTrial != null && a.costPerTrial > 2 * o.proceedsPerTrial! && a.spend >= 20)
+          .map((a) => ({
+            key: `a:${a.id}`,
+            tone: "red" as const,
+            label: "expensive",
+            href: `/p/${slug}/meta-ads`,
+            body: `${a.name}: ${fmtMoney(a.costPerTrial!, c, true)} per trial, over 2× the ${fmtMoney(o.proceedsPerTrial!, c, true)} a trial earns`,
+          }))
       : []),
   ];
   if (!items.length) return null;
   return (
     <section aria-label="Needs attention" className="card mb-6 divide-y divide-line-2">
-      <div className="px-4 h-10 flex items-center gap-2"><span className="text-[13px] font-semibold">Needs attention</span><span className="num text-[12px] text-fg-3">{items.length}</span></div>
+      <div className="px-4 h-10 flex items-center gap-2">
+        <span className="text-[13px] font-semibold">Needs attention</span>
+        <span className="num text-[12px] text-fg-3">{items.length}</span>
+      </div>
       {items.slice(0, 6).map((it) => {
         const row = (
           <>
             <Badge tone={it.tone}>{it.label}</Badge>
-            <span className="text-[13px] min-w-0 truncate" title={it.body}>{it.body}</span>
+            <span className="text-[13px] min-w-0 truncate" title={it.body}>
+              {it.body}
+            </span>
             {it.href && <span className="ml-auto text-fg-3 shrink-0">→</span>}
           </>
         );
-        return it.href
-          ? <Link key={it.key} href={it.href} className="px-4 py-2 flex items-center gap-3 row-link">{row}</Link>
-          : <div key={it.key} className="px-4 py-2 flex items-center gap-3">{row}</div>;
+        return it.href ? (
+          <Link key={it.key} href={it.href} className="px-4 py-2 flex items-center gap-3 row-link">
+            {row}
+          </Link>
+        ) : (
+          <div key={it.key} className="px-4 py-2 flex items-center gap-3">
+            {row}
+          </div>
+        );
       })}
       {items.length > 6 && <div className="px-4 py-2 text-[12px] text-fg-3">+{items.length - 6} more in the sections below</div>}
     </section>
@@ -130,26 +166,38 @@ function Setup({ channels, slug }: { channels: ChannelSetup[]; slug: string }) {
         <summary className="cursor-pointer select-none px-4 h-10 flex items-center gap-2 text-[13px]">
           <span className="font-semibold">{none ? "Connect your first channel" : "Not set up"}</span>
           <span className="text-fg-3 truncate min-w-0">{off.map((c) => c.label).join(" · ")}</span>
-          <span className="ml-auto text-fg-3 shrink-0 transition-transform duration-200 group-open:rotate-90 motion-reduce:transition-none" aria-hidden="true">›</span>
+          <span className="ml-auto text-fg-3 shrink-0 transition-transform duration-200 group-open:rotate-90 motion-reduce:transition-none" aria-hidden="true">
+            ›
+          </span>
         </summary>
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-px bg-line-2 border-t border-line-2">
           {off.map((c) => (
             <div key={c.key} className="bg-bg-2 p-4 min-w-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-semibold">{c.label}</span>
-                {c.path && <Link href={`/p/${slug}${c.path}`} className="ml-auto text-[12px] text-fg-2 hover:text-fg">Open →</Link>}
+                {c.path && (
+                  <Link href={`/p/${slug}${c.path}`} className="ml-auto text-[12px] text-fg-2 hover:text-fg">
+                    Open →
+                  </Link>
+                )}
               </div>
               <p className="text-[13px] text-fg-2">{c.gives}</p>
               <ol className="flex flex-col gap-1">
                 {c.steps.map((s) => (
-                  <li key={s} className={s.startsWith("pnpm ") ? "num text-[11px] text-fg-2 bg-bg border border-line rounded-[3px] px-2 py-1 [overflow-wrap:anywhere]" : "text-[12px] text-fg-3"}>{s}</li>
+                  <li key={s} className={s.startsWith("pnpm ") ? "num text-[11px] text-fg-2 bg-bg border border-line rounded-[3px] px-2 py-1 [overflow-wrap:anywhere]" : "text-[12px] text-fg-3"}>
+                    {s}
+                  </li>
                 ))}
               </ol>
             </div>
           ))}
         </div>
         <p className="px-4 py-2 border-t border-line-2 text-[12px] text-fg-3">
-          Each channel needs its key on the machine that runs the commands. <Link href="/setup" className="underline">Setup</Link> lists them; <code className="num">pnpm doctor</code> checks them.
+          Each channel needs its key on the machine that runs the commands.{" "}
+          <Link href="/setup" className="underline">
+            Setup
+          </Link>{" "}
+          lists them; <code className="num">pnpm doctor</code> checks them.
         </p>
       </details>
     </section>
@@ -162,7 +210,15 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
   const rows = o.channels.filter((r) => r.key !== "total");
   return (
     <section aria-label="Channels" className="mb-6">
-      <SectionHead right={<span className="text-[13px] text-fg-3">{fmtDate(o.window.from)} – {fmtDate(o.window.to)}</span>}>Channels, last {o.window.days} days</SectionHead>
+      <SectionHead
+        right={
+          <span className="text-[13px] text-fg-3">
+            {fmtDate(o.window.from)} – {fmtDate(o.window.to)}
+          </span>
+        }
+      >
+        Channels, last {o.window.days} days
+      </SectionHead>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
         <Stat label="Ad spend" value={fmtMoney(total.spend, c)} />
         <Stat label="Trials" value={fmtInt(total.trials)} hint="RevenueCat, all sources" />
@@ -170,7 +226,8 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
         <Stat label="Proceeds" value={fmtMoney(total.proceeds, c)} hint={`${fmtInt(total.paid)} trial(s) converted`} />
         <Stat label="Proceeds per trial" value={fmtMoney(o.proceedsPerTrial, c, true)} hint="cost per trial must get below this" />
       </div>
-      <DataTable dense
+      <DataTable
+        dense
         className="mb-1"
         columns={[
           { label: "Channel" },
@@ -186,7 +243,15 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
           id: r.key,
           href: r.path ? `/p/${slug}${r.path}?days=${o.window.days}` : undefined,
           cells: [
-            { node: <span className="font-medium">{r.label}{r.path && <span className="text-fg-3 ml-1">→</span>}</span>, value: r.label },
+            {
+              node: (
+                <span className="font-medium">
+                  {r.label}
+                  {r.path && <span className="text-fg-3 ml-1">→</span>}
+                </span>
+              ),
+              value: r.label,
+            },
             { node: r.attribution, dim: true },
             { node: fmtMoney(r.spend, c), value: r.spend },
             { node: fmtInt(r.installs), value: r.installs },
@@ -206,11 +271,20 @@ function MetaAds({ o, slug }: { o: Overview; slug: string }) {
   const c = o.scorecard.currency;
   return (
     <section aria-label="Meta ads" className="mb-6 min-w-0">
-      <SectionHead right={<Link href={`/p/${slug}/meta-ads?days=${o.window.days}`} className="text-[13px] text-fg-2 hover:text-fg">Meta ads →</Link>}>Meta ads by spend</SectionHead>
+      <SectionHead
+        right={
+          <Link href={`/p/${slug}/meta-ads?days=${o.window.days}`} className="text-[13px] text-fg-2 hover:text-fg">
+            Meta ads →
+          </Link>
+        }
+      >
+        Meta ads by spend
+      </SectionHead>
       {o.ads.length === 0 ? (
         <Empty>No Meta spend in this window.</Empty>
       ) : (
-        <DataTable dense
+        <DataTable
+          dense
           className=""
           maxHeight="420px"
           defaultSort={{ col: 2, dir: "desc" }}
@@ -219,7 +293,14 @@ function MetaAds({ o, slug }: { o: Overview; slug: string }) {
             id: a.id,
             href: `/p/${slug}/meta-ads?days=${o.window.days}`,
             cells: [
-              { node: <span className="block max-w-[280px] truncate" title={a.name}>{a.name}</span>, value: a.name },
+              {
+                node: (
+                  <span className="block max-w-[280px] truncate" title={a.name}>
+                    {a.name}
+                  </span>
+                ),
+                value: a.name,
+              },
               { node: <StatusDot tone={a.status === "ACTIVE" ? "green" : "neutral"}>{a.status.toLowerCase()}</StatusDot>, value: a.status },
               { node: fmtMoney(a.spend, c, true), value: a.spend },
               { node: fmtInt(a.trials), value: a.trials },
@@ -236,18 +317,31 @@ function Organic({ o, slug }: { o: Overview; slug: string }) {
   const { organic } = o;
   return (
     <section aria-label="Own posts" className="mb-6 min-w-0">
-      <SectionHead right={<Link href={`/p/${slug}/my-accounts`} className="text-[13px] text-fg-2 hover:text-fg">My accounts →</Link>}>
+      <SectionHead
+        right={
+          <Link href={`/p/${slug}/my-accounts`} className="text-[13px] text-fg-2 hover:text-fg">
+            My accounts →
+          </Link>
+        }
+      >
         Own posts, last {o.window.days} days
       </SectionHead>
       {organic.accounts === 0 ? (
-        <Empty>No own accounts tracked. Add them on <Link className="underline" href={`/p/${slug}/my-accounts`}>My accounts</Link>.</Empty>
+        <Empty>
+          No own accounts tracked. Add them on{" "}
+          <Link className="underline" href={`/p/${slug}/my-accounts`}>
+            My accounts
+          </Link>
+          .
+        </Empty>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Stat label="Posts" value={fmtInt(organic.posts.length)} hint={`across ${organic.accounts} account(s)`} />
             <Stat label="Views" value={fmtInt(organic.views)} hint="latest count for those posts" />
           </div>
-          <DataTable dense
+          <DataTable
+            dense
             className=""
             maxHeight="300px"
             empty="Nothing posted in this window."
@@ -256,7 +350,14 @@ function Organic({ o, slug }: { o: Overview; slug: string }) {
               id: `${p.platform}-${p.handle}-${i}`,
               href: p.url ?? undefined,
               cells: [
-                { node: <span>@{p.handle} <span className="text-fg-3">{p.platform}</span></span>, value: p.handle },
+                {
+                  node: (
+                    <span>
+                      @{p.handle} <span className="text-fg-3">{p.platform}</span>
+                    </span>
+                  ),
+                  value: p.handle,
+                },
                 { node: fmtDate(p.postedAt), value: p.postedAt, dim: true },
                 { node: fmtInt(p.views), value: p.views },
               ],
@@ -274,7 +375,8 @@ function Experiments({ o, slug }: { o: Overview; slug: string }) {
   return (
     <section aria-label="Running experiments" className="mb-6 min-w-0">
       <SectionHead>Running experiments</SectionHead>
-      <DataTable dense
+      <DataTable
+        dense
         className=""
         empty="No experiment is running."
         columns={[{ label: "Experiment" }, { label: "Channel" }]}
@@ -282,7 +384,14 @@ function Experiments({ o, slug }: { o: Overview; slug: string }) {
           id: e.slug,
           href: path(e.channel) ? `/p/${slug}/${path(e.channel)}` : undefined,
           cells: [
-            { node: <span className="block max-w-[420px] truncate" title={e.slug}>{e.name}</span>, value: e.name },
+            {
+              node: (
+                <span className="block max-w-[420px] truncate" title={e.slug}>
+                  {e.name}
+                </span>
+              ),
+              value: e.name,
+            },
             { node: e.channel.replace("_", " "), dim: true },
           ],
         }))}
@@ -296,7 +405,8 @@ function Freshness({ o }: { o: Overview }) {
   return (
     <section aria-label="Data freshness" className="mb-6 min-w-0">
       <SectionHead right={stale ? <Badge tone="warn">{stale} stale</Badge> : o.freshness.length ? <Badge tone="green">all fresh</Badge> : <Badge>no syncs yet</Badge>}>Data freshness</SectionHead>
-      <DataTable dense
+      <DataTable
+        dense
         className={o.warnings.length ? "mb-3" : ""}
         maxHeight="300px"
         defaultSort={{ col: 1, dir: "desc" }}
@@ -313,7 +423,9 @@ function Freshness({ o }: { o: Overview }) {
       />
       {o.warnings.length > 0 && (
         <ul className="text-[13px] text-fg-2 flex flex-col gap-1">
-          {o.warnings.map((w) => <li key={w}>– {w}</li>)}
+          {o.warnings.map((w) => (
+            <li key={w}>– {w}</li>
+          ))}
         </ul>
       )}
     </section>
@@ -326,7 +438,9 @@ function AgentBrief({ o }: { o: Overview }) {
       <details className="card group">
         <summary className="cursor-pointer select-none px-4 py-3 text-[14px] font-semibold flex items-center justify-between gap-3">
           Brief for agents
-          <span className="text-xs font-normal text-fg-3">the same text as <code className="num">pnpm brief --product {o.product}</code></span>
+          <span className="text-xs font-normal text-fg-3">
+            the same text as <code className="num">pnpm brief --product {o.product}</code>
+          </span>
         </summary>
         <pre className="num text-xs leading-relaxed whitespace-pre-wrap px-4 pb-4 text-fg-2">{formatBrief(o)}</pre>
       </details>

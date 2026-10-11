@@ -28,11 +28,19 @@ function smoothPath(pts: [number, number][]): string {
   const slope = pts.slice(1).map(([, py], i) => (py - pts[i]![1]) / dx[i]!);
   const m = pts.map((_, i) => (i === 0 ? slope[0]! : i === n - 1 ? slope[n - 2]! : slope[i - 1]! * slope[i]! <= 0 ? 0 : (slope[i - 1]! + slope[i]!) / 2));
   for (let i = 0; i < n - 1; i++) {
-    if (slope[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    if (slope[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
     const a = m[i]! / slope[i]!;
     const b = m[i + 1]! / slope[i]!;
     const s = a * a + b * b;
-    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * slope[i]!; m[i + 1] = t * b * slope[i]!; }
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * a * slope[i]!;
+      m[i + 1] = t * b * slope[i]!;
+    }
   }
   let d = `M${pts[0]![0].toFixed(1)},${pts[0]![1].toFixed(1)}`;
   for (let i = 0; i < n - 1; i++) {
@@ -70,8 +78,14 @@ export function OrganicDailyChart({ days }: { days: OrganicDay[] }) {
   return (
     <div className="relative">
       <div className="flex items-center gap-4 text-xs text-fg-2 mb-2">
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-[3px] rounded-full bg-accent" />Views</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-[3px] rounded-full" style={{ background: POSTS_COLOR }} />Posts (right axis)</span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-[3px] rounded-full bg-accent" />
+          Views
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-[3px] rounded-full" style={{ background: POSTS_COLOR }} />
+          Posts (right axis)
+        </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Posts and views by day, ${days[0]!.date} to ${days.at(-1)!.date}`} onMouseLeave={() => setHover(null)}>
         <defs>
@@ -83,15 +97,21 @@ export function OrganicDailyChart({ days }: { days: OrganicDay[] }) {
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={yViews(t * viewsMax)} y2={yViews(t * viewsMax)} stroke="var(--line-2)" strokeWidth={1} />
-            <text x={PAD.left - 8} y={yViews(t * viewsMax) + 4} textAnchor="end" fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">{compact(t * viewsMax)}</text>
+            <text x={PAD.left - 8} y={yViews(t * viewsMax) + 4} textAnchor="end" fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">
+              {compact(t * viewsMax)}
+            </text>
           </g>
         ))}
         {[0, postsMax / 2, postsMax].map((v) => (
-          <text key={v} x={W - PAD.right + 8} y={yPosts(v) + 4} textAnchor="start" fontSize={11} fill={POSTS_COLOR} fontFamily="var(--font-mono)">{v}</text>
+          <text key={v} x={W - PAD.right + 8} y={yPosts(v) + 4} textAnchor="start" fontSize={11} fill={POSTS_COLOR} fontFamily="var(--font-mono)">
+            {v}
+          </text>
         ))}
         {days.map((d, i) =>
           (i % labelEvery === 0 && days.length - 1 - i >= labelEvery) || i === days.length - 1 ? (
-            <text key={d.date} x={x(i)} y={H - 6} textAnchor={i === days.length - 1 ? "end" : i === 0 ? "start" : "middle"} fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">{shortDate(d.date)}</text>
+            <text key={d.date} x={x(i)} y={H - 6} textAnchor={i === days.length - 1 ? "end" : i === 0 ? "start" : "middle"} fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">
+              {shortDate(d.date)}
+            </text>
           ) : null,
         )}
         <path d={area} fill="url(#organic-views-fill)" />
@@ -115,7 +135,9 @@ export function OrganicDailyChart({ days }: { days: OrganicDay[] }) {
         >
           <div className="text-fg-3">{shortDate(h.date)}</div>
           <div className="text-[15px] font-medium text-fg">{h.views.toLocaleString("en-US")} views</div>
-          <div style={{ color: POSTS_COLOR }}>{h.posts} {h.posts === 1 ? "post" : "posts"}</div>
+          <div style={{ color: POSTS_COLOR }}>
+            {h.posts} {h.posts === 1 ? "post" : "posts"}
+          </div>
         </div>
       )}
     </div>

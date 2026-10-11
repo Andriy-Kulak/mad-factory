@@ -8,9 +8,27 @@ import { collectChanges } from "./pr-review.ts";
 const SOURCES = ["local file", "PRIVATE_TERMS", "database"] as const;
 
 export const FRAMEWORK_WORDS = new Set([
-  "vocabulary", "product", "brand", "angle", "angles", "audience", "audiences", "hook", "hooks", "format",
-  "desire", "desires", "creative", "campaign", "campaigns", "keyword", "keywords", "discovery", "generic",
-  "competitor", "competitors",
+  "vocabulary",
+  "product",
+  "brand",
+  "angle",
+  "angles",
+  "audience",
+  "audiences",
+  "hook",
+  "hooks",
+  "format",
+  "desire",
+  "desires",
+  "creative",
+  "campaign",
+  "campaigns",
+  "keyword",
+  "keywords",
+  "discovery",
+  "generic",
+  "competitor",
+  "competitors",
 ]);
 
 /** Matches a private value without matching it inside a longer word or number. */
@@ -83,14 +101,19 @@ function readAllowed(root: string): Set<string> {
 
 function readLocalTerms(root: string): string[] {
   try {
-    return readFileSync(join(root, "local/private-terms.txt"), "utf8").split(/\r?\n/).filter((line) => line.trim() && !line.trimStart().startsWith("#"));
+    return readFileSync(join(root, "local/private-terms.txt"), "utf8")
+      .split(/\r?\n/)
+      .filter((line) => line.trim() && !line.trimStart().startsWith("#"));
   } catch {
     return [];
   }
 }
 
 function envTerms(): string[] {
-  return (process.env.PRIVATE_TERMS ?? "").split(/[\n,]/).map((term) => term.trim()).filter(Boolean);
+  return (process.env.PRIVATE_TERMS ?? "")
+    .split(/[\n,]/)
+    .map((term) => term.trim())
+    .filter(Boolean);
 }
 
 export function databaseValues(input: {
@@ -99,10 +122,7 @@ export function databaseValues(input: {
   competitorKeywords: string[];
 }): string[] {
   const products = input.products.flatMap(({ slug, name, competitors }) => [slug, name, ...(competitors ?? []).map(stripNote)]);
-  const sources = input.sources.flatMap(({ value, label, enabled }) => [
-    value,
-    ...(enabled && label !== null ? [stripNote(label)] : []),
-  ]);
+  const sources = input.sources.flatMap(({ value, label, enabled }) => [value, ...(enabled && label !== null ? [stripNote(label)] : [])]);
   return [...products, ...sources, ...input.competitorKeywords];
 }
 
@@ -111,25 +131,14 @@ async function databaseTerms(): Promise<string[]> {
   try {
     const { getDb } = await import("../src/db/index.ts");
     const db = getDb();
-    const [products, sources] = await Promise.all([
-      db.from("products").select("slug,name,competitors"),
-      db.from("tracked_sources").select("value,label,enabled"),
-    ]);
+    const [products, sources] = await Promise.all([db.from("products").select("slug,name,competitors"), db.from("tracked_sources").select("value,label,enabled")]);
     if (products.error || sources.error) throw new Error("query failed");
-    const campaigns = await db
-      .from("experiment_campaigns")
-      .select("external_campaign_id")
-      .eq("channel", "apple_ads")
-      .eq("role", "competitors");
+    const campaigns = await db.from("experiment_campaigns").select("external_campaign_id").eq("channel", "apple_ads").eq("role", "competitors");
     if (campaigns.error) throw new Error("query failed");
     const campaignIds = (campaigns.data ?? []).map((campaign) => Number(campaign.external_campaign_id));
     let competitorKeywords: string[] = [];
     if (campaignIds.length) {
-      const keywords = await db
-        .from("apple_ads_keywords")
-        .select("text")
-        .in("campaign_id", campaignIds)
-        .eq("is_negative", false);
+      const keywords = await db.from("apple_ads_keywords").select("text").in("campaign_id", campaignIds).eq("is_negative", false);
       if (keywords.error) throw new Error("query failed");
       competitorKeywords = (keywords.data ?? []).map((keyword) => keyword.text);
     }
@@ -174,7 +183,6 @@ function matcher(term: string): RegExp {
 function containsTerm(text: string, terms: string[]): boolean {
   return terms.some((term) => matcher(term).test(text));
 }
-
 
 /** Replaces every private term with a safe placeholder. */
 export function redact(text: string, terms: string[]): string {
@@ -266,7 +274,10 @@ function squashMessage(commits: CommitMessage[], terms: string[]): string {
         }
       }
     }
-    const body = bodyLines.filter((line) => !/^Co-Authored-By:.*$/i.test(line)).join("\n").trim();
+    const body = bodyLines
+      .filter((line) => !/^Co-Authored-By:.*$/i.test(line))
+      .join("\n")
+      .trim();
     if (body) bodies.push(body);
   }
   return [subject, ...bodies, ...(trailers.length ? ["", ...trailers] : [])].join("\n\n").trimEnd() + "\n";
@@ -342,7 +353,7 @@ export async function runPrivacy(options: PrivacyOptions): Promise<Finding[]> {
 
   const bodyFile = options.prBodyFile ? resolve(root, options.prBodyFile) : undefined;
   const title = options.prTitle ?? "";
-  const loadBody = () => bodyFile ? readFileSync(bodyFile, "utf8") : options.prBody ?? "";
+  const loadBody = () => (bodyFile ? readFileSync(bodyFile, "utf8") : (options.prBody ?? ""));
   const collect = () => {
     const { base, files } = collectChanges(options.base, root);
     const filesToScan = options.all ? allTrackedFiles(root) : files;

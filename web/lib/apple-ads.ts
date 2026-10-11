@@ -1,7 +1,16 @@
 import "server-only";
 import { getDb } from "./db";
 import { blockingNegatives, negativeBlocks, sameText } from "./negatives";
-import type { AppleAdsCampaignRow, AppleAdsKeywordDailyRow, AppleAdsKeywordRow, AppleAdsSearchTermDailyRow, ExperimentCampaignRow, ExperimentLogRow, ExperimentRow, RevenueCatKeywordDailyRow } from "@db/types";
+import type {
+  AppleAdsCampaignRow,
+  AppleAdsKeywordDailyRow,
+  AppleAdsKeywordRow,
+  AppleAdsSearchTermDailyRow,
+  ExperimentCampaignRow,
+  ExperimentLogRow,
+  ExperimentRow,
+  RevenueCatKeywordDailyRow,
+} from "@db/types";
 
 export interface Totals {
   impressions: number;
@@ -72,7 +81,10 @@ export interface BidSummary {
 }
 
 export function summarizeBids(bids: (number | string | null)[]): BidSummary | null {
-  const nums = bids.filter((b): b is number | string => b != null).map(Number).filter(Number.isFinite);
+  const nums = bids
+    .filter((b): b is number | string => b != null)
+    .map(Number)
+    .filter(Number.isFinite);
   if (!nums.length) return null;
   return { avg: nums.reduce((s, b) => s + b, 0) / nums.length, min: Math.min(...nums), max: Math.max(...nums) };
 }
@@ -131,13 +143,43 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
   if (campaignsRes.error) throw new Error(`apple_ads_campaigns: ${campaignsRes.error.message}`);
   const campaignRows = campaignsRes.data ?? [];
   const ids = campaignRows.map((c) => c.id);
-  const empty: AppleAdsOverview = { campaigns: [], keywords: [], countries: [], days: [], searchTerms: [], negatives: [], withheldSearchTermRows: 0, totals: zero(), revenuecat: null, since, until, lastSyncedAt: null };
+  const empty: AppleAdsOverview = {
+    campaigns: [],
+    keywords: [],
+    countries: [],
+    days: [],
+    searchTerms: [],
+    negatives: [],
+    withheldSearchTermRows: 0,
+    totals: zero(),
+    revenuecat: null,
+    since,
+    until,
+    lastSyncedAt: null,
+  };
   if (!ids.length) return empty;
 
   const [keywordRows, daily, terms, outcomes] = await Promise.all([
     fetchAll<AppleAdsKeywordRow>((a, b) => db.from("apple_ads_keywords").select("*").in("campaign_id", ids).eq("deleted", false).order("id").range(a, b), "apple_ads_keywords"),
-    fetchAll<AppleAdsKeywordDailyRow>((a, b) => db.from("apple_ads_keyword_daily").select("*").in("campaign_id", ids).gte("date", since).lte("date", until).order("date").order("keyword_id").order("country").range(a, b), "apple_ads_keyword_daily"),
-    fetchAll<AppleAdsSearchTermDailyRow>((a, b) => db.from("apple_ads_search_terms_daily").select("*").in("campaign_id", ids).gte("date", since).lte("date", until).order("date").order("keyword_id").order("search_term").order("country").range(a, b), "apple_ads_search_terms_daily"),
+    fetchAll<AppleAdsKeywordDailyRow>(
+      (a, b) => db.from("apple_ads_keyword_daily").select("*").in("campaign_id", ids).gte("date", since).lte("date", until).order("date").order("keyword_id").order("country").range(a, b),
+      "apple_ads_keyword_daily",
+    ),
+    fetchAll<AppleAdsSearchTermDailyRow>(
+      (a, b) =>
+        db
+          .from("apple_ads_search_terms_daily")
+          .select("*")
+          .in("campaign_id", ids)
+          .gte("date", since)
+          .lte("date", until)
+          .order("date")
+          .order("keyword_id")
+          .order("search_term")
+          .order("country")
+          .range(a, b),
+      "apple_ads_search_terms_daily",
+    ),
     revenueCatRows(productId, since, until),
   ]);
 
@@ -146,7 +188,7 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
   const byCountry = new Map<string, Totals>();
   const byDay = new Map<string, Totals>();
   const totals = zero();
-  const bump = <K,>(m: Map<K, Totals>, k: K, r: AppleAdsKeywordDailyRow) => add(m.get(k) ?? m.set(k, zero()).get(k)!, r);
+  const bump = <K>(m: Map<K, Totals>, k: K, r: AppleAdsKeywordDailyRow) => add(m.get(k) ?? m.set(k, zero()).get(k)!, r);
   for (const r of daily) {
     bump(byCampaign, r.campaign_id, r);
     bump(byKeyword, r.keyword_id, r);
@@ -157,7 +199,7 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
   let revenuecat: RevenueCatStatus | null = null;
   if (outcomes) {
     revenuecat = { all: zero(), attributed: zero(), lastSyncedAt: null };
-    const tally = <K,>(m: Map<K, Totals>, k: K, r: RevenueCatKeywordDailyRow) => addOutcomes(m.get(k) ?? m.set(k, zero()).get(k)!, r);
+    const tally = <K>(m: Map<K, Totals>, k: K, r: RevenueCatKeywordDailyRow) => addOutcomes(m.get(k) ?? m.set(k, zero()).get(k)!, r);
     for (const r of outcomes) {
       addOutcomes(revenuecat.all, r);
       if (revenuecat.lastSyncedAt == null || r.synced_at > revenuecat.lastSyncedAt) revenuecat.lastSyncedAt = r.synced_at;
@@ -210,7 +252,17 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
       continue;
     }
     const key = `${r.campaign_id}|${r.keyword_id}|${r.search_term}`;
-    const t = byTerm.get(key) ?? byTerm.set(key, { term: r.search_term, keyword: keywordText.get(r.keyword_id) ?? "–", campaignName: name.get(r.campaign_id) ?? "", blockedBy: blockerOf(r.campaign_id, r.keyword_id, r.search_term), ...zero() }).get(key)!;
+    const t =
+      byTerm.get(key) ??
+      byTerm
+        .set(key, {
+          term: r.search_term,
+          keyword: keywordText.get(r.keyword_id) ?? "–",
+          campaignName: name.get(r.campaign_id) ?? "",
+          blockedBy: blockerOf(r.campaign_id, r.keyword_id, r.search_term),
+          ...zero(),
+        })
+        .get(key)!;
     add(t, r);
   }
 
@@ -222,7 +274,7 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
         totals: byCampaign.get(c.id) ?? zero(),
         keywords: kws.length,
         negatives: keywordRows.filter((k) => k.is_negative && k.campaign_id === c.id).length,
-        unserved: kws.filter((k) => !(byKeyword.get(k.id)?.impressions)).length,
+        unserved: kws.filter((k) => !byKeyword.get(k.id)?.impressions).length,
         bid: summarizeBids(kws.map((k) => k.bid)),
       };
     }),
@@ -288,7 +340,17 @@ export async function getAppleAdsExperiments(productId: string): Promise<Experim
         addOutcomes(totals, r);
       }
       const rows = await fetchAll<AppleAdsKeywordDailyRow>(
-        (a, b) => db.from("apple_ads_keyword_daily").select("*").in("campaign_id", ids).gte("date", experiment.start_date!).lte("date", experiment.end_date ?? today).order("date").order("keyword_id").order("country").range(a, b),
+        (a, b) =>
+          db
+            .from("apple_ads_keyword_daily")
+            .select("*")
+            .in("campaign_id", ids)
+            .gte("date", experiment.start_date!)
+            .lte("date", experiment.end_date ?? today)
+            .order("date")
+            .order("keyword_id")
+            .order("country")
+            .range(a, b),
         "apple_ads_keyword_daily",
       );
       for (const r of rows) {

@@ -6,14 +6,7 @@ import { dirname, join, relative, resolve } from "node:path";
 // The web app (pages, server actions, /api/mcp) must never reach code that can change an ad account,
 // so a stolen GitHub login or MCP key can read campaigns but not touch budgets, bids or status.
 const ROOT = resolve(import.meta.dirname, "../..");
-const READ_ONLY_AD_MODULES = new Set([
-  "src/meta-ads/attributes.ts",
-  "src/meta-ads/map.ts",
-  "src/meta-ads/types.ts",
-  "src/apple-ads/coverage.ts",
-  "src/apple-ads/map.ts",
-  "src/apple-ads/types.ts",
-]);
+const READ_ONLY_AD_MODULES = new Set(["src/meta-ads/attributes.ts", "src/meta-ads/map.ts", "src/meta-ads/types.ts", "src/apple-ads/coverage.ts", "src/apple-ads/map.ts", "src/apple-ads/types.ts"]);
 // CLI-only packages that crash the hosted web app when a page imports them (Playwright needs a local browser).
 const CLI_ONLY_PACKAGES = new Set(["playwright", "playwright-core"]);
 

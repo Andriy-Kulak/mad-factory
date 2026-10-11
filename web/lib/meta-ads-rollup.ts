@@ -21,7 +21,7 @@ export function addMeta(t: MetaTotals, r: { impressions: number; clicks: number;
   t.purchases += r.purchases ?? 0;
 }
 
-const bump = <K,>(m: Map<K, MetaTotals>, k: K) => m.get(k) ?? m.set(k, zeroMeta()).get(k)!;
+const bump = <K>(m: Map<K, MetaTotals>, k: K) => m.get(k) ?? m.set(k, zeroMeta()).get(k)!;
 
 export type Attributes = Record<string, string | number>;
 
@@ -85,13 +85,33 @@ export function rollup(
   const adsetName = new Map(adsets.map((a) => [a.id, a.name]));
   const creativeById = new Map(creatives.map((c) => [c.id, c]));
   const adSummaries: MetaAdSummary[] = ads.map((a) => {
-    const creative = a.creative_id ? creativeById.get(a.creative_id) ?? null : null;
-    return { id: a.id, name: a.name, status: a.effective_status ?? a.status, campaignId: a.campaign_id, campaignName: campaignName.get(a.campaign_id) ?? a.campaign_id, adsetName: adsetName.get(a.adset_id) ?? a.adset_id, creative, attributes: attributesOf(creative ?? undefined), totals: byAd.get(a.id) ?? zeroMeta() };
+    const creative = a.creative_id ? (creativeById.get(a.creative_id) ?? null) : null;
+    return {
+      id: a.id,
+      name: a.name,
+      status: a.effective_status ?? a.status,
+      campaignId: a.campaign_id,
+      campaignName: campaignName.get(a.campaign_id) ?? a.campaign_id,
+      adsetName: adsetName.get(a.adset_id) ?? a.adset_id,
+      creative,
+      attributes: attributesOf(creative ?? undefined),
+      totals: byAd.get(a.id) ?? zeroMeta(),
+    };
   });
   const known = new Set(ads.map((a) => a.id));
   for (const [id, r] of seen) {
     if (known.has(id)) continue;
-    adSummaries.push({ id, name: `ad ${id}`, status: "NOT SYNCED", campaignId: r.campaign_id, campaignName: campaignName.get(r.campaign_id) ?? r.campaign_id, adsetName: adsetName.get(r.adset_id) ?? r.adset_id, creative: null, attributes: {}, totals: byAd.get(id)! });
+    adSummaries.push({
+      id,
+      name: `ad ${id}`,
+      status: "NOT SYNCED",
+      campaignId: r.campaign_id,
+      campaignName: campaignName.get(r.campaign_id) ?? r.campaign_id,
+      adsetName: adsetName.get(r.adset_id) ?? r.adset_id,
+      creative: null,
+      attributes: {},
+      totals: byAd.get(id)!,
+    });
   }
   adSummaries.sort((a, b) => b.totals.spend - a.totals.spend || a.name.localeCompare(b.name));
 

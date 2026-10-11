@@ -57,12 +57,7 @@ export async function getTrackedSources(productId: string): Promise<TrackedSourc
 }
 
 export async function getScrapeRuns(productId: string, limit = 20): Promise<ScrapeRunRow[]> {
-  const res = await getDb()
-    .from("scrape_runs")
-    .select("*")
-    .eq("product_id", productId)
-    .order("started_at", { ascending: false })
-    .limit(limit);
+  const res = await getDb().from("scrape_runs").select("*").eq("product_id", productId).order("started_at", { ascending: false }).limit(limit);
   if (res.error) fail("scrape_runs", res.error);
   return res.data ?? [];
 }
@@ -134,11 +129,32 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
   const cols = `tracked_source_id,ad:ads(id,external_id,advertiser_id,advertiser_name,body_text,title,cta_text,link_url,start_date,end_date,is_active,platforms,collation_id,collation_count,first_seen_at,
     avatar:raw->snapshot->>page_profile_picture_url,caption:raw->snapshot->>caption,format:raw->snapshot->>display_format,
     ad_creatives(position,creatives(sha256,public_url,media_type)))`;
-  const page = (from: number) => db.from("product_ads").select(cols).eq("product_id", productId).order("ad_id").range(from, from + 999);
+  const page = (from: number) =>
+    db
+      .from("product_ads")
+      .select(cols)
+      .eq("product_id", productId)
+      .order("ad_id")
+      .range(from, from + 999);
   type Row = {
-    id: string; external_id: string; advertiser_id: string | null; advertiser_name: string | null; body_text: string | null; title: string | null; cta_text: string | null;
-    link_url: string | null; start_date: string | null; end_date: string | null; is_active: boolean | null; platforms: string[]; collation_id: string | null;
-    collation_count: number | null; first_seen_at: string; avatar: string | null; caption: string | null; format: string | null;
+    id: string;
+    external_id: string;
+    advertiser_id: string | null;
+    advertiser_name: string | null;
+    body_text: string | null;
+    title: string | null;
+    cta_text: string | null;
+    link_url: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    is_active: boolean | null;
+    platforms: string[];
+    collation_id: string | null;
+    collation_count: number | null;
+    first_seen_at: string;
+    avatar: string | null;
+    caption: string | null;
+    format: string | null;
     ad_creatives: { position: number; creatives: { sha256: string; public_url: string | null; media_type: string } | null }[];
   };
   const [count, ranks, relations] = await Promise.all([
@@ -195,11 +211,7 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
 async function creativesForAds(adIds: string[]): Promise<Map<string, CreativeRow[]>> {
   const out = new Map<string, CreativeRow[]>();
   if (!adIds.length) return out;
-  const links = await getDb()
-    .from("ad_creatives")
-    .select("ad_id,position,creatives(*)")
-    .in("ad_id", adIds)
-    .order("position");
+  const links = await getDb().from("ad_creatives").select("ad_id,position,creatives(*)").in("ad_id", adIds).order("position");
   if (links.error) fail("ad_creatives", links.error);
   for (const l of links.data ?? []) {
     const c = l.creatives as unknown as CreativeRow | null;
@@ -221,13 +233,8 @@ export async function getAd(id: string): Promise<AdDetail | null> {
   const res = await db.from("ads").select("*").eq("id", id).maybeSingle();
   if (res.error) fail("ad", res.error);
   if (!res.data) return null;
-  const [creatives, links] = await Promise.all([
-    creativesForAds([id]),
-    db.from("product_ads").select("products(id,slug,name)").eq("ad_id", id),
-  ]);
-  const products = (links.data ?? [])
-    .map((l) => l.products as unknown as Pick<ProductRow, "id" | "slug" | "name"> | null)
-    .filter((p): p is Pick<ProductRow, "id" | "slug" | "name"> => !!p);
+  const [creatives, links] = await Promise.all([creativesForAds([id]), db.from("product_ads").select("products(id,slug,name)").eq("ad_id", id)]);
+  const products = (links.data ?? []).map((l) => l.products as unknown as Pick<ProductRow, "id" | "slug" | "name"> | null).filter((p): p is Pick<ProductRow, "id" | "slug" | "name"> => !!p);
   return { ...res.data, creatives: creatives.get(id) ?? [], products };
 }
 

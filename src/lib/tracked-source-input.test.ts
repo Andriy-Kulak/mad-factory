@@ -35,18 +35,9 @@ test("normalizes TikTok handles and profile/video links", () => {
 test("normalizes Facebook page URLs and numeric IDs", () => {
   const cases = [
     ["987654321012345", "https://www.facebook.com/profile.php?id=987654321012345"],
-    [
-      "https://www.facebook.com/profile.php?id=987654321012345&sk=reels_tab",
-      "https://www.facebook.com/profile.php?id=987654321012345",
-    ],
-    [
-      "facebook.com/example.page/reels/?ref=share#videos",
-      "https://www.facebook.com/example.page",
-    ],
-    [
-      "https://m.facebook.com/example.page?ref=profile",
-      "https://www.facebook.com/example.page",
-    ],
+    ["https://www.facebook.com/profile.php?id=987654321012345&sk=reels_tab", "https://www.facebook.com/profile.php?id=987654321012345"],
+    ["facebook.com/example.page/reels/?ref=share#videos", "https://www.facebook.com/example.page"],
+    ["https://m.facebook.com/example.page?ref=profile", "https://www.facebook.com/example.page"],
   ];
 
   for (const [input, expected] of cases) {
@@ -59,54 +50,27 @@ test("rejects empty inputs and URLs from the wrong social platform", () => {
     assert.throws(() => parseSocialAccountInput(platform, "  "), /Enter a .* handle or profile URL/);
   }
 
-  assert.throws(
-    () => parseSocialAccountInput("instagram", "https://www.tiktok.com/@example.user"),
-    /Expected an Instagram profile URL, not a TikTok URL/,
-  );
-  assert.throws(
-    () => parseSocialAccountInput("tiktok", "https://www.facebook.com/example.page"),
-    /Expected a TikTok profile URL, not a Facebook URL/,
-  );
-  assert.throws(
-    () => parseSocialAccountInput("facebook", "https://www.instagram.com/example.user"),
-    /Expected a Facebook profile URL, not an Instagram URL/,
-  );
-  assert.throws(
-    () => parseSocialAccountInput("instagram", "https://example.test/example.user"),
-    /Expected an Instagram profile URL/,
-  );
+  assert.throws(() => parseSocialAccountInput("instagram", "https://www.tiktok.com/@example.user"), /Expected an Instagram profile URL, not a TikTok URL/);
+  assert.throws(() => parseSocialAccountInput("tiktok", "https://www.facebook.com/example.page"), /Expected a TikTok profile URL, not a Facebook URL/);
+  assert.throws(() => parseSocialAccountInput("facebook", "https://www.instagram.com/example.user"), /Expected a Facebook profile URL, not an Instagram URL/);
+  assert.throws(() => parseSocialAccountInput("instagram", "https://example.test/example.user"), /Expected an Instagram profile URL/);
 });
 
 test("rejects Instagram post and non-profile routes", () => {
   for (const route of ["p", "reel", "reels", "stories", "explore", "tv"]) {
-    assert.throws(
-      () => parseSocialAccountInput("instagram", `https://www.instagram.com/${route}/123`),
-      /Paste a profile link, not a post link/,
-    );
+    assert.throws(() => parseSocialAccountInput("instagram", `https://www.instagram.com/${route}/123`), /Paste a profile link, not a post link/);
   }
-  assert.throws(
-    () => parseSocialAccountInput("instagram", "https://www.instagram.com/example.user/p/123"),
-    /Paste an Instagram profile link, not a post link/,
-  );
+  assert.throws(() => parseSocialAccountInput("instagram", "https://www.instagram.com/example.user/p/123"), /Paste an Instagram profile link, not a post link/);
 });
 
 test("rejects TikTok URLs without an @handle and invalid handles", () => {
-  assert.throws(
-    () => parseSocialAccountInput("tiktok", "https://www.tiktok.com/example.user/video/123"),
-    /must include an @handle/,
-  );
+  assert.throws(() => parseSocialAccountInput("tiktok", "https://www.tiktok.com/example.user/video/123"), /must include an @handle/);
   assert.throws(() => parseSocialAccountInput("tiktok", "@bad handle"), /lowercase handle without @/);
 });
 
 test("rejects invalid Facebook profile URLs and bare handles", () => {
-  assert.throws(
-    () => parseSocialAccountInput("facebook", "https://www.facebook.com/profile.php?sk=reels_tab"),
-    /must include a numeric page ID/,
-  );
-  assert.throws(
-    () => parseSocialAccountInput("facebook", "https://www.facebook.com/example.page/posts/123"),
-    /Paste a Facebook profile URL, not a post link/,
-  );
+  assert.throws(() => parseSocialAccountInput("facebook", "https://www.facebook.com/profile.php?sk=reels_tab"), /must include a numeric page ID/);
+  assert.throws(() => parseSocialAccountInput("facebook", "https://www.facebook.com/example.page/posts/123"), /Paste a Facebook profile URL, not a post link/);
   assert.throws(() => parseSocialAccountInput("facebook", "example.page"), /numeric page ID/);
 });
 
@@ -145,17 +109,12 @@ test("parses numeric Meta page IDs and keyword searches", () => {
     country: "US",
     config: {},
   });
-  assert.deepEqual(
-    parseAdLibraryInput(
-      "https://facebook.com/ads/library/?search_type=keyword_unordered&q=sample+term%26more&country=all&active_status=inactive",
-    ),
-    {
-      kind: "keyword",
-      value: "sample term&more",
-      country: "ALL",
-      config: { status: "INACTIVE" },
-    },
-  );
+  assert.deepEqual(parseAdLibraryInput("https://facebook.com/ads/library/?search_type=keyword_unordered&q=sample+term%26more&country=all&active_status=inactive"), {
+    kind: "keyword",
+    value: "sample term&more",
+    country: "ALL",
+    config: { status: "INACTIVE" },
+  });
 });
 
 test("maps Ad Library status values and omits missing status", () => {
@@ -164,46 +123,20 @@ test("maps Ad Library status values and omits missing status", () => {
     ["inactive", "INACTIVE"],
     ["all", "ALL"],
   ] as const) {
-    assert.deepEqual(
-      parseAdLibraryInput(
-        `https://www.facebook.com/ads/library/?view_all_page_id=123456789012345&active_status=${status}`,
-      ).config,
-      { status: expected },
-    );
+    assert.deepEqual(parseAdLibraryInput(`https://www.facebook.com/ads/library/?view_all_page_id=123456789012345&active_status=${status}`).config, { status: expected });
   }
-  assert.deepEqual(
-    parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123456789012345").config,
-    {},
-  );
+  assert.deepEqual(parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123456789012345").config, {});
 });
 
 test("rejects unsupported Ad Library inputs", () => {
   assert.throws(() => parseAdLibraryInput(""), /Paste a Meta Ad Library URL or numeric page ID/);
   assert.throws(() => parseAdLibraryInput("not a page ID"), /Paste a Meta Ad Library URL or numeric page ID/);
-  assert.throws(
-    () => parseAdLibraryInput("https://www.instagram.com/ads/library/?view_all_page_id=123"),
-    /must be on facebook.com/,
-  );
-  assert.throws(
-    () => parseAdLibraryInput("https://www.facebook.com/example.page"),
-    /not a Facebook profile or post link/,
-  );
-  assert.throws(
-    () => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=abc"),
-    /page ID must be numeric/,
-  );
-  assert.throws(
-    () => parseAdLibraryInput("https://www.facebook.com/ads/library/?search_type=page&q=example"),
-    /page ID or keyword search/,
-  );
-  assert.throws(
-    () => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123&active_status=archived"),
-    /status must be active, inactive, or all/,
-  );
-  assert.throws(
-    () => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123&country="),
-    /country cannot be empty/,
-  );
+  assert.throws(() => parseAdLibraryInput("https://www.instagram.com/ads/library/?view_all_page_id=123"), /must be on facebook.com/);
+  assert.throws(() => parseAdLibraryInput("https://www.facebook.com/example.page"), /not a Facebook profile or post link/);
+  assert.throws(() => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=abc"), /page ID must be numeric/);
+  assert.throws(() => parseAdLibraryInput("https://www.facebook.com/ads/library/?search_type=page&q=example"), /page ID or keyword search/);
+  assert.throws(() => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123&active_status=archived"), /status must be active, inactive, or all/);
+  assert.throws(() => parseAdLibraryInput("https://www.facebook.com/ads/library/?view_all_page_id=123&country="), /country cannot be empty/);
 });
 
 test("Ad Library relation defaults to competitor, and competitor wins when sources disagree", () => {

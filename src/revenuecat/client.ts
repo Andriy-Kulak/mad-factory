@@ -26,12 +26,7 @@ export class RevenueCatClient {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(
-    apiKey: string,
-    minIntervalMs = CHARTS_MIN_INTERVAL_MS,
-    sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
-    fetchImpl: typeof fetch = fetch,
-  ) {
+  constructor(apiKey: string, minIntervalMs = CHARTS_MIN_INTERVAL_MS, sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)), fetchImpl: typeof fetch = fetch) {
     this.apiKey = apiKey;
     this.minIntervalMs = minIntervalMs;
     this.sleep = sleep;

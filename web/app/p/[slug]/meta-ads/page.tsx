@@ -23,7 +23,12 @@ export default async function MetaAdsPage({ params, searchParams }: { params: Pr
     );
   }
   return (
-    <Shell title="Meta ads" subtitle={`since ${o.since} · last sync ${fmtDateTime(o.lastRun?.finished_at ?? null)}`} action={<RangePicker href={`/p/${slug}/meta-ads`} range={range} />} tabs={<MetaTabs slug={slug} active="ads" range={range} />}>
+    <Shell
+      title="Meta ads"
+      subtitle={`since ${o.since} · last sync ${fmtDateTime(o.lastRun?.finished_at ?? null)}`}
+      action={<RangePicker href={`/p/${slug}/meta-ads`} range={range} />}
+      tabs={<MetaTabs slug={slug} active="ads" range={range} />}
+    >
       <MetaAdsOverviewBody o={o} slug={slug} range={range} />
     </Shell>
   );

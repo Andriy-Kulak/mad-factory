@@ -6,59 +6,14 @@
 export const SCHEMA_VERSION = 1;
 
 export const MEDIA_TYPES = ["video", "image", "carousel"] as const;
-export const HOOK_TYPES = [
-  "callout",
-  "question",
-  "bold_claim",
-  "pov",
-  "story_open",
-  "pattern_interrupt",
-  "stat",
-  "demo_first",
-  "controversial",
-] as const;
-export const BEATS = [
-  "hook",
-  "problem",
-  "agitate",
-  "solution",
-  "mechanism",
-  "demo",
-  "proof",
-  "offer",
-  "cta",
-] as const;
-export const STRUCTURES = [
-  "problem_solution",
-  "testimonial",
-  "founder_story",
-  "listicle",
-  "tutorial",
-  "skit",
-  "before_after",
-  "demo",
-] as const;
+export const HOOK_TYPES = ["callout", "question", "bold_claim", "pov", "story_open", "pattern_interrupt", "stat", "demo_first", "controversial"] as const;
+export const BEATS = ["hook", "problem", "agitate", "solution", "mechanism", "demo", "proof", "offer", "cta"] as const;
+export const STRUCTURES = ["problem_solution", "testimonial", "founder_story", "listicle", "tutorial", "skit", "before_after", "demo"] as const;
 export const AWARENESS = ["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware"] as const;
 export const STRATEGIC_RESPONSES = ["benefit", "mechanism", "new_information", "new_identity"] as const;
-export const CLAIM_TYPES = [
-  "simple_benefit",
-  "amplified_benefit",
-  "mechanism",
-  "enhanced_mechanism",
-  "identity",
-] as const;
+export const CLAIM_TYPES = ["simple_benefit", "amplified_benefit", "mechanism", "enhanced_mechanism", "identity"] as const;
 export const PROOF = ["app_demo", "score_screen", "testimonial", "stat", "before_after", "press", "none"] as const;
-export const FORMATS = [
-  "talking_head",
-  "ugc_selfie",
-  "green_screen",
-  "skit",
-  "app_demo",
-  "slideshow",
-  "static_image",
-  "carousel",
-  "animation",
-] as const;
+export const FORMATS = ["talking_head", "ugc_selfie", "green_screen", "skit", "app_demo", "slideshow", "static_image", "carousel", "animation"] as const;
 export const VISUAL_STYLES = ["lofi_selfie", "polished", "studio", "screen_record", "text_heavy", "meme", "ai_generated"] as const;
 export const LAYOUTS = ["text_overlay", "screenshot", "before_after", "meme", "product_shot", "photo"] as const;
 export const SETTINGS = ["home", "bathroom", "car", "office", "outdoor", "studio", "other"] as const;
@@ -70,16 +25,7 @@ export const PACINGS = ["fast", "medium", "slow"] as const;
 export const PERSON_ROLES = ["presenter", "actor", "voice_only", "extra"] as const;
 export const GENDERS = ["female", "male", "other"] as const;
 export const AGE_BANDS = ["under_18", "18_24", "25_34", "35_44", "45_54", "55_plus"] as const;
-export const ETHNICITIES = [
-  "black",
-  "east_asian",
-  "south_asian",
-  "southeast_asian",
-  "hispanic",
-  "middle_eastern",
-  "white",
-  "mixed_other",
-] as const;
+export const ETHNICITIES = ["black", "east_asian", "south_asian", "southeast_asian", "hispanic", "middle_eastern", "white", "mixed_other"] as const;
 export const CTA_TYPES = ["download", "try_free", "learn_more", "sign_up", "shop", "other"] as const;
 export const PROFILED_BY = ["llm", "manual"] as const;
 
@@ -209,12 +155,7 @@ function numberField(problems: Problems, path: string, value: unknown): number |
   return value;
 }
 
-function enumField<const T extends readonly string[]>(
-  problems: Problems,
-  path: string,
-  value: unknown,
-  values: T,
-): T[number] | null {
+function enumField<const T extends readonly string[]>(problems: Problems, path: string, value: unknown, values: T): T[number] | null {
   if (value === null) return null;
   if (typeof value !== "string" || !values.includes(value)) {
     problems.push(path, `must be one of ${values.join(", ")} or null`);
@@ -223,12 +164,7 @@ function enumField<const T extends readonly string[]>(
   return value;
 }
 
-function requiredEnumField<const T extends readonly string[]>(
-  problems: Problems,
-  path: string,
-  value: unknown,
-  values: T,
-): T[number] | null {
+function requiredEnumField<const T extends readonly string[]>(problems: Problems, path: string, value: unknown, values: T): T[number] | null {
   if (typeof value !== "string" || !values.includes(value)) {
     problems.push(path, `must be one of ${values.join(", ")}`);
     return null;
@@ -271,12 +207,7 @@ function slugList(problems: Problems, path: string, value: unknown): string[] {
   return out;
 }
 
-function enumList<const T extends readonly string[]>(
-  problems: Problems,
-  path: string,
-  value: unknown,
-  values: T,
-): T[number][] {
+function enumList<const T extends readonly string[]>(problems: Problems, path: string, value: unknown, values: T): T[number][] {
   if (!Array.isArray(value)) {
     problems.push(path, "must be an array");
     return [];
@@ -299,18 +230,7 @@ export function parseCreativeProfile(input: unknown): CreativeProfile {
   const list: string[] = [];
   const problems: Problems = { push: (path, message) => list.push(`${path}: ${message}`) };
 
-  const root = requiredObj(problems, "", input, [
-    "schema_version",
-    "media_type",
-    "hook",
-    "script",
-    "strategy",
-    "production",
-    "cards",
-    "people",
-    "cta",
-    "_meta",
-  ]);
+  const root = requiredObj(problems, "", input, ["schema_version", "media_type", "hook", "script", "strategy", "production", "cards", "people", "cta", "_meta"]);
   if (!root) throw new Error(`Invalid creative profile:\n${list.join("\n")}`);
 
   const schemaVersion = root.schema_version;
@@ -377,25 +297,19 @@ export function parseCreativeProfile(input: unknown): CreativeProfile {
   ]);
   const strategy = {
     awareness: strategyInput ? enumField(problems, "strategy.awareness", strategyInput.awareness, AWARENESS) : null,
-    strategic_response: strategyInput
-      ? enumField(problems, "strategy.strategic_response", strategyInput.strategic_response, STRATEGIC_RESPONSES)
-      : null,
+    strategic_response: strategyInput ? enumField(problems, "strategy.strategic_response", strategyInput.strategic_response, STRATEGIC_RESPONSES) : null,
     claim_type: strategyInput ? enumField(problems, "strategy.claim_type", strategyInput.claim_type, CLAIM_TYPES) : null,
     mechanism: strategyInput ? textField(problems, "strategy.mechanism", strategyInput.mechanism) : null,
     new_information: strategyInput ? textField(problems, "strategy.new_information", strategyInput.new_information) : null,
     identity: strategyInput ? textField(problems, "strategy.identity", strategyInput.identity) : null,
     angle: strategyInput ? slugField(problems, "strategy.angle", strategyInput.angle) : null,
-    angle_suggestion: strategyInput
-      ? slugField(problems, "strategy.angle_suggestion", strategyInput.angle_suggestion ?? null)
-      : null,
+    angle_suggestion: strategyInput ? slugField(problems, "strategy.angle_suggestion", strategyInput.angle_suggestion ?? null) : null,
     audience: strategyInput ? slugField(problems, "strategy.audience", strategyInput.audience) : null,
     pain_points: strategyInput ? slugList(problems, "strategy.pain_points", strategyInput.pain_points) : [],
     desires: strategyInput ? slugList(problems, "strategy.desires", strategyInput.desires) : [],
     features: strategyInput ? slugList(problems, "strategy.features", strategyInput.features) : [],
     proof: strategyInput ? enumList(problems, "strategy.proof", strategyInput.proof, PROOF) : [],
-    objections_handled: strategyInput
-      ? stringList(problems, "strategy.objections_handled", strategyInput.objections_handled)
-      : [],
+    objections_handled: strategyInput ? stringList(problems, "strategy.objections_handled", strategyInput.objections_handled) : [],
     offer: strategyInput ? textField(problems, "strategy.offer", strategyInput.offer) : null,
     claims: strategyInput ? stringList(problems, "strategy.claims", strategyInput.claims) : [],
   };
@@ -415,9 +329,7 @@ export function parseCreativeProfile(input: unknown): CreativeProfile {
   ]);
   const production = {
     format: productionInput ? enumField(problems, "production.format", productionInput.format, FORMATS) : null,
-    visual_style: productionInput
-      ? enumField(problems, "production.visual_style", productionInput.visual_style, VISUAL_STYLES)
-      : null,
+    visual_style: productionInput ? enumField(problems, "production.visual_style", productionInput.visual_style, VISUAL_STYLES) : null,
     layout: productionInput ? enumField(problems, "production.layout", productionInput.layout, LAYOUTS) : null,
     setting: productionInput ? enumField(problems, "production.setting", productionInput.setting, SETTINGS) : null,
     length_s: productionInput ? numberField(problems, "production.length_s", productionInput.length_s) : null,
@@ -425,9 +337,7 @@ export function parseCreativeProfile(input: unknown): CreativeProfile {
     voice: productionInput ? enumField(problems, "production.voice", productionInput.voice, VOICES) : null,
     captions: productionInput ? enumField(problems, "production.captions", productionInput.captions, CAPTIONS) : null,
     music: productionInput ? enumField(problems, "production.music", productionInput.music, MUSIC) : null,
-    app_on_screen_s: productionInput
-      ? numberField(problems, "production.app_on_screen_s", productionInput.app_on_screen_s)
-      : null,
+    app_on_screen_s: productionInput ? numberField(problems, "production.app_on_screen_s", productionInput.app_on_screen_s) : null,
     pacing: productionInput ? enumField(problems, "production.pacing", productionInput.pacing, PACINGS) : null,
   };
 
@@ -495,10 +405,10 @@ export function parseCreativeProfile(input: unknown): CreativeProfile {
 
   if (strategy.angle === "other") {
     if (strategy.angle_suggestion === null) {
-      problems.push("strategy.angle_suggestion", "must be a slug when angle is \"other\"");
+      problems.push("strategy.angle_suggestion", 'must be a slug when angle is "other"');
     }
   } else if (strategy.angle_suggestion !== null) {
-    problems.push("strategy.angle_suggestion", "must be null unless angle is \"other\"");
+    problems.push("strategy.angle_suggestion", 'must be null unless angle is "other"');
   }
 
   if (mediaType === "image") {

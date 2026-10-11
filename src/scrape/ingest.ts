@@ -1,12 +1,5 @@
 import type { AdInsert, Json } from "../db/types.ts";
-import {
-  creativeExists,
-  hasCreativesForAd,
-  insertCreative,
-  linkAdCreative,
-  linkProductAd,
-  upsertAd,
-} from "../db/ads.ts";
+import { creativeExists, hasCreativesForAd, insertCreative, linkAdCreative, linkProductAd, upsertAd } from "../db/ads.ts";
 import { download, sha256, store } from "../lib/storage.ts";
 import type { CollectedAd } from "../sources/types.ts";
 

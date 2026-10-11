@@ -30,11 +30,11 @@ test("docFromFile uses an unnumbered basename at sort one hundred", () => {
 });
 
 test("productDocFromFile uses kind defaults for non-brand documents", () => {
-  assert.deepEqual(productDocFromFile("experiments/plans/sample.json", "{\"plan\":true}", "plan"), {
+  assert.deepEqual(productDocFromFile("experiments/plans/sample.json", '{"plan":true}', "plan"), {
     name: "sample",
     title: null,
     sort: 0,
-    body_md: "{\"plan\":true}",
+    body_md: '{"plan":true}',
   });
   assert.deepEqual(productDocFromFile("research/sample.md", "# Research\n\nNotes.", "research"), {
     name: "sample",

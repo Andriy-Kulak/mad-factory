@@ -80,9 +80,7 @@ async function profileCommand(): Promise<void> {
     concurrency,
     dryRun: values["dry-run"],
   });
-  console.log(
-    `Done: ${stats.selected} selected, ${stats.profiled} profiled, ${stats.skipped} skipped, ${stats.failures} failed`,
-  );
+  console.log(`Done: ${stats.selected} selected, ${stats.profiled} profiled, ${stats.skipped} skipped, ${stats.failures} failed`);
 }
 
 async function anglesCommand(): Promise<void> {
@@ -106,16 +104,20 @@ async function anglesCommand(): Promise<void> {
     return;
   }
   const model = values.model ?? (await latestFlashModel());
-  await tagAngles(values.product, {
-    source: values.source,
-    limit,
-    model,
-    concurrency,
-    out: values.out!,
-  }, {
-    ...anglesDefaultDeps,
-    complete: (messages, options) => pickComplete(options.model)(messages, options),
-  });
+  await tagAngles(
+    values.product,
+    {
+      source: values.source,
+      limit,
+      model,
+      concurrency,
+      out: values.out!,
+    },
+    {
+      ...anglesDefaultDeps,
+      complete: (messages, options) => pickComplete(options.model)(messages, options),
+    },
+  );
 }
 
 async function showCommand(): Promise<void> {

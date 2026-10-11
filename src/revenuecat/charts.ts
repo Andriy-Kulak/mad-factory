@@ -1,6 +1,9 @@
 /** Pure helpers for RevenueCat Charts responses (GET /projects/{id}/charts/{chart} and .../options). */
 
-export interface ChartOptionValue { id: string; display_name: string }
+export interface ChartOptionValue {
+  id: string;
+  display_name: string;
+}
 export interface ChartOptions {
   filters: { id: string; display_name: string; options?: ChartOptionValue[] }[];
   segments: { id: string; display_name: string }[];

@@ -4,7 +4,10 @@ import type { ProductVocab, VocabAngle, VocabAudience } from "./prompt.ts";
 /** Load a product's angle/audience/desire vocabulary from its brand docs. */
 
 const kebab = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 export function parseAudiences(markdown: string): { letter: string; slug: string; name: string }[] {
   const audiences: { letter: string; slug: string; name: string }[] = [];
@@ -33,11 +36,16 @@ function angleColumn(header: string): keyof VocabAngle | "name" | null {
 export function parseAngles(markdown: string): VocabAngle[] {
   const lines = markdown.split("\n");
   const isRow = (line: string) => line.trim().startsWith("|");
-  const cells = (line: string) => line.trim().split("|").slice(1, -1).map((cell) => cell.trim());
+  const cells = (line: string) =>
+    line
+      .trim()
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
 
   // Find the table header row (the row with an Angle column), then the columns' meaning.
   const angles: VocabAngle[] = [];
-  let columns: (ReturnType<typeof angleColumn>)[] | null = null;
+  let columns: ReturnType<typeof angleColumn>[] | null = null;
   for (const line of lines) {
     if (!isRow(line)) continue;
     const row = cells(line);
@@ -53,9 +61,15 @@ export function parseAngles(markdown: string): VocabAngle[] {
     for (const [i, column] of columns.entries()) {
       const value = row[i] ?? "";
       if (column === "audiences") {
-        angle.audiences = value.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean);
+        angle.audiences = value
+          .split(",")
+          .map((a) => a.trim().toLowerCase())
+          .filter(Boolean);
       } else if (column === "desires") {
-        angle.desires = value.split(",").map((d) => kebab(d)).filter(Boolean);
+        angle.desires = value
+          .split(",")
+          .map((d) => kebab(d))
+          .filter(Boolean);
       } else if (column === "promise" && value) {
         angle.promise = value;
       } else if (column === "not" && value && value !== "—") {

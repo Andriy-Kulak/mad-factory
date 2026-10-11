@@ -41,9 +41,7 @@ export function discoveryGaps(campaigns: CoverageCampaign[], keywords: CoverageK
     if (discovery.role !== "discovery" || discovery.geo == null) continue;
     const discoveryKeywords = keywordsByCampaign.get(discovery.id) ?? [];
     const negativeTexts = new Set(discoveryKeywords.filter((keyword) => keyword.isNegative).map((keyword) => normalize(keyword.text)));
-    const broadTexts = discoveryKeywords
-      .filter((keyword) => !keyword.isNegative && keyword.matchType === "BROAD")
-      .map((keyword) => normalize(keyword.text));
+    const broadTexts = discoveryKeywords.filter((keyword) => !keyword.isNegative && keyword.matchType === "BROAD").map((keyword) => normalize(keyword.text));
 
     for (const source of campaigns) {
       if (source.role === "discovery" || source.geo !== discovery.geo) continue;

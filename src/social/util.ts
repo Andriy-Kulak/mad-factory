@@ -3,9 +3,7 @@ import type { Json } from "./types.ts";
 export type JsonRecord = Record<string, unknown>;
 
 export function record(value: unknown): JsonRecord | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? value as JsonRecord
-    : null;
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : null;
 }
 
 export function text(value: unknown): string | null {

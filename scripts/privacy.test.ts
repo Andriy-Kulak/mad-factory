@@ -59,30 +59,21 @@ test("stripNote removes parenthesized notes and falls back to the trimmed value"
 });
 
 test("databaseValues keeps product and source values while stripping competitor and enabled-label notes", () => {
-  assert.deepEqual(databaseValues({
-    products: [
-      { slug: "sample-product", name: "Sample Product", competitors: ["Acme ($5/mo, note)", "Plain competitor"] },
-      { slug: "empty-product", name: "Empty Product", competitors: null },
-    ],
-    sources: [
-      { value: "source-value-1", label: "Example Page (legacy name)", enabled: true },
-      { value: "source-value-2", label: "Disabled Page (old name)", enabled: false },
-      { value: "source-value-3", label: null, enabled: true },
-    ],
-    competitorKeywords: ["sample keyword"],
-  }), [
-    "sample-product",
-    "Sample Product",
-    "Acme",
-    "Plain competitor",
-    "empty-product",
-    "Empty Product",
-    "source-value-1",
-    "Example Page",
-    "source-value-2",
-    "source-value-3",
-    "sample keyword",
-  ]);
+  assert.deepEqual(
+    databaseValues({
+      products: [
+        { slug: "sample-product", name: "Sample Product", competitors: ["Acme ($5/mo, note)", "Plain competitor"] },
+        { slug: "empty-product", name: "Empty Product", competitors: null },
+      ],
+      sources: [
+        { value: "source-value-1", label: "Example Page (legacy name)", enabled: true },
+        { value: "source-value-2", label: "Disabled Page (old name)", enabled: false },
+        { value: "source-value-3", label: null, enabled: true },
+      ],
+      competitorKeywords: ["sample keyword"],
+    }),
+    ["sample-product", "Sample Product", "Acme", "Plain competitor", "empty-product", "Empty Product", "source-value-1", "Example Page", "source-value-2", "source-value-3", "sample keyword"],
+  );
 });
 
 test("framework words are ignored while other database values remain private terms", () => {
@@ -99,9 +90,12 @@ test("the example placeholder label allowlists its note-stripped form", async ()
     const root = mkdtempSync(join(tmpdir(), "privacy-allowed-"));
     try {
       mkdirSync(join(root, "examples"), { recursive: true });
-      writeFileSync(join(root, "examples/product.example.json"), JSON.stringify({
-        tracked_sources: [{ label: "Example competitor page (placeholder id)" }],
-      }));
+      writeFileSync(
+        join(root, "examples/product.example.json"),
+        JSON.stringify({
+          tracked_sources: [{ label: "Example competitor page (placeholder id)" }],
+        }),
+      );
       process.env.PRIVATE_TERMS = "Example competitor page";
       const { terms, counts } = await privateTerms(root);
       assert.deepEqual(terms, []);
@@ -123,14 +117,12 @@ test("termPattern matches case and separator variants without longer-word or num
 });
 
 test("termsFrom normalizes URLs and account IDs, filters short and allowed terms, and deduplicates", () => {
-  assert.deepEqual(termsFrom([
-    " https://social.example/Globex/ ",
-    "https://social.example/profile.php?id=123456789",
+  assert.deepEqual(termsFrom([" https://social.example/Globex/ ", "https://social.example/profile.php?id=123456789", "act_987654321", "globex", "xy", "Fictional"], new Set(["fictional"])), [
+    "Globex",
+    "123456789",
     "act_987654321",
-    "globex",
-    "xy",
-    "Fictional",
-  ], new Set(["fictional"])), ["Globex", "123456789", "act_987654321", "987654321"]);
+    "987654321",
+  ]);
 });
 
 test("scanDiff blocks current paths and content while ignoring deleted paths", () => {
@@ -188,13 +180,17 @@ test("--all scans full tracked text files and skips binaries", async () => {
 });
 
 test("scanText checks commit, branch and PR sources without revealing their text", () => {
-  const findings = scanText([
-    { where: "commit 1a2b3c4 message", text: "Acme Widget is private" },
-    { where: "branch name", text: "work-globex" },
-    { where: "PR title", text: "123456789 release" },
-    { where: "PR description", text: "Includes Acme Widget" },
-    { where: "PR description", text: "Includes Acme\nWidget" },
-  ], [TERM, "Globex", "123456789"], false);
+  const findings = scanText(
+    [
+      { where: "commit 1a2b3c4 message", text: "Acme Widget is private" },
+      { where: "branch name", text: "work-globex" },
+      { where: "PR title", text: "123456789 release" },
+      { where: "PR description", text: "Includes Acme Widget" },
+      { where: "PR description", text: "Includes Acme\nWidget" },
+    ],
+    [TERM, "Globex", "123456789"],
+    false,
+  );
   assert.equal(findings.length, 5);
   assert.ok(findings.some((finding) => finding.path === "commit 1a2b3c4 message"));
   assert.ok(findings.some((finding) => finding.path === "branch name"));

@@ -29,20 +29,16 @@ export function docFromFile(filename: string, markdown: string): ProductDocFile 
   };
 }
 
-export function productDocFromFile(
-  filename: string,
-  markdown: string,
-  kind: ProductDocKind,
-  overrides: { name?: string; title?: string } = {},
-): ProductDocFile {
-  const parsed = kind === "brand"
-    ? docFromFile(filename, markdown)
-    : {
-        name: docName(filename),
-        title: markdown.match(/^#\s+(.+?)\s*#*\s*$/m)?.[1]?.trim() || null,
-        sort: kind === "research" ? 100 : 0,
-        body_md: markdown,
-      };
+export function productDocFromFile(filename: string, markdown: string, kind: ProductDocKind, overrides: { name?: string; title?: string } = {}): ProductDocFile {
+  const parsed =
+    kind === "brand"
+      ? docFromFile(filename, markdown)
+      : {
+          name: docName(filename),
+          title: markdown.match(/^#\s+(.+?)\s*#*\s*$/m)?.[1]?.trim() || null,
+          sort: kind === "research" ? 100 : 0,
+          body_md: markdown,
+        };
   return {
     ...parsed,
     ...(overrides.name !== undefined ? { name: overrides.name } : {}),

@@ -7,10 +7,7 @@ import { scrapeCreatorsInstagramCollector } from "./collect.ts";
 const profileBody = profile as Record<string, unknown>;
 const reelItems = (reels as { items: Array<{ media: Record<string, unknown> }> }).items;
 
-async function withStubbedFetch(
-  responses: Array<{ body: Record<string, unknown>; status?: number }>,
-  run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>,
-): Promise<void> {
+async function withStubbedFetch(responses: Array<{ body: Record<string, unknown>; status?: number }>, run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>): Promise<void> {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.SCRAPECREATORS_API_KEY;
   const requests: Array<{ url: URL; apiKey: string | null }> = [];
@@ -71,21 +68,17 @@ test("collects Instagram Reels by user id and follows max_id pagination", async 
     assert.equal(result.creditsRemaining, 56);
     assert.deepEqual(usage, [1, 1, 1]);
     assert.deepEqual(ids, ["3999488182834263933", "3989395279407508278"]);
-    assert.deepEqual(requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`), [
-      "/v1/instagram/profile?handle=sample_creator",
-      "/v1/instagram/user/reels?user_id=1000001",
-      "/v1/instagram/user/reels?user_id=1000001&max_id=cursor-2",
-    ]);
+    assert.deepEqual(
+      requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`),
+      ["/v1/instagram/profile?handle=sample_creator", "/v1/instagram/user/reels?user_id=1000001", "/v1/instagram/user/reels?user_id=1000001&max_id=cursor-2"],
+    );
     assert.ok(requests.every(({ apiKey }) => apiKey === "test-key"));
   });
 });
 
 test("stops before another Instagram request at the configured credit limit", async () => {
   await withStubbedFetch([{ body: profileBody }], async (requests) => {
-    await assert.rejects(
-      scrapeCreatorsInstagramCollector.collect("sample_creator", { maxPosts: 12, maxCredits: 1 }),
-      /reached the 1-credit limit/,
-    );
+    await assert.rejects(scrapeCreatorsInstagramCollector.collect("sample_creator", { maxPosts: 12, maxCredits: 1 }), /reached the 1-credit limit/);
     assert.equal(requests.length, 1);
   });
 });

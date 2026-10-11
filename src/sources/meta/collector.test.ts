@@ -4,8 +4,17 @@ import { metaSource } from "./collector.ts";
 import type { TrackedSourceRow } from "../../db/types.ts";
 
 const base: TrackedSourceRow = {
-  id: "t", product_id: "p", source: "meta", kind: "page", value: "1", country: "US",
-  label: null, enabled: true, config: {}, last_scraped_at: null, created_at: "",
+  id: "t",
+  product_id: "p",
+  source: "meta",
+  kind: "page",
+  value: "1",
+  country: "US",
+  label: null,
+  enabled: true,
+  config: {},
+  last_scraped_at: null,
+  created_at: "",
 };
 
 test("validate rejects wrong source and kinds", () => {

@@ -28,8 +28,7 @@ const videoMessages: ChatMessage[] = [
 ];
 
 test("message conversion maps roles, system instruction and inline video data", async () => {
-  const { fetchFn, calls } = fetchWith(() =>
-    new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "{}" }] } }] })));
+  const { fetchFn, calls } = fetchWith(() => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "{}" }] } }] })));
   await completeGemini(videoMessages, { model: "gemini-2.5-flash" }, fetchFn);
   const call = calls[0]!;
   assert.equal(call.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
@@ -42,10 +41,7 @@ test("message conversion maps roles, system instruction and inline video data", 
   assert.deepEqual(body.contents, [
     {
       role: "user",
-      parts: [
-        { text: "Describe this ad." },
-        { inline_data: { mime_type: "video/mp4", data: "QUJD" } },
-      ],
+      parts: [{ text: "Describe this ad." }, { inline_data: { mime_type: "video/mp4", data: "QUJD" } }],
     },
     { role: "model", parts: [{ text: '{"partial":true}' }] },
     { role: "user", parts: [{ text: "Return full JSON." }] },
@@ -53,25 +49,22 @@ test("message conversion maps roles, system instruction and inline video data", 
 });
 
 test("image_url parts become inline_data too", async () => {
-  const { fetchFn, calls } = fetchWith(() =>
-    new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "{}" }] } }] })));
-  await completeGemini(
-    [{ role: "user", content: [{ type: "image_url", image_url: { url: "data:image/webp;base64,WFk=" } }] }],
-    { model: "gemini-2.5-flash" },
-    fetchFn,
-  );
+  const { fetchFn, calls } = fetchWith(() => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "{}" }] } }] })));
+  await completeGemini([{ role: "user", content: [{ type: "image_url", image_url: { url: "data:image/webp;base64,WFk=" } }] }], { model: "gemini-2.5-flash" }, fetchFn);
   const body = JSON.parse(String(calls[0]!.init!.body));
   assert.deepEqual(body.contents[0].parts, [{ inline_data: { mime_type: "image/webp", data: "WFk=" } }]);
 });
 
 test("response text parts are joined and usage maps token counts incl. thoughts", async () => {
-  const { fetchFn } = fetchWith(() =>
-    new Response(
-      JSON.stringify({
-        candidates: [{ content: { parts: [{ text: '{"a":' }, { text: "1}" }] }, finishReason: "STOP" }],
-        usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 20, thoughtsTokenCount: 7, totalTokenCount: 127 },
-      }),
-    ));
+  const { fetchFn } = fetchWith(
+    () =>
+      new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: '{"a":' }, { text: "1}" }] }, finishReason: "STOP" }],
+          usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 20, thoughtsTokenCount: 7, totalTokenCount: 127 },
+        }),
+      ),
+  );
   const result = await completeGemini(videoMessages, { model: "gemini-2.5-flash" }, fetchFn);
   assert.equal(result.content, '{"a":1}');
   assert.deepEqual(result.usage, { prompt_tokens: 100, completion_tokens: 27, total_tokens: 127 });
@@ -83,14 +76,8 @@ test("non-2xx throws status plus body excerpt", async () => {
 });
 
 test("a blocked or empty response throws with reasons", async () => {
-  const { fetchFn } = fetchWith(() =>
-    new Response(
-      JSON.stringify({ candidates: [{ finishReason: "SAFETY" }], promptFeedback: { blockReason: "OTHER" } }),
-    ));
-  await assert.rejects(
-    () => completeGemini(videoMessages, { model: "m" }, fetchFn),
-    /no text \(finishReason: SAFETY, blockReason: OTHER\)/,
-  );
+  const { fetchFn } = fetchWith(() => new Response(JSON.stringify({ candidates: [{ finishReason: "SAFETY" }], promptFeedback: { blockReason: "OTHER" } })));
+  await assert.rejects(() => completeGemini(videoMessages, { model: "m" }, fetchFn), /no text \(finishReason: SAFETY, blockReason: OTHER\)/);
 });
 
 test("latestFlashModel picks the highest stable flash across pages", async () => {

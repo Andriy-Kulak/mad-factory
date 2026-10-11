@@ -11,6 +11,9 @@ export async function setFavorite(productId: string, kind: FavoriteKind, ids: st
   if (!ids.length) return;
   const res = await getDb()
     .from("favorites")
-    .upsert(ids.map((target_id) => ({ product_id: productId, kind, target_id, favorited })), { onConflict: "product_id,kind,target_id" });
+    .upsert(
+      ids.map((target_id) => ({ product_id: productId, kind, target_id, favorited })),
+      { onConflict: "product_id,kind,target_id" },
+    );
   if (res.error) throw new Error(`favorites: ${res.error.message}`);
 }

@@ -88,10 +88,7 @@ export function buildOverview(input: { product: string; window: { from: string; 
   const { scorecard: sc, data } = input;
   const now = input.now ?? new Date();
   const cur = sc.currency;
-  const warnings: string[] = formatDiscoveryGaps(
-    data.appleCoverage.campaigns,
-    discoveryGaps(data.appleCoverage.campaigns, data.appleCoverage.keywords),
-  );
+  const warnings: string[] = formatDiscoveryGaps(data.appleCoverage.campaigns, discoveryGaps(data.appleCoverage.campaigns, data.appleCoverage.keywords));
   const keep = <T extends { currency: string }>(rows: T[], label: string) => {
     const ok = rows.filter((r) => r.currency === cur);
     if (ok.length < rows.length) warnings.push(`${label}: ${rows.length - ok.length} row(s) not in ${cur} left out`);
@@ -115,10 +112,54 @@ export function buildOverview(input: { product: string; window: { from: string; 
   const totalProceeds = sum(rc, (r) => r.proceeds);
 
   const channels: ChannelRow[] = [
-    { key: "meta_ads", label: "Meta ads", attribution: "Meta-reported (AppsFlyer)", path: "/meta-ads", spend: metaSpend, installs: sum(meta, (r) => r.installs), trials: metaTrials, paid: null, proceeds: null, costPerTrial: per(metaSpend, metaTrials) },
-    { key: "apple_ads", label: "Apple ads", attribution: "RevenueCat (Apple AdServices)", path: "/apple-ads", spend: appleSpend, installs: sum(apple, (r) => r.installs), trials: appleTrials, paid: sum(rcApple, (r) => r.paid), proceeds: sum(rcApple, (r) => r.proceeds), costPerTrial: per(appleSpend, appleTrials) },
-    { key: "unattributed", label: "Not attributed", attribution: "RevenueCat, no campaign: organic, Meta and anything else", path: null, spend: null, installs: null, trials: noneTrials, paid: sum(rcNone, (r) => r.paid), proceeds: sum(rcNone, (r) => r.proceeds), costPerTrial: null },
-    { key: "total", label: "Total", attribution: "Spend from both channels; trials, paid and proceeds from RevenueCat", path: null, spend: totalSpend, installs: null, trials: totalTrials, paid: sum(rc, (r) => r.paid), proceeds: totalProceeds, costPerTrial: per(totalSpend, totalTrials) },
+    {
+      key: "meta_ads",
+      label: "Meta ads",
+      attribution: "Meta-reported (AppsFlyer)",
+      path: "/meta-ads",
+      spend: metaSpend,
+      installs: sum(meta, (r) => r.installs),
+      trials: metaTrials,
+      paid: null,
+      proceeds: null,
+      costPerTrial: per(metaSpend, metaTrials),
+    },
+    {
+      key: "apple_ads",
+      label: "Apple ads",
+      attribution: "RevenueCat (Apple AdServices)",
+      path: "/apple-ads",
+      spend: appleSpend,
+      installs: sum(apple, (r) => r.installs),
+      trials: appleTrials,
+      paid: sum(rcApple, (r) => r.paid),
+      proceeds: sum(rcApple, (r) => r.proceeds),
+      costPerTrial: per(appleSpend, appleTrials),
+    },
+    {
+      key: "unattributed",
+      label: "Not attributed",
+      attribution: "RevenueCat, no campaign: organic, Meta and anything else",
+      path: null,
+      spend: null,
+      installs: null,
+      trials: noneTrials,
+      paid: sum(rcNone, (r) => r.paid),
+      proceeds: sum(rcNone, (r) => r.proceeds),
+      costPerTrial: null,
+    },
+    {
+      key: "total",
+      label: "Total",
+      attribution: "Spend from both channels; trials, paid and proceeds from RevenueCat",
+      path: null,
+      spend: totalSpend,
+      installs: null,
+      trials: totalTrials,
+      paid: sum(rc, (r) => r.paid),
+      proceeds: totalProceeds,
+      costPerTrial: per(totalSpend, totalTrials),
+    },
   ];
 
   const names = new Map(data.metaAds.map((a) => [a.id, a]));
@@ -136,9 +177,7 @@ export function buildOverview(input: { product: string; window: { from: string; 
     .filter((l) => l.spend > 0 || l.trials > 0)
     .sort((a, b) => b.spend - a.spend);
 
-  const posts = data.ownPosts
-    .map((p) => ({ platform: p.platform, handle: p.handle, url: p.url, postedAt: p.posted_at, views: p.views }))
-    .sort((a, b) => (b.views ?? -1) - (a.views ?? -1));
+  const posts = data.ownPosts.map((p) => ({ platform: p.platform, handle: p.handle, url: p.url, postedAt: p.posted_at, views: p.views })).sort((a, b) => (b.views ?? -1) - (a.views ?? -1));
 
   const bySource = new Map<string, SourceFreshness>();
   for (const r of data.runs) {

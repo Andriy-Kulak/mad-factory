@@ -44,18 +44,36 @@ function harness(rows: MetaAdsChangeRow[], objects: Record<string, Record<string
     },
   };
   const deps: VerifyDeps = {
-    async requireProduct() { return product(); },
-    async adAccount() { return opts?.account ?? "act_999"; },
-    async listPlanWrites(_productId, planPath) { planRefs.push(planPath); return rows; },
+    async requireProduct() {
+      return product();
+    },
+    async adAccount() {
+      return opts?.account ?? "act_999";
+    },
+    async listPlanWrites(_productId, planPath) {
+      planRefs.push(planPath);
+      return rows;
+    },
   };
   return { client, deps, calls, planRefs };
 }
 
 const AD = (status: string, extra: Record<string, unknown> = {}) => ({
-  name: "Ad", status, effective_status: status, adset_id: "s1", account_id: "999", updated_time: "2026-01-02T00:00:00+0000", ...extra,
+  name: "Ad",
+  status,
+  effective_status: status,
+  adset_id: "s1",
+  account_id: "999",
+  updated_time: "2026-01-02T00:00:00+0000",
+  ...extra,
 });
 const ADSET = (status: string, extra: Record<string, unknown> = {}) => ({
-  name: "Adset", status, effective_status: status, account_id: "999", campaign_id: "camp1", ...extra,
+  name: "Adset",
+  status,
+  effective_status: status,
+  account_id: "999",
+  campaign_id: "camp1",
+  ...extra,
 });
 const pauseAd = (id: string) => writeRow({ object_type: "ad", object_id: id, path: `/${id}`, request: { status: "PAUSED" } });
 const activateAdset = (id: string) => writeRow({ object_type: "adset", object_id: id, path: `/${id}`, request: { status: "ACTIVE" } });
@@ -140,10 +158,7 @@ test("(g) an ACTIVE ad under a paused ad set warns but still passes", async () =
 
 test("(h) an object from another account throws", async () => {
   const { client, deps } = harness([pauseAd("a1")], { a1: AD("PAUSED", { account_id: "777" }) });
-  await assert.rejects(
-    verifyPlan(client, "acme", { plan: "plan.md" }, deps),
-    /act_777, not act_999/,
-  );
+  await assert.rejects(verifyPlan(client, "acme", { plan: "plan.md" }, deps), /act_777, not act_999/);
 });
 
 test("(i) no journaled writes for the plan is an error", async () => {

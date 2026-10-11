@@ -79,7 +79,9 @@ switch (cmd) {
           log: (l) => console.log(`   ${l}`),
         });
         for (const w of stats.warnings) console.warn(`   WARNING ${w}`);
-        console.log(`   ${stats.campaigns} campaign(s), ${stats.keywords} keyword(s), ${stats.negatives} negative(s), ${stats.dailyRows} daily row(s), ${stats.searchTermRows} search-term row(s), ${stats.popularityTerms} new popularity term(s)`);
+        console.log(
+          `   ${stats.campaigns} campaign(s), ${stats.keywords} keyword(s), ${stats.negatives} negative(s), ${stats.dailyRows} daily row(s), ${stats.searchTermRows} search-term row(s), ${stats.popularityTerms} new popularity term(s)`,
+        );
       } catch (e) {
         failures++;
         console.error(`   FAILED: ${e instanceof Error ? e.message : String(e)}`);
@@ -97,7 +99,11 @@ switch (cmd) {
     const adAccountId = Number((ts.config as Record<string, unknown>).ad_account_id);
     const client = new AppleAdsClient(loadCredentials());
     const countries = [values.country.toUpperCase()];
-    const terms = values.terms?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
+    const terms =
+      values.terms
+        ?.split(",")
+        .map((t) => t.trim())
+        .filter(Boolean) ?? [];
     const pulledAt = new Date().toISOString();
     let rows: { term: string; popularity: number | null }[];
     if (terms.length) {

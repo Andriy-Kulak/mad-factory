@@ -1,12 +1,4 @@
-import type {
-  Json,
-  MetaAdsAdDailyBreakdownInsert,
-  MetaAdsAdDailyInsert,
-  MetaAdsAdInsert,
-  MetaAdsAdsetInsert,
-  MetaAdsCampaignInsert,
-  MetaAdsCreativeInsert,
-} from "../db/types.ts";
+import type { Json, MetaAdsAdDailyBreakdownInsert, MetaAdsAdDailyInsert, MetaAdsAdInsert, MetaAdsAdsetInsert, MetaAdsCampaignInsert, MetaAdsCreativeInsert } from "../db/types.ts";
 import type { ActionTypeConfig, ApiObject } from "./types.ts";
 
 const DEFAULT_ACTION_TYPES = {
@@ -21,7 +13,7 @@ function value(row: ApiObject, key: string): string | null {
 }
 
 function object(value: unknown): ApiObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as ApiObject : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as ApiObject) : {};
 }
 
 function number(value: unknown): number | null {
@@ -35,12 +27,12 @@ function requiredNumber(row: ApiObject, key: string): number {
 }
 
 function json(value: unknown): Json | null {
-  return value === undefined || value === null ? null : value as Json;
+  return value === undefined || value === null ? null : (value as Json);
 }
 
 function actionsFor(row: ApiObject): ApiObject[] {
-  const conversions = Array.isArray(row.conversions) ? row.conversions as ApiObject[] : [];
-  const actions = Array.isArray(row.actions) ? row.actions as ApiObject[] : [];
+  const conversions = Array.isArray(row.conversions) ? (row.conversions as ApiObject[]) : [];
+  const actions = Array.isArray(row.actions) ? (row.actions as ApiObject[]) : [];
   return [...conversions, ...actions];
 }
 
@@ -71,14 +63,7 @@ function budget(row: ApiObject, key: string): number | null {
   return number(row[key]);
 }
 
-export function campaignRow(
-  c: ApiObject,
-  productId: string,
-  trackedSourceId: string,
-  accountId: string,
-  currency: string,
-  syncedAt: string,
-): MetaAdsCampaignInsert {
+export function campaignRow(c: ApiObject, productId: string, trackedSourceId: string, accountId: string, currency: string, syncedAt: string): MetaAdsCampaignInsert {
   return {
     id: String(c.id),
     product_id: productId,
@@ -144,7 +129,7 @@ export function creativeRow(c: ApiObject, productId: string, accountId: string, 
 }
 
 export function adRow(a: ApiObject, syncedAt: string): MetaAdsAdInsert {
-  const creative = a.creative && typeof a.creative === "object" ? a.creative as ApiObject : null;
+  const creative = a.creative && typeof a.creative === "object" ? (a.creative as ApiObject) : null;
   return {
     id: String(a.id),
     adset_id: String(a.adset_id),
@@ -163,10 +148,10 @@ export function adRow(a: ApiObject, syncedAt: string): MetaAdsAdInsert {
 
 function dailyMetrics(row: ApiObject, productId: string, currency: string, syncedAt: string, config: ActionTypeConfig) {
   const actions = actionsFor(row);
-  const videoActions = Array.isArray(row.video_p25_watched_actions) ? row.video_p25_watched_actions as ApiObject[] : [];
-  const video50 = Array.isArray(row.video_p50_watched_actions) ? row.video_p50_watched_actions as ApiObject[] : [];
-  const video100 = Array.isArray(row.video_p100_watched_actions) ? row.video_p100_watched_actions as ApiObject[] : [];
-  const thruplays = Array.isArray(row.video_thruplay_watched_actions) ? row.video_thruplay_watched_actions as ApiObject[] : [];
+  const videoActions = Array.isArray(row.video_p25_watched_actions) ? (row.video_p25_watched_actions as ApiObject[]) : [];
+  const video50 = Array.isArray(row.video_p50_watched_actions) ? (row.video_p50_watched_actions as ApiObject[]) : [];
+  const video100 = Array.isArray(row.video_p100_watched_actions) ? (row.video_p100_watched_actions as ApiObject[]) : [];
+  const thruplays = Array.isArray(row.video_thruplay_watched_actions) ? (row.video_thruplay_watched_actions as ApiObject[]) : [];
   const counts = actionCounts(row, config);
   return {
     date: String(row.date_start ?? ""),
@@ -201,13 +186,7 @@ export function dailyRow(row: ApiObject, productId: string, currency: string, sy
   return dailyMetrics(row, productId, currency, syncedAt, config);
 }
 
-export function breakdownRow(
-  row: ApiObject,
-  productId: string,
-  currency: string,
-  syncedAt: string,
-  config: ActionTypeConfig = {},
-): MetaAdsAdDailyBreakdownInsert {
+export function breakdownRow(row: ApiObject, productId: string, currency: string, syncedAt: string, config: ActionTypeConfig = {}): MetaAdsAdDailyBreakdownInsert {
   const metrics = dailyMetrics(row, productId, currency, syncedAt, config);
   return {
     date: metrics.date,

@@ -26,7 +26,22 @@ for (const t of tables) console.log(`  ${t.padEnd(16)} ${await count(t)}`);
 
 const ads = await count("ads");
 console.log("\nads field coverage (non-null)");
-const fields = ["advertiser_id", "advertiser_name", "body_text", "title", "link_url", "cta_text", "start_date", "is_active", "collation_id", "collation_count", "reach_estimate", "spend", "currency", "total_active_time"] as const;
+const fields = [
+  "advertiser_id",
+  "advertiser_name",
+  "body_text",
+  "title",
+  "link_url",
+  "cta_text",
+  "start_date",
+  "is_active",
+  "collation_id",
+  "collation_count",
+  "reach_estimate",
+  "spend",
+  "currency",
+  "total_active_time",
+] as const;
 for (const f of fields) {
   const n = await count("ads", (q) => q.not(f, "is", null));
   console.log(`  ${f.padEnd(18)} ${String(n).padStart(5)} / ${ads}  ${pct(n, ads)}`);

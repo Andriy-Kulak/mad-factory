@@ -12,17 +12,31 @@ import { useRef, type ReactNode } from "react";
  * An image or video. In grids (no `controls`) a video shows its first frame and loads only metadata; with
  * `controls` it plays with sound. No URL renders a dark "no media" block of the same size.
  */
-export function Media({ url, type, poster, controls = false, className = "", empty = "No media stored" }: {
-  url: string | null; type: "image" | "video" | string; poster?: string | null; controls?: boolean; className?: string; empty?: ReactNode;
+export function Media({
+  url,
+  type,
+  poster,
+  controls = false,
+  className = "",
+  empty = "No media stored",
+}: {
+  url: string | null;
+  type: "image" | "video" | string;
+  poster?: string | null;
+  controls?: boolean;
+  className?: string;
+  empty?: ReactNode;
 }) {
   if (!url) return <div className={`grid place-items-center text-chrome-fg-3 text-[12px] bg-chrome-3 ${className}`}>{empty}</div>;
   if (type === "image") {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={url} alt="" loading="lazy" className={`object-cover bg-chrome-3 ${className}`} />;
   }
-  return controls
-    ? <video key={url} src={url} poster={poster ?? undefined} controls autoPlay playsInline className={`object-cover bg-black ${className}`} />
-    : <video src={poster ? url : `${url}#t=0.5`} poster={poster ?? undefined} preload={poster ? "none" : "metadata"} muted playsInline className={`object-cover bg-black ${className}`} />;
+  return controls ? (
+    <video key={url} src={url} poster={poster ?? undefined} controls autoPlay playsInline className={`object-cover bg-black ${className}`} />
+  ) : (
+    <video src={poster ? url : `${url}#t=0.5`} poster={poster ?? undefined} preload={poster ? "none" : "metadata"} muted playsInline className={`object-cover bg-black ${className}`} />
+  );
 }
 
 /** Thumbnail that plays the stored video (muted) while the pointer is over its `group` card. */
@@ -39,8 +53,16 @@ export function HoverVideo({ thumb, video }: { thumb: string | null; video: stri
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {thumb && <img src={thumb} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />}
       {video && (
-        <video ref={ref} src={video} poster={thumb ?? undefined} muted loop playsInline preload="none"
-          className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+        <video
+          ref={ref}
+          src={video}
+          poster={thumb ?? undefined}
+          muted
+          loop
+          playsInline
+          preload="none"
+          className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        />
       )}
     </div>
   );
@@ -86,13 +108,20 @@ export function FavoriteStar({ on, onToggle, variant = "overlay" }: { on: boolea
   if (variant === "button") {
     return (
       <button type="button" onClick={click} aria-pressed={on} title={on ? "Remove from favorites" : "Add to favorites"} className={`btn ${on ? "text-warn" : ""}`}>
-        {star}{on ? "Favorited" : "Favorite"}
+        {star}
+        {on ? "Favorited" : "Favorite"}
       </button>
     );
   }
   return (
-    <button type="button" onClick={click} aria-pressed={on} aria-label={on ? "Remove from favorites" : "Add to favorites"} title={on ? "Remove from favorites" : "Add to favorites"}
-      className={`w-7 h-7 rounded-full grid place-items-center bg-black/55 transition-opacity duration-150 hover:bg-black/75 ${on ? "text-[#ffc83d] opacity-100" : "text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}>
+    <button
+      type="button"
+      onClick={click}
+      aria-pressed={on}
+      aria-label={on ? "Remove from favorites" : "Add to favorites"}
+      title={on ? "Remove from favorites" : "Add to favorites"}
+      className={`w-7 h-7 rounded-full grid place-items-center bg-black/55 transition-opacity duration-150 hover:bg-black/75 ${on ? "text-[#ffc83d] opacity-100" : "text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
+    >
       {star}
     </button>
   );

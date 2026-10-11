@@ -112,8 +112,18 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
   const byHandle = new Map(tracked.filter((t) => !t.accountId).map((t) => [`${t.platform}:${t.value}`, t]));
   const cols = "id,platform,handle,display_name,last_synced_at,avatar_sha256";
   const [idRows, handleRows] = await Promise.all([
-    byId.size ? db.from("social_accounts").select(cols).in("id", [...byId.keys()]) : Promise.resolve({ data: [], error: null }),
-    byHandle.size ? db.from("social_accounts").select(cols).in("handle", [...new Set([...byHandle.values()].map((t) => t.value))]) : Promise.resolve({ data: [], error: null }),
+    byId.size
+      ? db
+          .from("social_accounts")
+          .select(cols)
+          .in("id", [...byId.keys()])
+      : Promise.resolve({ data: [], error: null }),
+    byHandle.size
+      ? db
+          .from("social_accounts")
+          .select(cols)
+          .in("handle", [...new Set([...byHandle.values()].map((t) => t.value))])
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (idRows.error) fail("social_accounts", idRows.error);
   if (handleRows.error) fail("social_accounts", handleRows.error);
@@ -130,50 +140,26 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
   const [accSnaps, postRows] = await Promise.all([
     inChunks(accIds, async (ids) => {
       return fetchAll(
-        (from, to) => db
-          .from("social_account_snapshots")
-          .select("account_id,captured_on,followers")
-          .in("account_id", ids)
-          .order("account_id")
-          .order("captured_on")
-          .range(from, to),
+        (from, to) => db.from("social_account_snapshots").select("account_id,captured_on,followers").in("account_id", ids).order("account_id").order("captured_on").range(from, to),
         "social_account_snapshots",
       );
     }),
     inChunks(accIds, async (ids) => {
       let q = db.from("social_posts").select("id,account_id,url,kind,caption,posted_at,duration_s").in("account_id", ids);
       if (filter.kinds) q = q.in("kind", filter.kinds);
-      return fetchAll(
-        (from, to) => q.order("posted_at", { ascending: false }).order("id").range(from, to),
-        "social_posts",
-      );
+      return fetchAll((from, to) => q.order("posted_at", { ascending: false }).order("id").range(from, to), "social_posts");
     }),
   ]);
   const postIds = postRows.map((p) => p.id);
   const [postSnaps, media] = await Promise.all([
     inChunks(postIds, async (ids) => {
       return fetchAll(
-        (from, to) => db
-          .from("social_post_snapshots")
-          .select("post_id,captured_on,source,views,likes,comments,shares,saves")
-          .in("post_id", ids)
-          .order("post_id")
-          .order("captured_on")
-          .range(from, to),
+        (from, to) => db.from("social_post_snapshots").select("post_id,captured_on,source,views,likes,comments,shares,saves").in("post_id", ids).order("post_id").order("captured_on").range(from, to),
         "social_post_snapshots",
       );
     }),
     inChunks(postIds, async (ids) => {
-      return fetchAll(
-        (from, to) => db
-          .from("social_post_media")
-          .select("post_id,role,sha256")
-          .in("post_id", ids)
-          .order("post_id")
-          .order("role")
-          .range(from, to),
-        "social_post_media",
-      );
+      return fetchAll((from, to) => db.from("social_post_media").select("post_id,role,sha256").in("post_id", ids).order("post_id").order("role").range(from, to), "social_post_media");
     }),
   ]);
   const shas = [...new Set([...media.map((m) => m.sha256), ...accRows.flatMap(({ a }) => (a.avatar_sha256 ? [a.avatar_sha256] : []))])];

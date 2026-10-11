@@ -8,7 +8,10 @@ const usd = (date: string, amount: number) => ({ date, amount, currency: "USD" }
 function data(over: Partial<ScorecardData> = {}): ScorecardData {
   return {
     proceeds: [usd("2026-10-01", 100), usd("2026-10-02", 100)],
-    trials: [{ date: "2026-10-01", n: 3 }, { date: "2026-10-02", n: 2 }],
+    trials: [
+      { date: "2026-10-01", n: 3 },
+      { date: "2026-10-02", n: 2 },
+    ],
     spend: { apple_ads: [usd("2026-10-01", 40), usd("2026-10-02", 40)], meta_ads: [usd("2026-10-02", 20)] },
     latest: { revenuecat: "2026-10-02", apple_ads: "2026-10-02", meta_ads: "2026-10-02" },
     running: [],
@@ -36,7 +39,10 @@ test("profit is proceeds minus every channel's spend minus prorated fixed costs,
 
 test("warns about missing goal, unset fixed costs, stale sources and other currencies", () => {
   const stale = data({ latest: { revenuecat: "2026-10-02", meta_ads: "2026-10-01", apple_ads: null } });
-  assert.match(buildScorecard({ product: "p", month: "2026-10", through: "2026-10-02", goal: null, data: stale }).warnings.join("\n"), /No goal set[\s\S]*meta_ads: data only through 2026-10-01[\s\S]*apple_ads: no data/);
+  assert.match(
+    buildScorecard({ product: "p", month: "2026-10", through: "2026-10-02", goal: null, data: stale }).warnings.join("\n"),
+    /No goal set[\s\S]*meta_ads: data only through 2026-10-01[\s\S]*apple_ads: no data/,
+  );
 
   const eur = data({ spend: { meta_ads: [usd("2026-10-01", 5), { date: "2026-10-01", amount: 9, currency: "EUR" }] } });
   const s = buildScorecard({ product: "p", month: "2026-10", through: "2026-10-02", goal: { target: 1, currency: "USD", monthlyFixedCosts: null }, data: eur });

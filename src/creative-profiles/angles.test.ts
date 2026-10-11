@@ -92,9 +92,13 @@ function harness(options: HarnessOptions) {
       completions.push(messages);
       return { content: replies.shift() ?? '{"angle":"never-stall","angle_suggestion":null}', usage: { total_tokens: 10 } };
     },
-    upsertProfile: async (sha, p) => { upserts.push({ sha, profile: p }); },
+    upsertProfile: async (sha, p) => {
+      upserts.push({ sha, profile: p });
+    },
     readFile: async (path) => Buffer.from(options.files?.get(path) ?? "[]"),
-    writeFile: async (path, content) => { written.set(path, content); },
+    writeFile: async (path, content) => {
+      written.set(path, content);
+    },
     log: () => {},
   };
   return { deps, completions, upserts, written };
@@ -133,10 +137,7 @@ test("--out rejects a bad angle once, repairs it, and reports failures", async (
   const { deps, completions } = harness({
     own: ["sha1"],
     profiles,
-    replies: [
-      '{"angle":"made-up","angle_suggestion":null}',
-      '{"angle":"other","angle_suggestion":"new-idea"}',
-    ],
+    replies: ['{"angle":"made-up","angle_suggestion":null}', '{"angle":"other","angle_suggestion":"new-idea"}'],
   });
   const results = await tagAngles("fictional", tagOptions, deps);
   assert.equal(completions.length, 2);
@@ -147,10 +148,7 @@ test("--out rejects a bad angle once, repairs it, and reports failures", async (
 
 test("--out errors when no angle library is loaded", async () => {
   const { deps } = harness({ vocab: { angles: [], audiences: [], desires: [], library: false } });
-  await assert.rejects(
-    () => tagAngles("fictional", tagOptions, deps),
-    /no angle-library doc for product "fictional" \(pnpm product docs import\)/,
-  );
+  await assert.rejects(() => tagAngles("fictional", tagOptions, deps), /no angle-library doc for product "fictional" \(pnpm product docs import\)/);
 });
 
 test("--apply updates only angle and angle_suggestion, skipping manual rows", async () => {

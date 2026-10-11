@@ -21,7 +21,21 @@ function Icon({ d, size = 16 }: { d: string; size?: number }) {
  * Dark top bar + collapsible sidebar around the light workspace. Lives in the product layout so it keeps
  * its state across page navigations; the collapsed state is a cookie so the server renders the right width.
  */
-export function AppFrame({ products, current, defaultCollapsed, user, needsSetup = [], children }: { products: Product[]; current: Product; defaultCollapsed: boolean; user?: string | null; needsSetup?: NavKey[]; children: ReactNode }) {
+export function AppFrame({
+  products,
+  current,
+  defaultCollapsed,
+  user,
+  needsSetup = [],
+  children,
+}: {
+  products: Product[];
+  current: Product;
+  defaultCollapsed: boolean;
+  user?: string | null;
+  needsSetup?: NavKey[];
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const active = activeNav(pathname, current.slug);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -64,7 +78,9 @@ export function AppFrame({ products, current, defaultCollapsed, user, needsSetup
 function TopBar({ current, active, products, user }: { current: Product; active: NavItem; products: Product[]; user?: string | null }) {
   return (
     <div className="sticky top-0 z-30 h-12 shrink-0 flex items-center gap-3 px-4 bg-chrome border-b border-chrome-line text-[13px] text-chrome-fg-2">
-      <Link href={`/p/${current.slug}`} className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">Mad Factory</Link>
+      <Link href={`/p/${current.slug}`} className="font-semibold text-chrome-fg hover:text-signal transition-colors duration-200">
+        Mad Factory
+      </Link>
       <span className="hidden sm:flex items-center gap-2 min-w-0">
         <span className="text-chrome-fg-3">/</span>
         <span className="truncate">{current.name}</span>
@@ -74,13 +90,19 @@ function TopBar({ current, active, products, user }: { current: Product; active:
       <div className="lg:hidden ml-auto w-44">
         <ProductSwitcher products={products} current={current} />
       </div>
-      <Link href="/setup" className="hidden lg:inline ml-auto hover:text-chrome-fg transition-colors duration-200">Setup</Link>
-      <Link href="/ui" className="hidden lg:inline hover:text-chrome-fg transition-colors duration-200">Components</Link>
+      <Link href="/setup" className="hidden lg:inline ml-auto hover:text-chrome-fg transition-colors duration-200">
+        Setup
+      </Link>
+      <Link href="/ui" className="hidden lg:inline hover:text-chrome-fg transition-colors duration-200">
+        Components
+      </Link>
       {user && (
         <form action="/api/auth/logout" method="post" className="flex items-center gap-3 shrink-0">
           <span aria-hidden="true" className="hidden lg:block h-4 w-px bg-chrome-line" />
           <span className="hidden lg:inline">@{user}</span>
-          <button type="submit" className="hover:text-chrome-fg transition-colors duration-200">Sign out</button>
+          <button type="submit" className="hover:text-chrome-fg transition-colors duration-200">
+            Sign out
+          </button>
         </form>
       )}
     </div>
@@ -108,7 +130,21 @@ const EXPANDED = 232;
 const COLLAPSED = 64;
 
 /** Channels the product has not connected stay in the sidebar, dimmed and marked "set up", so they are easy to find. */
-function Sidebar({ products, current, active, collapsed, onToggle, needsSetup }: { products: Product[]; current: Product; active: NavItem; collapsed: boolean; onToggle: () => void; needsSetup: NavKey[] }) {
+function Sidebar({
+  products,
+  current,
+  active,
+  collapsed,
+  onToggle,
+  needsSetup,
+}: {
+  products: Product[];
+  current: Product;
+  active: NavItem;
+  collapsed: boolean;
+  onToggle: () => void;
+  needsSetup: NavKey[];
+}) {
   const navRef = useRef<HTMLDivElement>(null);
   const [marker, setMarker] = useState<{ top: number; height: number } | null>(null);
 
@@ -178,7 +214,12 @@ function Sidebar({ products, current, active, collapsed, onToggle, needsSetup }:
                     <span className={`flex-1 ${label}`}>{it.label}</span>
                     {off && <span className={`text-[11px] font-normal text-chrome-fg-3 ${label}`}>set up</span>}
                   </Link>
-                  {collapsed && <span className="tip">{it.label}{off ? " · not set up" : ""}</span>}
+                  {collapsed && (
+                    <span className="tip">
+                      {it.label}
+                      {off ? " · not set up" : ""}
+                    </span>
+                  )}
                 </div>
               );
             })}

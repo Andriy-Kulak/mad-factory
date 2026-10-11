@@ -36,7 +36,10 @@ switch (cmd) {
   case "list": {
     const rows = await listMcpKeys();
     if (!rows.length) console.log("No keys yet: pnpm mcp-key create --name <agent>");
-    for (const r of rows) console.log(`${r.name.padEnd(20)} created ${r.created_at.slice(0, 10)}  last used ${r.last_used_at?.slice(0, 16).replace("T", " ") ?? "never"}  ${r.revoked_at ? `REVOKED ${r.revoked_at.slice(0, 10)}` : "active"}`);
+    for (const r of rows)
+      console.log(
+        `${r.name.padEnd(20)} created ${r.created_at.slice(0, 10)}  last used ${r.last_used_at?.slice(0, 16).replace("T", " ") ?? "never"}  ${r.revoked_at ? `REVOKED ${r.revoked_at.slice(0, 10)}` : "active"}`,
+      );
     break;
   }
   case "revoke": {

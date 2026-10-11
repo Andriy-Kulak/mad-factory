@@ -56,9 +56,10 @@ function harness(creatives: MetaAdsCreativeRow[]): Harness {
   };
   const deps: MediaDeps = {
     listCreatives: async () => creatives,
-    getCreative: async (productId, creativeId) =>
-      creatives.find((row) => row.product_id === productId && row.id === creativeId) ?? null,
-    setCreativeSha: async (id, hash) => { state.linked.push({ id, hash }); },
+    getCreative: async (productId, creativeId) => creatives.find((row) => row.product_id === productId && row.id === creativeId) ?? null,
+    setCreativeSha: async (id, hash) => {
+      state.linked.push({ id, hash });
+    },
     creativeExists: async (hash) => state.known.has(hash),
     insertCreative: async (row: CreativeInsert) => {
       state.known.add(row.sha256);
@@ -79,9 +80,8 @@ function harness(creatives: MetaAdsCreativeRow[]): Harness {
   return { deps, stored: state.stored, linked: state.linked, downloads: state.downloads };
 }
 
-test("video creatives download the video source once per video_id", async () => withEnv(
-  { META_ADS_TOKEN: "read-secret" },
-  async () => {
+test("video creatives download the video source once per video_id", async () =>
+  withEnv({ META_ADS_TOKEN: "read-secret" }, async () => {
     const rows = [creative("c1", "v1", "thumb-hash"), creative("c2", "v1", null), creative("c3", "v2", null)];
     const { deps, stored, linked, downloads } = harness(rows);
     const requested: string[] = [];
@@ -102,12 +102,10 @@ test("video creatives download the video source once per video_id", async () => 
     // Both creatives sharing v1 get the same sha256.
     assert.equal(linked.length, 3);
     assert.equal(linked.find((l) => l.id === "c1")!.hash, linked.find((l) => l.id === "c2")!.hash);
-  },
-));
+  }));
 
-test("image-only creatives are resolved with one batched adimages call", async () => withEnv(
-  { META_ADS_TOKEN: "read-secret" },
-  async () => {
+test("image-only creatives are resolved with one batched adimages call", async () =>
+  withEnv({ META_ADS_TOKEN: "read-secret" }, async () => {
     const rows = [creative("c1", null, "h1"), creative("c2", null, "h2"), creative("c3", null, "h1")];
     const { deps, stored, linked } = harness(rows);
     const calls: { path: string; params: URLSearchParams }[] = [];
@@ -116,9 +114,11 @@ test("image-only creatives are resolved with one batched adimages call", async (
       calls.push({ path: url.pathname, params: url.searchParams });
       assert.ok(url.pathname.endsWith("/act_1/adimages"));
       const hashes = JSON.parse(url.searchParams.get("hashes")!) as string[];
-      return new Response(JSON.stringify({
-        data: hashes.map((hash) => ({ hash, url: `https://cdn/${hash}.jpg` })),
-      }));
+      return new Response(
+        JSON.stringify({
+          data: hashes.map((hash) => ({ hash, url: `https://cdn/${hash}.jpg` })),
+        }),
+      );
     }) as typeof fetch);
 
     const stats = await downloadMedia(client, "act_1", "p1", {}, deps);
@@ -130,18 +130,11 @@ test("image-only creatives are resolved with one batched adimages call", async (
     assert.ok(stored.every((item) => item.type === "image" && item.prefix === "images" && item.ext === "jpg"));
     assert.equal(linked.length, 3);
     assert.equal(linked.find((l) => l.id === "c1")!.hash, linked.find((l) => l.id === "c3")!.hash);
-  },
-));
+  }));
 
-test("video wins over image_hash and one failure does not stop the rest", async () => withEnv(
-  { META_ADS_TOKEN: "read-secret" },
-  async () => {
-    const rows = [
-      creative("c1", "v-ok", "h-ignored"),
-      creative("c2", "v-bad", null),
-      creative("c3", null, "h-ok"),
-      creative("c4", null, null),
-    ];
+test("video wins over image_hash and one failure does not stop the rest", async () =>
+  withEnv({ META_ADS_TOKEN: "read-secret" }, async () => {
+    const rows = [creative("c1", "v-ok", "h-ignored"), creative("c2", "v-bad", null), creative("c3", null, "h-ok"), creative("c4", null, null)];
     const { deps, linked } = harness(rows);
     const client = new MetaAdsClient({}, (async (input) => {
       const url = new URL(String(input));
@@ -158,8 +151,7 @@ test("video wins over image_hash and one failure does not stop the rest", async 
     assert.equal(stats.failures, 1);
     assert.equal(stats.skipped, 1);
     assert.deepEqual(linked.map((l) => l.id).sort(), ["c1", "c3"]);
-  },
-));
+  }));
 
 test("importMediaFile stores a new file and links the creative", async () => {
   const { deps, stored, linked } = harness([creative("c1", "v1", "thumb")]);

@@ -89,12 +89,7 @@ interface AdState {
 // meta_ads_changes row is inserted BEFORE the Meta call and updated with the HTTP
 // status and response afterwards, so every attempted write has an audit row even
 // when the call fails. Stops on the first failure.
-export async function pauseAds(
-  client: Pick<MetaAdsClient, "get" | "pause">,
-  productSlug: string,
-  options: PauseOptions,
-  deps: PauseDeps = defaultDeps,
-): Promise<PauseStats> {
+export async function pauseAds(client: Pick<MetaAdsClient, "get" | "pause">, productSlug: string, options: PauseOptions, deps: PauseDeps = defaultDeps): Promise<PauseStats> {
   if (!options.adIds.length) throw new Error("pause needs at least one --ad <id>");
   const product = await deps.requireProduct(productSlug);
   const accountId = await deps.adAccount(product.id);
@@ -102,10 +97,7 @@ export async function pauseAds(
 
   const ads: AdState[] = [];
   for (const id of options.adIds) {
-    const ad = await client.get<{ id?: string; name?: string; status?: string; effective_status?: string; account_id?: string }>(
-      `/${id}`,
-      { fields: "name,status,effective_status,account_id" },
-    );
+    const ad = await client.get<{ id?: string; name?: string; status?: string; effective_status?: string; account_id?: string }>(`/${id}`, { fields: "name,status,effective_status,account_id" });
     const adAccount = `act_${ad.account_id ?? ""}`;
     if (adAccount !== accountId) {
       throw new Error(`ad ${id} (${ad.name ?? "?"}) belongs to ${adAccount}, not ${accountId}; refusing to write to another account`);

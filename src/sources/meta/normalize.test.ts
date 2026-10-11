@@ -54,11 +54,7 @@ test("normalize collects snapshot images and image-only cards", () => {
     snapshot: {
       body: { text: "b" },
       images: [{ original_image_url: "https://cdn/hd.jpg", resized_image_url: "https://cdn/sd.jpg" }],
-      cards: [
-        { original_image_url: "https://cdn/card1.jpg" },
-        { video_sd_url: "https://cdn/card.mp4" },
-        { resized_image_url: "https://cdn/card3.jpg" },
-      ],
+      cards: [{ original_image_url: "https://cdn/card1.jpg" }, { video_sd_url: "https://cdn/card.mp4" }, { resized_image_url: "https://cdn/card3.jpg" }],
     },
   });
   assert.deepEqual(

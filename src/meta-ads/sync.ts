@@ -19,11 +19,13 @@ export const SOURCE = "meta_ads";
 export const MAX_DAYS = 28;
 
 const CAMPAIGN_FIELDS = "id,name,objective,status,effective_status,daily_budget,lifetime_budget,bid_strategy,created_time,updated_time";
-const ADSET_FIELDS = "id,campaign_id,name,status,effective_status,optimization_goal,billing_event,bid_amount,daily_budget,lifetime_budget,targeting,promoted_object,learning_stage_info,is_skadnetwork_attribution";
+const ADSET_FIELDS =
+  "id,campaign_id,name,status,effective_status,optimization_goal,billing_event,bid_amount,daily_budget,lifetime_budget,targeting,promoted_object,learning_stage_info,is_skadnetwork_attribution";
 const CREATIVE_FIELDS = "id,name,title,body,call_to_action_type,video_id,image_hash,thumbnail_url,object_story_spec,asset_feed_spec";
 // Exported: launch mirrors freshly created ads with exactly the sync's fields.
 export const AD_FIELDS = `id,name,adset_id,campaign_id,status,effective_status,issues_info,created_time,updated_time,creative{${CREATIVE_FIELDS}}`;
-const INSIGHT_FIELDS = "date_start,ad_id,campaign_id,adset_id,impressions,reach,clicks,inline_link_clicks,spend,actions,conversions,cost_per_action_type,video_p25_watched_actions,video_p50_watched_actions,video_p100_watched_actions,video_thruplay_watched_actions,quality_ranking,engagement_rate_ranking,conversion_rate_ranking";
+const INSIGHT_FIELDS =
+  "date_start,ad_id,campaign_id,adset_id,impressions,reach,clicks,inline_link_clicks,spend,actions,conversions,cost_per_action_type,video_p25_watched_actions,video_p50_watched_actions,video_p100_watched_actions,video_thruplay_watched_actions,quality_ranking,engagement_rate_ranking,conversion_rate_ranking";
 
 export interface SyncOptions {
   days: number | "auto";
@@ -52,7 +54,7 @@ function accountConfig(ts: TrackedSourceRow): AccountConfig {
   if (ts.source !== SOURCE || ts.kind !== "ad_account") throw new Error(`Tracked source ${ts.id} is not a ${SOURCE} ad_account`);
   if (!/^act_\d+$/.test(ts.value)) throw new Error(`Tracked source ${ts.id}: value must match act_<digits>`);
   const config = (ts.config ?? {}) as Record<string, unknown>;
-  const rawActions = config.action_types && typeof config.action_types === "object" ? config.action_types as Record<string, unknown> : {};
+  const rawActions = config.action_types && typeof config.action_types === "object" ? (config.action_types as Record<string, unknown>) : {};
   const actionTypes: ActionTypeConfig = {};
   for (const key of ["installs", "trials", "purchases"] as const) {
     const values = rawActions[key];
@@ -163,7 +165,9 @@ export async function syncAccount(client: MetaAdsClient, ts: TrackedSourceRow, o
       stats.breakdownRows = breakdownRows.length;
     }
 
-    options.log(`Account ${account.name ?? accountId} [${account.account_status ?? "unknown"}]: ${stats.campaigns} campaign(s), ${stats.adsets} ad set(s), ${stats.creatives} creative(s), ${stats.ads} ad(s), ${stats.dailyRows} daily row(s), ${stats.breakdownRows} breakdown row(s)`);
+    options.log(
+      `Account ${account.name ?? accountId} [${account.account_status ?? "unknown"}]: ${stats.campaigns} campaign(s), ${stats.adsets} ad set(s), ${stats.creatives} creative(s), ${stats.ads} ad(s), ${stats.dailyRows} daily row(s), ${stats.breakdownRows} breakdown row(s)`,
+    );
     if (!options.dryRun && runId) {
       await finishScrapeRun(runId, { status: "done", ads_seen: stats.ads, error: stats.warnings.join("; ") || null });
       await markSourceScraped(ts.id);

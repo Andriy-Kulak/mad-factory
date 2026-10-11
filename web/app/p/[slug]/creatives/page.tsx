@@ -22,9 +22,13 @@ export default async function CreativesPage({ params, searchParams }: { params: 
         <Stat label="Ran 30+ days" value={items.filter((it) => it.bucket === "long").length} hint="competitor media" />
         <Stat label="Stopped within 14 days" value={items.filter((it) => it.bucket === "stopped").length} hint="competitor media" />
       </div>
-      {items.length === 0
-        ? <Empty>No profiled creatives yet. Run <code>pnpm creatives profile --product {slug}</code>.</Empty>
-        : <CreativeBrowser items={items} initial={parseCreativeFilters(sp)} />}
+      {items.length === 0 ? (
+        <Empty>
+          No profiled creatives yet. Run <code>pnpm creatives profile --product {slug}</code>.
+        </Empty>
+      ) : (
+        <CreativeBrowser items={items} initial={parseCreativeFilters(sp)} />
+      )}
     </Shell>
   );
 }

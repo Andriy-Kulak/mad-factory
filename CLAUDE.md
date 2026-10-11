@@ -138,6 +138,7 @@ Implement `AdSource` in `src/sources/<name>/`, map its payload to `CollectedAd`,
 `src/sources/index.ts`. Do not touch ingest.ts unless the source needs a new media type.
 
 ## Conventions
+- Formatting is Biome (`pnpm format`); `pnpm ready` fails on unformatted files. There is no linter on purpose.
 - Node 22, TypeScript run directly via node type stripping (`node file.ts`; no tsx, no build step).
   Keep syntax erasable (`erasableSyntaxOnly`): no enums, no parameter properties. Import with `.ts` extensions.
 - pnpm. Avoid native-build dependencies (playwright, @aws-sdk/client-s3, @supabase/supabase-js, postgres are all pure JS).

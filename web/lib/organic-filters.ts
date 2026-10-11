@@ -33,7 +33,9 @@ const many = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [
 
 /** Accepts "3", "3x", "10,000", "2.5%", "10k", "1.5m"; blank or junk is null. */
 export function parseNum(v: string | string[] | undefined): number | null {
-  const s = one(v).replace(/[,%x×\s]/gi, "").toLowerCase();
+  const s = one(v)
+    .replace(/[,%x×\s]/gi, "")
+    .toLowerCase();
   if (!s) return null;
   const mult = s.endsWith("k") ? 1e3 : s.endsWith("m") ? 1e6 : 1;
   const n = Number(mult === 1 ? s : s.slice(0, -1)) * mult;
@@ -70,30 +72,33 @@ export function applyOrganicFilters(posts: OrganicPost[], f: OrganicFilters, now
   const channels = new Set(f.channels);
   const q = f.q.toLowerCase();
   const since = f.postedWithin ? now - f.postedWithin.n * UNIT_DAYS[f.postedWithin.unit] * DAY_MS : null;
-  return posts.filter((p) =>
-    (!channels.size || channels.has(p.account.id)) &&
-    (!f.platform || p.account.platform === f.platform) &&
-    (!q || (p.caption ?? "").toLowerCase().includes(q)) &&
-    (!f.favorites || favorites.has(p.id)) &&
-    inRange(p.outlier, f.outlier) &&
-    inRange(p.views, f.views) &&
-    inRange(p.engagement == null ? null : p.engagement * 100, f.engagement) &&
-    (since == null || (p.postedAt != null && Date.parse(p.postedAt) >= since)),
+  return posts.filter(
+    (p) =>
+      (!channels.size || channels.has(p.account.id)) &&
+      (!f.platform || p.account.platform === f.platform) &&
+      (!q || (p.caption ?? "").toLowerCase().includes(q)) &&
+      (!f.favorites || favorites.has(p.id)) &&
+      inRange(p.outlier, f.outlier) &&
+      inRange(p.views, f.views) &&
+      inRange(p.engagement == null ? null : p.engagement * 100, f.engagement) &&
+      (since == null || (p.postedAt != null && Date.parse(p.postedAt) >= since)),
   );
 }
 
 export const NO_FILTERS: Omit<OrganicFilters, "sort" | "view"> = {
-  channels: [], q: "", platform: null, outlier: { min: null, max: null }, views: { min: null, max: null },
-  engagement: { min: null, max: null }, postedWithin: null, favorites: false,
+  channels: [],
+  q: "",
+  platform: null,
+  outlier: { min: null, max: null },
+  views: { min: null, max: null },
+  engagement: { min: null, max: null },
+  postedWithin: null,
+  favorites: false,
 };
 
 export function sortPosts(posts: OrganicPost[], sort: OrganicSort): OrganicPost[] {
   const key = (p: OrganicPost) => (sort === "views" ? p.views : sort === "outlier" ? p.outlier : sort === "engagement" ? p.engagement : null);
-  return [...posts].sort((a, b) =>
-    sort === "newest"
-      ? (b.postedAt ?? "").localeCompare(a.postedAt ?? "")
-      : (key(b) ?? -1) - (key(a) ?? -1) || (b.views ?? -1) - (a.views ?? -1),
-  );
+  return [...posts].sort((a, b) => (sort === "newest" ? (b.postedAt ?? "").localeCompare(a.postedAt ?? "") : (key(b) ?? -1) - (key(a) ?? -1) || (b.views ?? -1) - (a.views ?? -1)));
 }
 
 /** Number of filters that narrow the posts (sort and view don't count). */

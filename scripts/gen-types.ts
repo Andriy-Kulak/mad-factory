@@ -13,13 +13,34 @@ import { join } from "node:path";
 const OUT = join("src", "db", "database.types.ts");
 const check = process.argv.includes("--check");
 
-interface Col { table_name: string; column_name: string; data_type: string; udt_name: string; is_nullable: "YES" | "NO"; column_default: string | null; ordinal_position: number }
+interface Col {
+  table_name: string;
+  column_name: string;
+  data_type: string;
+  udt_name: string;
+  is_nullable: "YES" | "NO";
+  column_default: string | null;
+  ordinal_position: number;
+}
 
 function tsType(c: Col): string {
   const map: Record<string, string> = {
-    uuid: "string", text: "string", varchar: "string", bpchar: "string",
-    int2: "number", int4: "number", int8: "number", float4: "number", float8: "number", numeric: "number",
-    bool: "boolean", timestamptz: "string", timestamp: "string", date: "string", jsonb: "Json", json: "Json",
+    uuid: "string",
+    text: "string",
+    varchar: "string",
+    bpchar: "string",
+    int2: "number",
+    int4: "number",
+    int8: "number",
+    float4: "number",
+    float8: "number",
+    numeric: "number",
+    bool: "boolean",
+    timestamptz: "string",
+    timestamp: "string",
+    date: "string",
+    jsonb: "Json",
+    json: "Json",
   };
   if (c.data_type === "ARRAY") {
     const inner = map[c.udt_name.replace(/^_/, "")] ?? "unknown";
@@ -30,7 +51,9 @@ function tsType(c: Col): string {
 
 const db = new PGlite();
 const dir = join(process.cwd(), "supabase", "migrations");
-for (const f of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+for (const f of readdirSync(dir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort()) {
   await db.exec(readFileSync(join(dir, f), "utf8"));
 }
 const cols = (
@@ -70,12 +93,25 @@ for (const [name, cs] of tables) {
   lines.push("        Relationships: [];");
   lines.push("      };");
 }
-lines.push("    };", "    Views: { [_ in never]: never };", "    Functions: { [_ in never]: never };", "    Enums: { [_ in never]: never };", "    CompositeTypes: { [_ in never]: never };", "  };", "};", "");
+lines.push(
+  "    };",
+  "    Views: { [_ in never]: never };",
+  "    Functions: { [_ in never]: never };",
+  "    Enums: { [_ in never]: never };",
+  "    CompositeTypes: { [_ in never]: never };",
+  "  };",
+  "};",
+  "",
+);
 const out = lines.join("\n");
 
 if (check) {
   let current = "";
-  try { current = readFileSync(OUT, "utf8"); } catch { /* missing */ }
+  try {
+    current = readFileSync(OUT, "utf8");
+  } catch {
+    /* missing */
+  }
   if (current !== out) {
     console.error(`${OUT} is out of date with supabase/migrations. Run: pnpm db:types`);
     process.exit(1);

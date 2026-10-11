@@ -4,9 +4,7 @@ import { test } from "node:test";
 import profile from "./fixtures/profile.json" with { type: "json" };
 import { normalizeInstagramPost, normalizeInstagramProfile } from "./normalize.ts";
 
-const reels = JSON.parse(
-  readFileSync(new URL("./fixtures/reels.json", import.meta.url), "utf8"),
-) as { items: Array<{ media: Record<string, unknown> }> };
+const reels = JSON.parse(readFileSync(new URL("./fixtures/reels.json", import.meta.url), "utf8")) as { items: Array<{ media: Record<string, unknown> }> };
 
 test("normalizes Instagram profile identity and account counts", () => {
   const normalized = normalizeInstagramProfile(profile);

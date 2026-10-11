@@ -14,11 +14,7 @@ import type {
 
 const CHUNK = 500;
 
-async function upsertChunks<T>(
-  rows: T[],
-  write: (chunk: T[]) => PromiseLike<{ error: { message: string } | null }>,
-  context: string,
-): Promise<number> {
+async function upsertChunks<T>(rows: T[], write: (chunk: T[]) => PromiseLike<{ error: { message: string } | null }>, context: string): Promise<number> {
   for (let i = 0; i < rows.length; i += CHUNK) {
     const { error } = await write(rows.slice(i, i + CHUNK));
     if (error) throw new Error(`${context}: ${error.message}`);
@@ -47,11 +43,7 @@ export function upsertMetaAdsAdDaily(rows: MetaAdsAdDailyInsert[]): Promise<numb
 }
 
 export function upsertMetaAdsAdDailyBreakdowns(rows: MetaAdsAdDailyBreakdownInsert[]): Promise<number> {
-  return upsertChunks(
-    rows,
-    (chunk) => getDb().from("meta_ads_ad_daily_breakdowns").upsert(chunk, { onConflict: "date,ad_id,breakdown,value" }),
-    "upsertMetaAdsAdDailyBreakdowns",
-  );
+  return upsertChunks(rows, (chunk) => getDb().from("meta_ads_ad_daily_breakdowns").upsert(chunk, { onConflict: "date,ad_id,breakdown,value" }), "upsertMetaAdsAdDailyBreakdowns");
 }
 
 export async function addMetaAdsChange(input: MetaAdsChangeInsert): Promise<string> {
@@ -67,7 +59,8 @@ export async function updateMetaAdsChange(id: string, patch: { status?: number |
 
 export async function listMetaAdsPlanWrites(productId: string, planPath: string): Promise<MetaAdsChangeRow[]> {
   const name = docName(planPath);
-  const { data, error } = await getDb().from("meta_ads_changes")
+  const { data, error } = await getDb()
+    .from("meta_ads_changes")
     .select("*")
     .eq("product_id", productId)
     .in("plan_path", [name, `experiments/plans/${name}.md`, `experiments/plans/${name}.json`])

@@ -75,23 +75,19 @@ function angleLines(vocab: ProductVocab): string {
       )
       .join("\n");
   }
-  return vocab.angles
-    .map((a) => `- ${a.slug}: "${a.name}" (audience ${a.audiences.join(", ") || "any"}; desire ${a.desires.join(", ") || "-"})`)
-    .join("\n");
+  return vocab.angles.map((a) => `- ${a.slug}: "${a.name}" (audience ${a.audiences.join(", ") || "any"}; desire ${a.desires.join(", ") || "-"})`).join("\n");
 }
 
 function angleRuleText(vocab: ProductVocab): string {
   if (!vocab.library) {
     return "when one genuinely fits, copy its slug from the product vocabulary below exactly (the text before the colon; never shorten or reword it). If none fits, write a new short slug that names the reason to buy (angle) or the person in a situation (audience). Do not force a fit.";
   }
-  return "the angle is the reason to buy the ad keeps returning to — not the hook, the format or whether the app is shown. Pick exactly one slug from the angle library below. When two fit, pick the one the hook opens with. If none fits, use \"other\" and put a short new slug in strategy.angle_suggestion. Never invent an angle slug. For audience: when one genuinely fits, copy its slug from the product vocabulary below exactly; if none fits, write a new short slug that names the person in a situation. Do not force a fit.";
+  return 'the angle is the reason to buy the ad keeps returning to — not the hook, the format or whether the app is shown. Pick exactly one slug from the angle library below. When two fit, pick the one the hook opens with. If none fits, use "other" and put a short new slug in strategy.angle_suggestion. Never invent an angle slug. For audience: when one genuinely fits, copy its slug from the product vocabulary below exactly; if none fits, write a new short slug that names the person in a situation. Do not force a fit.';
 }
 
 function vocabSection(vocab: ProductVocab): string {
   const angles = angleLines(vocab);
-  const audiences = vocab.audiences.length
-    ? vocab.audiences.map((a) => `- ${a.slug}: ${a.name}`).join("\n")
-    : "- (none defined yet)";
+  const audiences = vocab.audiences.length ? vocab.audiences.map((a) => `- ${a.slug}: ${a.name}`).join("\n") : "- (none defined yet)";
   const desires = vocab.desires.length ? vocab.desires.join(", ") : "(none defined yet)";
   const used = vocab.used;
   const usedLines = used
@@ -238,10 +234,7 @@ export function buildAnglePrompt(input: AnglePromptInput): string {
     delete strategy.angle;
     delete strategy.angle_suggestion;
   }
-  const whose =
-    owner === "own"
-      ? `This is one of ${productName}'s own ads.`
-      : `This ad is run by another advertiser in the same market as ${productName}.`;
+  const whose = owner === "own" ? `This is one of ${productName}'s own ads.` : `This ad is run by another advertiser in the same market as ${productName}.`;
 
   return `You are a senior direct-response creative strategist labelling paid social ads for comparison. Be literal and consistent.
 

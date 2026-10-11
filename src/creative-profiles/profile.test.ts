@@ -1,17 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  getPath,
-  imageMime,
-  mergeManualKeys,
-  pickComplete,
-  profileCreatives,
-  setPath,
-  runDays,
-  stripFences,
-  wrapProfile,
-  type ProfileDeps,
-} from "./profile.ts";
+import { getPath, imageMime, mergeManualKeys, pickComplete, profileCreatives, setPath, runDays, stripFences, wrapProfile, type ProfileDeps } from "./profile.ts";
 import { completeGemini } from "./gemini.ts";
 import { complete } from "./gateway.ts";
 import type { CreativeProfileRow, CreativeRow, ProductRow } from "../db/types.ts";
@@ -106,7 +95,9 @@ function harness(options: HarnessOptions) {
       return { content: replies.shift() ?? JSON.stringify(baseProfile()), usage: null };
     },
     download: async () => Buffer.from("bytes"),
-    upsertProfile: async (sha, profile) => { upserts.push({ sha, profile }); },
+    upsertProfile: async (sha, profile) => {
+      upserts.push({ sha, profile });
+    },
     log: () => {},
   };
   return { deps, completions, upserts };
@@ -127,11 +118,7 @@ test("stripFences removes json code fences and leaves plain text alone", () => {
 });
 
 test("wrapProfile overrides model schema_version, media_type and _meta", () => {
-  const wrapped = wrapProfile(
-    { schema_version: 99, media_type: "image", _meta: { by: "manual" }, hook: {} },
-    "video",
-    "test-model",
-  ) as Record<string, unknown>;
+  const wrapped = wrapProfile({ schema_version: 99, media_type: "image", _meta: { by: "manual" }, hook: {} }, "video", "test-model") as Record<string, unknown>;
   assert.equal(wrapped.schema_version, 1);
   assert.equal(wrapped.media_type, "video");
   assert.equal((wrapped._meta as { by: string }).by, "llm");
@@ -169,9 +156,17 @@ test("one repair turn is sent after a validation failure, then it gives up", asy
     creatives: [creative("sha1")],
     replies: ["not json at all", "still not json"],
   });
-  const stats = await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   assert.equal(completions.length, 2);
   const repairUser = completions[1]!.at(-1)!;
   assert.match(String(repairUser.content), /Your JSON failed validation/);
@@ -185,9 +180,17 @@ test("a failed first reply is repaired and profiled on the second", async () => 
     creatives: [creative("sha1")],
     replies: ["broken", `\`\`\`json\n${JSON.stringify(baseProfile())}\n\`\`\``],
   });
-  const stats = await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   assert.equal(stats.profiled, 1);
   assert.equal((upserts[0]!.profile as CreativeProfile).media_type, "video");
 });
@@ -207,29 +210,29 @@ test("selection: own first, library ordered by start_date, deduped and filtered"
       { sha256: "hasprof", start_date: "2023-01-01" },
       { sha256: "manual", start_date: "2022-01-01" },
     ],
-    creatives: [
-      creative("ownvid"),
-      creative("shared"),
-      creative("newer"),
-      creative("older"),
-      creative("nodate"),
-      creative("hasprof"),
-      creative("manual"),
-      creative("doc", "carousel"),
-    ],
+    creatives: [creative("ownvid"), creative("shared"), creative("newer"), creative("older"), creative("nodate"), creative("hasprof"), creative("manual"), creative("doc", "carousel")],
     profiles,
   });
-  const stats = await profileCreatives("fictional", {
-    source: "all", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
-  assert.deepEqual(upserts.map((u) => u.sha), ["ownvid", "shared", "older", "newer", "nodate"]);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "all",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
+  assert.deepEqual(
+    upserts.map((u) => u.sha),
+    ["ownvid", "shared", "older", "newer", "nodate"],
+  );
   assert.equal(stats.profiled, 5);
 });
 
 test("--min-days keeps library media on its longest run; --limit counts only unprofiled media", async () => {
-  const profiles = new Map<string, CreativeProfileRow>([
-    ["done", { sha256: "done", profiled_by: "llm", profile: {}, media_type: "video" } as CreativeProfileRow],
-  ]);
+  const profiles = new Map<string, CreativeProfileRow>([["done", { sha256: "done", profiled_by: "llm", profile: {}, media_type: "video" } as CreativeProfileRow]]);
   const { deps, upserts } = harness({
     own: ["ownvid"],
     library: [
@@ -243,11 +246,24 @@ test("--min-days keeps library media on its longest run; --limit counts only unp
     creatives: ["ownvid", "done", "oneday", "rerun", "survivor", "nodate"].map((sha) => creative(sha)),
     profiles,
   });
-  const stats = await profileCreatives("fictional", {
-    source: "all", minDays: 7, limit: 2, model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "all",
+      minDays: 7,
+      limit: 2,
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   // Own media ignore --min-days; "done" is skipped before the limit, so the two calls go to new files.
-  assert.deepEqual(upserts.map((u) => u.sha), ["ownvid", "rerun"]);
+  assert.deepEqual(
+    upserts.map((u) => u.sha),
+    ["ownvid", "rerun"],
+  );
   assert.equal(stats.selected, 2);
 });
 
@@ -275,9 +291,17 @@ test("used slugs reach the prompt and brand-vocab duplicates are excluded", asyn
       features: ["feat-1"],
     },
   });
-  await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   const prompt = String((completions[0]![0]!.content as unknown as { text: string }[])[0]!.text);
   assert.match(prompt, /Slugs already used for other ads/);
   assert.match(prompt, /- angle: invented-angle/);
@@ -301,9 +325,17 @@ test("a slug invented by item 1 appears in item 2's prompt with concurrency 1", 
     creatives: [creative("sha1"), creative("sha2")],
     replies: [JSON.stringify(first)],
   });
-  await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   assert.equal(completions.length, 2);
   const secondPrompt = String((completions[1]![0]!.content as unknown as { text: string }[])[0]!.text);
   assert.match(secondPrompt, /fresh-angle/);
@@ -326,9 +358,17 @@ test("with a library, an off-library angle is repaired and the message lists all
     },
     replies: [JSON.stringify(offLibrary), JSON.stringify(onLibrary)],
   });
-  const stats = await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   assert.equal(stats.profiled, 1);
   assert.equal(completions.length, 2);
   const repairMessage = String(completions[1]!.at(-1)!.content);
@@ -336,7 +376,7 @@ test("with a library, an off-library angle is repaired and the message lists all
   assert.equal((upserts[0]!.profile as CreativeProfile).strategy.angle, "lib-angle");
 });
 
-test("with a library, \"other\" plus an angle_suggestion is accepted", async () => {
+test('with a library, "other" plus an angle_suggestion is accepted', async () => {
   const other = baseProfile();
   (other.strategy as Record<string, unknown>).angle = "other";
   (other.strategy as Record<string, unknown>).angle_suggestion = "fresh-idea";
@@ -351,9 +391,17 @@ test("with a library, \"other\" plus an angle_suggestion is accepted", async () 
     },
     replies: [JSON.stringify(other)],
   });
-  const stats = await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   assert.equal(stats.profiled, 1);
   assert.equal((upserts[0]!.profile as CreativeProfile).strategy.angle, "other");
 });
@@ -376,9 +424,17 @@ test("with a library, the prompt drops the used-angles line", async () => {
       features: [],
     },
   });
-  await profileCreatives("fictional", {
-    source: "own", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
+  await profileCreatives(
+    "fictional",
+    {
+      source: "own",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
   const prompt = String((completions[0]![0]!.content as unknown as { text: string }[])[0]!.text);
   const usedSection = prompt.split("Slugs already used for other ads")[1]!;
   assert.ok(!usedSection.includes("invented-angle"));
@@ -398,9 +454,20 @@ test("library ads that are also own are not double-profiled and carousel is skip
     creatives: [creative("shared"), creative("caro", "carousel")],
   });
   // "caro" never enters candidates since it isn't in own/library; test media skip via a library carousel.
-  const stats = await profileCreatives("fictional", {
-    source: "all", model: "m", force: false, concurrency: 1, dryRun: false,
-  }, deps);
-  assert.deepEqual(upserts.map((u) => u.sha), ["shared"]);
+  const stats = await profileCreatives(
+    "fictional",
+    {
+      source: "all",
+      model: "m",
+      force: false,
+      concurrency: 1,
+      dryRun: false,
+    },
+    deps,
+  );
+  assert.deepEqual(
+    upserts.map((u) => u.sha),
+    ["shared"],
+  );
   assert.equal(stats.profiled, 1);
 });

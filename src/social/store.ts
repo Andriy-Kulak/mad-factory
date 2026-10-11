@@ -1,13 +1,5 @@
 import { creativeExists as creativeExistsRow, insertCreative as insertCreativeRow } from "../db/ads.ts";
-import {
-  hasSocialPostMedia,
-  updateSocialAccountAvatar,
-  upsertSocialAccount,
-  upsertSocialAccountSnapshot,
-  upsertSocialPost,
-  upsertSocialPostMedia,
-  upsertSocialPostSnapshot,
-} from "../db/social.ts";
+import { hasSocialPostMedia, updateSocialAccountAvatar, upsertSocialAccount, upsertSocialAccountSnapshot, upsertSocialPost, upsertSocialPostMedia, upsertSocialPostSnapshot } from "../db/social.ts";
 import type { SocialStore } from "./types.ts";
 
 const supabaseSocialStore: SocialStore = {

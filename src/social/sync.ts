@@ -3,13 +3,7 @@ import { markSourceScraped, updateTrackedSourceConfig } from "../db/products.ts"
 import type { Json as DatabaseJson, TrackedSourceRow } from "../db/types.ts";
 import { SocialMediaDownloadError as SocialMediaDownloadErrorClass, storeSocialMedia } from "./media.ts";
 import { r2Enabled } from "../lib/storage.ts";
-import type {
-  SocialAccountSnapshotUpsert,
-  SocialCollector,
-  SocialPost,
-  SocialPostMediaUpsert,
-  SocialStore,
-} from "./types.ts";
+import type { SocialAccountSnapshotUpsert, SocialCollector, SocialPost, SocialPostMediaUpsert, SocialStore } from "./types.ts";
 
 export interface SocialSyncOptions {
   maxPosts: number;
@@ -38,9 +32,7 @@ interface SyncStats {
 }
 
 function relationConfig(source: TrackedSourceRow): { relation: string; config: Record<string, DatabaseJson> } {
-  const config = source.config !== null && typeof source.config === "object" && !Array.isArray(source.config)
-    ? source.config as Record<string, DatabaseJson>
-    : {};
+  const config = source.config !== null && typeof source.config === "object" && !Array.isArray(source.config) ? (source.config as Record<string, DatabaseJson>) : {};
   const relation = config.relation;
   if (relation !== "own" && relation !== "competitor" && relation !== "inspiration") {
     throw new Error(`${source.source} account config.relation must be own, competitor, or inspiration`);
@@ -72,12 +64,7 @@ async function storeMedia(
   }
 }
 
-async function savePostMedia(
-  postId: string,
-  post: SocialPost,
-  store: SocialStore,
-  stats: SyncStats,
-): Promise<void> {
+async function savePostMedia(postId: string, post: SocialPost, store: SocialStore, stats: SyncStats): Promise<void> {
   const assets: Array<{
     url: string;
     prefix: "images" | "videos";
@@ -106,15 +93,7 @@ async function savePostMedia(
 
   for (const asset of assets) {
     if (await store.hasPostMedia(postId, asset.role)) continue;
-    const stored = await storeMedia(
-      asset.url,
-      asset.prefix,
-      asset.extension,
-      asset.mediaType,
-      `post ${post.externalId} ${asset.role}`,
-      store,
-      stats,
-    );
+    const stored = await storeMedia(asset.url, asset.prefix, asset.extension, asset.mediaType, `post ${post.externalId} ${asset.role}`, store, stats);
     if (!stored) continue;
     await store.upsertPostMedia({
       postId,
@@ -128,13 +107,7 @@ async function savePostMedia(
   }
 }
 
-export async function syncSource(
-  source: TrackedSourceRow,
-  productId: string,
-  collector: SocialCollector,
-  store: SocialStore,
-  options: SocialSyncOptions,
-): Promise<SocialSyncResult> {
+export async function syncSource(source: TrackedSourceRow, productId: string, collector: SocialCollector, store: SocialStore, options: SocialSyncOptions): Promise<SocialSyncResult> {
   if (source.source !== collector.platform || source.kind !== "account") {
     throw new Error(`Unsupported social source ${source.source}/${source.kind}`);
   }
@@ -190,15 +163,7 @@ export async function syncSource(
         await store.upsertAccountSnapshot(accountSnapshot);
 
         if (options.downloadMedia && r2Enabled && profile.avatarUrl) {
-          const avatar = await storeMedia(
-            profile.avatarUrl,
-            "images",
-            "jpg",
-            "image",
-            "profile avatar",
-            store,
-            stats,
-          );
+          const avatar = await storeMedia(profile.avatarUrl, "images", "jpg", "image", "profile avatar", store, stats);
           if (avatar) {
             await store.updateAccountAvatar(account.id, avatar.sha256);
             stats.mediaStored++;

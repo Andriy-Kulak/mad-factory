@@ -5,18 +5,7 @@
  * No dependencies, so the web app can import it too.
  */
 
-export type IntegrationKey =
-  | "supabase"
-  | "migrations"
-  | "scrapecreators"
-  | "r2"
-  | "proxy"
-  | "meta-ads"
-  | "apple-ads"
-  | "revenuecat"
-  | "gemini"
-  | "ai-gateway"
-  | "web-auth";
+export type IntegrationKey = "supabase" | "migrations" | "scrapecreators" | "r2" | "proxy" | "meta-ads" | "apple-ads" | "revenuecat" | "gemini" | "ai-gateway" | "web-auth";
 
 export interface Integration {
   key: IntegrationKey;

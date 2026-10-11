@@ -31,11 +31,7 @@ export interface TargetedTerm {
 const normalizeTerm = (text: string) => text.trim().toLowerCase().replace(/\s+/g, " ");
 
 /** Targeted keyword texts with no popularity row yet (any country counts as known), deduped, sorted by text, capped. */
-export function termsMissingPopularity(
-  targeted: TargetedTerm[],
-  known: Iterable<string>,
-  limit: number,
-): { lookups: TargetedTerm[]; deferred: number } {
+export function termsMissingPopularity(targeted: TargetedTerm[], known: Iterable<string>, limit: number): { lookups: TargetedTerm[]; deferred: number } {
   const knownTerms = new Set([...known].map(normalizeTerm));
   const firstCountryByTerm = new Map<string, string>();
   for (const { text, country } of targeted) {
@@ -52,13 +48,7 @@ export function termsMissingPopularity(
   return { lookups, deferred: missing.length - lookups.length };
 }
 
-export async function keywordSuggestions(
-  client: AppleAdsClient,
-  adAccountId: number,
-  appStoreId: string,
-  countries: string[],
-  terms?: string[],
-): Promise<KeywordSuggestion[]> {
+export async function keywordSuggestions(client: AppleAdsClient, adAccountId: number, appStoreId: string, countries: string[], terms?: string[]): Promise<KeywordSuggestion[]> {
   const filters: Record<string, unknown>[] = [
     { field: "promotedObjectId", operator: "EQUALS", value: [appStoreId] },
     { field: "promotedObjectType", operator: "EQUALS", value: ["APPSTORE_APP"] },
@@ -78,13 +68,7 @@ export async function keywordSuggestions(
 }
 
 /** Popularity of each term as Apple reports it when seeded with that term alone; absent = Apple returned nothing. */
-export async function termPopularity(
-  client: AppleAdsClient,
-  adAccountId: number,
-  appStoreId: string,
-  countries: string[],
-  terms: string[],
-): Promise<Map<string, number | null>> {
+export async function termPopularity(client: AppleAdsClient, adAccountId: number, appStoreId: string, countries: string[], terms: string[]): Promise<Map<string, number | null>> {
   const out = new Map<string, number | null>();
   for (const term of terms) {
     const got = await keywordSuggestions(client, adAccountId, appStoreId, countries, [term]);

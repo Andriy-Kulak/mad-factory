@@ -103,14 +103,9 @@ export function wrapProfile(modelJson: unknown, mediaType: "video" | "image", mo
 }
 
 /** Copy manually-set paths from an old profile into a new one. */
-export function mergeManualKeys(
-  newProfile: Record<string, unknown>,
-  oldProfile: Record<string, unknown>,
-): Record<string, unknown> {
+export function mergeManualKeys(newProfile: Record<string, unknown>, oldProfile: Record<string, unknown>): Record<string, unknown> {
   const oldMeta = oldProfile._meta as { manual_keys?: unknown } | undefined;
-  const manualKeys = Array.isArray(oldMeta?.manual_keys)
-    ? oldMeta.manual_keys.filter((key): key is string => typeof key === "string")
-    : [];
+  const manualKeys = Array.isArray(oldMeta?.manual_keys) ? oldMeta.manual_keys.filter((key): key is string => typeof key === "string") : [];
   for (const key of manualKeys) {
     setPath(newProfile, key, getPath(oldProfile, key));
   }
@@ -123,11 +118,7 @@ export interface Candidate {
   owner: "own" | "competitor";
 }
 
-export async function selectCandidates(
-  deps: ProfileDeps,
-  productId: string,
-  options: Pick<ProfileOptions, "source" | "minDays">,
-): Promise<Candidate[]> {
+export async function selectCandidates(deps: ProfileDeps, productId: string, options: Pick<ProfileOptions, "source" | "minDays">): Promise<Candidate[]> {
   const own = options.source === "library" ? [] : await deps.listOwnShas(productId);
   const ownSet = new Set(own);
   const candidates: Candidate[] = own.map((sha256) => ({ sha256, owner: "own" as const }));
@@ -138,11 +129,13 @@ export async function selectCandidates(
     // A file can back several ads; it qualifies on its longest run.
     const longest = new Map<string, number>();
     for (const row of library) longest.set(row.sha256, Math.max(longest.get(row.sha256) ?? 0, row.days ?? 0));
-    const sorted = [...library].filter((row) => !options.minDays || (longest.get(row.sha256) ?? 0) >= options.minDays).sort((a, b) => {
-      if (a.start_date === null) return b.start_date === null ? 0 : 1;
-      if (b.start_date === null) return -1;
-      return a.start_date.localeCompare(b.start_date);
-    });
+    const sorted = [...library]
+      .filter((row) => !options.minDays || (longest.get(row.sha256) ?? 0) >= options.minDays)
+      .sort((a, b) => {
+        if (a.start_date === null) return b.start_date === null ? 0 : 1;
+        if (b.start_date === null) return -1;
+        return a.start_date.localeCompare(b.start_date);
+      });
     for (const row of sorted) {
       if (seen.has(row.sha256)) continue;
       seen.add(row.sha256);
@@ -199,9 +192,7 @@ async function profileOne(
   }
 
   const mediaType = creative.media_type as "video" | "image";
-  const manualKeys = new Set(
-    ((existing?.profile as { _meta?: { manual_keys?: unknown } } | undefined)?._meta?.manual_keys ?? []) as string[],
-  );
+  const manualKeys = new Set(((existing?.profile as { _meta?: { manual_keys?: unknown } } | undefined)?._meta?.manual_keys ?? []) as string[]);
   const checkProfile = (candidate: unknown): void => {
     parseCreativeProfile(candidate);
     // strategy.angle will be overwritten by the manual-key merge, so don't check it.
@@ -303,11 +294,7 @@ async function profileOne(
   }
 }
 
-export async function profileCreatives(
-  productSlug: string,
-  options: ProfileOptions,
-  deps: ProfileDeps = defaultDeps,
-): Promise<ProfileStats> {
+export async function profileCreatives(productSlug: string, options: ProfileOptions, deps: ProfileDeps = defaultDeps): Promise<ProfileStats> {
   const product = await deps.requireProduct(productSlug);
   const vocab = await deps.loadVocab(product.id);
   // Slugs already used across all profiles, minus what the brand docs define,
@@ -347,9 +334,7 @@ export async function profileCreatives(
   const limited = options.limit ? todo.slice(0, options.limit) : todo;
   stats.skipped += todo.length - limited.length;
   stats.selected = limited.length;
-  deps.log(
-    `${limited.length} creative(s) to profile for ${product.slug} (${options.source}, model ${options.model}${options.dryRun ? ", dry-run" : ""})`,
-  );
+  deps.log(`${limited.length} creative(s) to profile for ${product.slug} (${options.source}, model ${options.model}${options.dryRun ? ", dry-run" : ""})`);
 
   const ctx = { deps, options, product, vocab, used };
   let index = 0;
@@ -428,7 +413,10 @@ async function listUsedSlugs(): Promise<UsedSlugs> {
     features: new Set<string>(),
   };
   for (let from = 0; ; from += PAGE) {
-    const res = await db.from("creative_profiles").select("profile").range(from, from + PAGE - 1);
+    const res = await db
+      .from("creative_profiles")
+      .select("profile")
+      .range(from, from + PAGE - 1);
     if (res.error) throw new Error(`listUsedSlugs: ${res.error.message}`);
     for (const row of res.data ?? []) {
       const strategy = (row.profile as { strategy?: Record<string, unknown> } | null)?.strategy;
@@ -454,7 +442,10 @@ async function listProfiledShas(shas: string[]): Promise<Set<string>> {
   const db = getDb();
   const out = new Set<string>();
   for (let i = 0; i < shas.length; i += IN_CHUNK) {
-    const res = await db.from("creative_profiles").select("sha256").in("sha256", shas.slice(i, i + IN_CHUNK));
+    const res = await db
+      .from("creative_profiles")
+      .select("sha256")
+      .in("sha256", shas.slice(i, i + IN_CHUNK));
     if (res.error) throw new Error(`listProfiledShas: ${res.error.message}`);
     for (const row of res.data ?? []) out.add(row.sha256);
   }
@@ -466,7 +457,10 @@ async function listCreatives(shas: string[]): Promise<CreativeRow[]> {
   const db = getDb();
   const rows: CreativeRow[] = [];
   for (let i = 0; i < shas.length; i += IN_CHUNK) {
-    const res = await db.from("creatives").select("*").in("sha256", shas.slice(i, i + IN_CHUNK));
+    const res = await db
+      .from("creatives")
+      .select("*")
+      .in("sha256", shas.slice(i, i + IN_CHUNK));
     if (res.error) throw new Error(`listCreatives: ${res.error.message}`);
     rows.push(...(res.data ?? []));
   }

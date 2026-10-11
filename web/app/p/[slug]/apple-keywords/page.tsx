@@ -36,9 +36,13 @@ export default async function AppleKeywordsPage({ params, searchParams }: { para
     return (
       <Shell title="Apple keywords" subtitle={product.slug}>
         <Empty>
-          {k.unavailable
-            ? <>The <code className="num">apple_ads_term_popularity</code> table is not in the database yet — run <code className="num">pnpm db:migrate</code>, then {refresh}. ({k.unavailable})</>
-            : <>No popularity readings yet. Pull them with {refresh}.</>}
+          {k.unavailable ? (
+            <>
+              The <code className="num">apple_ads_term_popularity</code> table is not in the database yet — run <code className="num">pnpm db:migrate</code>, then {refresh}. ({k.unavailable})
+            </>
+          ) : (
+            <>No popularity readings yet. Pull them with {refresh}.</>
+          )}
         </Empty>
       </Shell>
     );
@@ -57,10 +61,13 @@ export default async function AppleKeywordsPage({ params, searchParams }: { para
       </div>
 
       <Card className="p-4 mb-6 text-[13px] text-fg-2 max-w-4xl">
-        <span className="font-semibold text-fg">How to read this.</span> Popularity is Apple&apos;s 0–100 score from <code className="num">POST /suggestions/keywords/query</code>, relative across all storefronts (not US volume) and it shifts a little with the seed, so compare within one pull. <span className="font-semibold text-fg">{FLOOR} is the floor</span>: Apple echoes a term at {FLOOR} when it has nothing on it. The right-hand columns are what our own keyword with that exact text actually got — that is the ground truth for bids. Refresh with {refresh}.
+        <span className="font-semibold text-fg">How to read this.</span> Popularity is Apple&apos;s 0–100 score from <code className="num">POST /suggestions/keywords/query</code>, relative across all
+        storefronts (not US volume) and it shifts a little with the seed, so compare within one pull. <span className="font-semibold text-fg">{FLOOR} is the floor</span>: Apple echoes a term at{" "}
+        {FLOOR} when it has nothing on it. The right-hand columns are what our own keyword with that exact text actually got — that is the ground truth for bids. Refresh with {refresh}.
       </Card>
 
-      <DataTable dense
+      <DataTable
+        dense
         maxHeight="75vh"
         columns={[
           { label: "Term" },
@@ -80,9 +87,26 @@ export default async function AppleKeywordsPage({ params, searchParams }: { para
           return {
             id: `${r.country}:${r.term}`,
             cells: [
-              { node: <><span className={r.popularity != null && r.popularity > FLOOR ? "font-semibold" : ""}>{r.term}</span> <span className="text-fg-3 text-xs ml-1">{r.country}</span></>, value: r.term },
+              {
+                node: (
+                  <>
+                    <span className={r.popularity != null && r.popularity > FLOOR ? "font-semibold" : ""}>{r.term}</span> <span className="text-fg-3 text-xs ml-1">{r.country}</span>
+                  </>
+                ),
+                value: r.term,
+              },
               { node: <Popularity v={r.popularity} />, value: r.popularity },
-              { node: t.length ? t.map((x, i) => <span key={i} className="mr-2">{x.campaignName} <Badge>{x.matchType}</Badge></span>) : "–", value: t[0]?.campaignName ?? null, dim },
+              {
+                node: t.length
+                  ? t.map((x, i) => (
+                      <span key={i} className="mr-2">
+                        {x.campaignName} <Badge>{x.matchType}</Badge>
+                      </span>
+                    ))
+                  : "–",
+                value: t[0]?.campaignName ?? null,
+                dim,
+              },
               { node: t.length ? [...new Set(t.map((x) => (x.bid == null ? "–" : `$${x.bid.toFixed(2)}`)))].join(" / ") : "–", value: bids.length ? Math.max(...bids) : null, dim },
               { node: t.length ? sum.impressions.toLocaleString("en-US") : "–", value: t.length ? sum.impressions : null, dim: dim || !sum.impressions },
               { node: t.length ? sum.taps : "–", value: t.length ? sum.taps : null, dim: dim || !sum.taps },

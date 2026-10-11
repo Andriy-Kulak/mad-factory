@@ -84,7 +84,7 @@ test("a missing angle_suggestion normalizes to null", () => {
   assert.equal(parseCreativeProfile(input).strategy.angle_suggestion, null);
 });
 
-test("angle \"other\" requires a suggestion; other angles require null", () => {
+test('angle "other" requires a suggestion; other angles require null', () => {
   const other = example();
   (other.strategy as Record<string, unknown>).angle = "other";
   assert.match(problems(other), /strategy\.angle_suggestion: must be a slug when angle is "other"/);

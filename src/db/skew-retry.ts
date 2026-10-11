@@ -9,7 +9,10 @@ export function skewRetryFetch(base: typeof fetch = fetch, { retries = 2, delayM
     for (let attempt = 0; ; attempt++) {
       const res = await base(input, init);
       if (res.status !== 401 || attempt >= retries) return res;
-      const body = await res.clone().text().catch(() => "");
+      const body = await res
+        .clone()
+        .text()
+        .catch(() => "");
       if (!body.includes("JWT issued at future")) return res;
       await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
     }

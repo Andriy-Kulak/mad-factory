@@ -52,7 +52,15 @@ export async function transcribePost(postId: string): Promise<{ transcript: stri
     });
     const b64 = (await download(c.public_url)).toString("base64");
     const reply = await completeGemini(
-      [{ role: "user", content: [{ type: "text", text: PROMPT }, { type: "file", file: { filename: "post.mp4", file_data: `data:video/mp4;base64,${b64}` } }] }],
+      [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: PROMPT },
+            { type: "file", file: { filename: "post.mp4", file_data: `data:video/mp4;base64,${b64}` } },
+          ],
+        },
+      ],
       { model: await flashModel },
     );
     const parsed = JSON.parse(stripFences(reply.content)) as { transcript?: unknown };

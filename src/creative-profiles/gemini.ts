@@ -48,11 +48,7 @@ interface GeminiResponse {
   };
 }
 
-export async function completeGemini(
-  messages: ChatMessage[],
-  options: { model: string },
-  fetchFn: typeof fetch = fetch,
-): Promise<Completion> {
+export async function completeGemini(messages: ChatMessage[], options: { model: string }, fetchFn: typeof fetch = fetch): Promise<Completion> {
   const { system, contents } = toContents(messages);
   const response = await fetchFn(`${BASE}/models/${options.model}:generateContent`, {
     method: "POST",
@@ -79,9 +75,7 @@ export async function completeGemini(
   const candidate = body.candidates?.[0];
   const content = (candidate?.content?.parts ?? []).map((part) => part.text ?? "").join("");
   if (!content) {
-    throw new Error(
-      `Gemini API returned no text (finishReason: ${candidate?.finishReason ?? "none"}, blockReason: ${body.promptFeedback?.blockReason ?? "none"})`,
-    );
+    throw new Error(`Gemini API returned no text (finishReason: ${candidate?.finishReason ?? "none"}, blockReason: ${body.promptFeedback?.blockReason ?? "none"})`);
   }
   const meta = body.usageMetadata;
   const usage = meta

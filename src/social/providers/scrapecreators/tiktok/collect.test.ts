@@ -7,10 +7,7 @@ import { scrapeCreatorsTikTokCollector } from "./collect.ts";
 const profileBody = profile as Record<string, unknown>;
 const videoItems = (videos as { aweme_list: Array<Record<string, unknown>> }).aweme_list;
 
-async function withStubbedFetch(
-  responses: Array<{ body: Record<string, unknown>; status?: number }>,
-  run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>,
-): Promise<void> {
+async function withStubbedFetch(responses: Array<{ body: Record<string, unknown>; status?: number }>, run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>): Promise<void> {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.SCRAPECREATORS_API_KEY;
   const requests: Array<{ url: URL; apiKey: string | null }> = [];
@@ -49,43 +46,40 @@ test("skips TikTok photo posts without counting them toward maxPosts and passes 
     credits_remaining: 56,
   };
 
-  await withStubbedFetch(
-    [{ body: profileBody }, { body: firstPage }, { body: secondPage }],
-    async (requests) => {
-      const ids: string[] = [];
-      const result = await scrapeCreatorsTikTokCollector.collect("sample_creator", {
-        maxPosts: 1,
-        maxCredits: 5,
-        onPosts: (posts) => {
-          ids.push(...posts.map((post) => post.externalId));
-        },
-      });
+  await withStubbedFetch([{ body: profileBody }, { body: firstPage }, { body: secondPage }], async (requests) => {
+    const ids: string[] = [];
+    const result = await scrapeCreatorsTikTokCollector.collect("sample_creator", {
+      maxPosts: 1,
+      maxCredits: 5,
+      onPosts: (posts) => {
+        ids.push(...posts.map((post) => post.externalId));
+      },
+    });
 
-      assert.equal(result.postsSeen, 1);
-      assert.equal(result.creditsUsed, 3);
-      assert.equal(result.creditsRemaining, 56);
-      assert.deepEqual(ids, ["7687100769052495134"]);
-      assert.deepEqual(requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`), [
+    assert.equal(result.postsSeen, 1);
+    assert.equal(result.creditsUsed, 3);
+    assert.equal(result.creditsRemaining, 56);
+    assert.deepEqual(ids, ["7687100769052495134"]);
+    assert.deepEqual(
+      requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`),
+      [
         "/v1/tiktok/profile?handle=sample_creator",
         "/v3/tiktok/profile/videos?handle=sample_creator&user_id=1000001&sort_by=latest&region=US",
         "/v3/tiktok/profile/videos?handle=sample_creator&user_id=1000001&sort_by=latest&region=US&max_cursor=cursor-2",
-      ]);
-      assert.ok(requests.every(({ apiKey }) => apiKey === "test-key"));
-    },
-  );
+      ],
+    );
+    assert.ok(requests.every(({ apiKey }) => apiKey === "test-key"));
+  });
 });
 
 test("keeps paging TikTok videos when has_more is the number 1", async () => {
   const firstPage = { aweme_list: [videoItems[1]], has_more: 1, max_cursor: 1790714054768, credits_charged: 1 };
   const secondPage = { aweme_list: [videoItems[2]], has_more: 0, credits_charged: 1 };
 
-  await withStubbedFetch(
-    [{ body: profileBody }, { body: firstPage }, { body: secondPage }],
-    async (requests) => {
-      const result = await scrapeCreatorsTikTokCollector.collect("sample_creator", { maxPosts: 10, maxCredits: 5 });
+  await withStubbedFetch([{ body: profileBody }, { body: firstPage }, { body: secondPage }], async (requests) => {
+    const result = await scrapeCreatorsTikTokCollector.collect("sample_creator", { maxPosts: 10, maxCredits: 5 });
 
-      assert.equal(result.postsSeen, 2);
-      assert.equal(requests.at(-1)?.url.searchParams.get("max_cursor"), "1790714054768");
-    },
-  );
+    assert.equal(result.postsSeen, 2);
+    assert.equal(requests.at(-1)?.url.searchParams.get("max_cursor"), "1790714054768");
+  });
 });

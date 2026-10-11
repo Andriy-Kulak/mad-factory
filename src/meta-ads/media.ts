@@ -39,22 +39,12 @@ export interface MediaStats {
 
 export const defaultDeps: MediaDeps = {
   async listCreatives(productId) {
-    const res = await getDb()
-      .from("meta_ads_creatives")
-      .select("*")
-      .eq("product_id", productId)
-      .is("sha256", null)
-      .order("id");
+    const res = await getDb().from("meta_ads_creatives").select("*").eq("product_id", productId).is("sha256", null).order("id");
     if (res.error) throw new Error(`listCreatives: ${res.error.message}`);
     return res.data;
   },
   async getCreative(productId, creativeId) {
-    const res = await getDb()
-      .from("meta_ads_creatives")
-      .select("*")
-      .eq("product_id", productId)
-      .eq("id", creativeId)
-      .maybeSingle();
+    const res = await getDb().from("meta_ads_creatives").select("*").eq("product_id", productId).eq("id", creativeId).maybeSingle();
     if (res.error) throw new Error(`getCreative: ${res.error.message}`);
     return res.data;
   },
@@ -70,12 +60,7 @@ export const defaultDeps: MediaDeps = {
   log: (message) => console.log(message),
 };
 
-async function persist(
-  deps: MediaDeps,
-  hash: string,
-  buf: Buffer,
-  media: { ext: string; prefix: string; type: string },
-): Promise<StoredObject | null> {
+async function persist(deps: MediaDeps, hash: string, buf: Buffer, media: { ext: string; prefix: string; type: string }): Promise<StoredObject | null> {
   if (await deps.creativeExists(hash)) return null;
   const stored = await deps.store(hash, buf, media.ext, media.prefix);
   await deps.insertCreative({
@@ -93,13 +78,7 @@ async function persist(
  * through `/<video_id>` one at a time; image creatives share one batched
  * `/<ad_account_id>/adimages` call. One failing creative is logged and skipped.
  */
-export async function downloadMedia(
-  client: MetaAdsClient,
-  accountId: string,
-  productId: string,
-  options: MediaOptions,
-  deps: MediaDeps = defaultDeps,
-): Promise<MediaStats> {
+export async function downloadMedia(client: MetaAdsClient, accountId: string, productId: string, options: MediaOptions, deps: MediaDeps = defaultDeps): Promise<MediaStats> {
   const stats: MediaStats = { scanned: 0, videos: 0, images: 0, skipped: 0, failures: 0 };
   const all = await deps.listCreatives(productId);
   const creatives = options.limit ? all.slice(0, options.limit) : all;
@@ -215,13 +194,7 @@ const FILE_MEDIA: Record<string, { ext: string; prefix: string; type: string }> 
  * Import a media file the owner provided by hand (e.g. a video Meta will not
  * let us download) for one meta_ads_creatives row. No Meta API call.
  */
-export async function importMediaFile(
-  productId: string,
-  creativeId: string,
-  filePath: string,
-  options: { force?: boolean } = {},
-  deps: MediaDeps = defaultDeps,
-): Promise<void> {
+export async function importMediaFile(productId: string, creativeId: string, filePath: string, options: { force?: boolean } = {}, deps: MediaDeps = defaultDeps): Promise<void> {
   const ext = filePath.slice(filePath.lastIndexOf(".") + 1).toLowerCase();
   const media = FILE_MEDIA[ext];
   if (!media) throw new Error(`unsupported file extension ".${ext}" (mp4, mov, jpg, jpeg, png, webp)`);

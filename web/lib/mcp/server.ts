@@ -100,13 +100,24 @@ export function buildMcpServer(): McpServer {
 
   server.registerTool(
     "brief",
-    { title: "Brief", description: "Where a product stands: monthly profit goal and pace, the last N complete days per channel, own Meta ads by spend, running experiments and stale data. Same numbers as the web overview.", inputSchema: { product, days }, annotations: readOnly },
+    {
+      title: "Brief",
+      description:
+        "Where a product stands: monthly profit goal and pace, the last N complete days per channel, own Meta ads by spend, running experiments and stale data. Same numbers as the web overview.",
+      inputSchema: { product, days },
+      annotations: readOnly,
+    },
     async (args) => text(formatBrief(await overviewFor(await resolveProduct(args.product), { days: args.days }))),
   );
 
   server.registerTool(
     "experiments",
-    { title: "Experiments", description: "A product's experiments (newest first): hypothesis, status, dates, budget, success criteria, rules, verdict.", inputSchema: { product, status: z.string().optional().describe("e.g. running, planned, concluded") }, annotations: readOnly },
+    {
+      title: "Experiments",
+      description: "A product's experiments (newest first): hypothesis, status, dates, budget, success criteria, rules, verdict.",
+      inputSchema: { product, status: z.string().optional().describe("e.g. running, planned, concluded") },
+      annotations: readOnly,
+    },
     async (args) => {
       const p = await resolveProduct(args.product);
       let q = getDb().from("experiments").select("*").eq("product_id", p.id).order("start_date", { ascending: false, nullsFirst: true });
@@ -119,7 +130,12 @@ export function buildMcpServer(): McpServer {
 
   server.registerTool(
     "experiment",
-    { title: "Experiment", description: "One experiment with its full log, open follow-ups and the write-up document.", inputSchema: { product, slug: z.string().describe("Experiment slug") }, annotations: readOnly },
+    {
+      title: "Experiment",
+      description: "One experiment with its full log, open follow-ups and the write-up document.",
+      inputSchema: { product, slug: z.string().describe("Experiment slug") },
+      annotations: readOnly,
+    },
     async (args) => {
       const p = await resolveProduct(args.product);
       const db = getDb();
@@ -130,11 +146,7 @@ export function buildMcpServer(): McpServer {
       if (log.error) throw new Error(`experiment_log: ${log.error.message}`);
       let writeup = null;
       if (exp.data.writeup_path) {
-        const result = await db.from("product_docs")
-          .select("name, title, body_md")
-          .eq("product_id", p.id)
-          .eq("name", docName(exp.data.writeup_path))
-          .maybeSingle();
+        const result = await db.from("product_docs").select("name, title, body_md").eq("product_id", p.id).eq("name", docName(exp.data.writeup_path)).maybeSingle();
         if (result.error) throw new Error(`product_docs: ${result.error.message}`);
         writeup = result.data;
       }
@@ -146,8 +158,13 @@ export function buildMcpServer(): McpServer {
     "recent_activity",
     {
       title: "Recent activity",
-      description: "Everything that happened in the last N days (default 30), newest first: experiment log entries (decisions, observations, follow-ups) and every write made to the Apple Ads and Meta Ads accounts. Plus open follow-ups.",
-      inputSchema: { product, days: z.number().int().min(1).max(90).optional().describe("Last N days (default 30)"), limit: z.number().int().min(1).max(1000).optional().describe("Max timeline entries, newest first (default 150)") },
+      description:
+        "Everything that happened in the last N days (default 30), newest first: experiment log entries (decisions, observations, follow-ups) and every write made to the Apple Ads and Meta Ads accounts. Plus open follow-ups.",
+      inputSchema: {
+        product,
+        days: z.number().int().min(1).max(90).optional().describe("Last N days (default 30)"),
+        limit: z.number().int().min(1).max(1000).optional().describe("Max timeline entries, newest first (default 150)"),
+      },
       annotations: readOnly,
     },
     async (args) => {
@@ -160,12 +177,40 @@ export function buildMcpServer(): McpServer {
       const ids = [...slugById.keys()];
       const none = { data: [], error: null };
       const [log, open, apple, meta] = await Promise.all([
-        ids.length ? db.from("experiment_log").select("experiment_id, at, actor, kind, body, plan_path, source_url, due_on, resolved_at").in("experiment_id", ids).gte("at", since).order("at", { ascending: false }).limit(500) : none,
+        ids.length
+          ? db
+              .from("experiment_log")
+              .select("experiment_id, at, actor, kind, body, plan_path, source_url, due_on, resolved_at")
+              .in("experiment_id", ids)
+              .gte("at", since)
+              .order("at", { ascending: false })
+              .limit(500)
+          : none,
         ids.length ? db.from("experiment_log").select("experiment_id, at, actor, kind, body, due_on").in("experiment_id", ids).not("due_on", "is", null).is("resolved_at", null).order("due_on") : none,
-        db.from("apple_ads_changes").select("at, actor, method, path, status, note, plan_path, campaign_id, keyword_id, experiment_id").eq("product_id", p.id).eq("is_write", true).gte("at", since).order("at", { ascending: false }).limit(500),
-        db.from("meta_ads_changes").select("at, actor, method, path, status, note, plan_path, object_type, object_id, experiment_id").eq("product_id", p.id).eq("is_write", true).gte("at", since).order("at", { ascending: false }).limit(500),
+        db
+          .from("apple_ads_changes")
+          .select("at, actor, method, path, status, note, plan_path, campaign_id, keyword_id, experiment_id")
+          .eq("product_id", p.id)
+          .eq("is_write", true)
+          .gte("at", since)
+          .order("at", { ascending: false })
+          .limit(500),
+        db
+          .from("meta_ads_changes")
+          .select("at, actor, method, path, status, note, plan_path, object_type, object_id, experiment_id")
+          .eq("product_id", p.id)
+          .eq("is_write", true)
+          .gte("at", since)
+          .order("at", { ascending: false })
+          .limit(500),
       ]);
-      for (const [name, r] of [["experiment_log", log], ["experiment_log", open], ["apple_ads_changes", apple], ["meta_ads_changes", meta]] as const) if (r.error) throw new Error(`${name}: ${r.error.message}`);
+      for (const [name, r] of [
+        ["experiment_log", log],
+        ["experiment_log", open],
+        ["apple_ads_changes", apple],
+        ["meta_ads_changes", meta],
+      ] as const)
+        if (r.error) throw new Error(`${name}: ${r.error.message}`);
       const exp = (id: string | null) => (id ? (slugById.get(id) ?? id) : null);
       const timeline = [
         ...(log.data ?? []).map(({ experiment_id, ...l }) => ({ type: "experiment_log", experiment: exp(experiment_id), ...l })),
@@ -173,7 +218,13 @@ export function buildMcpServer(): McpServer {
         ...(meta.data ?? []).map(({ experiment_id, ...c }) => ({ type: "meta_ads_write", experiment: exp(experiment_id), ...c })),
       ].sort((a, b) => b.at.localeCompare(a.at));
       const max = args.limit ?? 150;
-      return json({ product: p.slug, since, truncated: timeline.length > max ? `${timeline.length - max} older entries left out; pass a higher limit or fewer days` : undefined, openFollowUps: (open.data ?? []).map(({ experiment_id, ...l }) => ({ experiment: exp(experiment_id), ...l })), timeline: timeline.slice(0, max) });
+      return json({
+        product: p.slug,
+        since,
+        truncated: timeline.length > max ? `${timeline.length - max} older entries left out; pass a higher limit or fewer days` : undefined,
+        openFollowUps: (open.data ?? []).map(({ experiment_id, ...l }) => ({ experiment: exp(experiment_id), ...l })),
+        timeline: timeline.slice(0, max),
+      });
     },
   );
 
@@ -181,7 +232,8 @@ export function buildMcpServer(): McpServer {
     "apple_ads",
     {
       title: "Apple Ads",
-      description: "Apple Ads for a date range: totals, by campaign, keyword (with top search terms), search term, country and day, with RevenueCat trials/paid/revenue per install keyword, and negative keywords that blocked impressions.",
+      description:
+        "Apple Ads for a date range: totals, by campaign, keyword (with top search terms), search term, country and day, with RevenueCat trials/paid/revenue per install keyword, and negative keywords that blocked impressions.",
       inputSchema: { product, ...range, limit },
       annotations: readOnly,
     },
@@ -221,7 +273,18 @@ export function buildMcpServer(): McpServer {
       const o = await getMetaAdsOverview(p.id, r);
       if (!o) return text("Meta Ads data is not set up for this workspace yet.");
       const n = args.limit ?? 25;
-      return json({ product: p.slug, range: r, lastRun: o.lastRun, currency: o.currency, totals: o.totals, campaigns: o.campaigns, adsets: o.adsets, ads: o.ads.slice(0, n), countries: o.countries, days: o.days });
+      return json({
+        product: p.slug,
+        range: r,
+        lastRun: o.lastRun,
+        currency: o.currency,
+        totals: o.totals,
+        campaigns: o.campaigns,
+        adsets: o.adsets,
+        ads: o.ads.slice(0, n),
+        countries: o.countries,
+        days: o.days,
+      });
     },
   );
 
@@ -239,12 +302,7 @@ export function buildMcpServer(): McpServer {
     },
     async (args) => {
       const p = await resolveProduct(args.product);
-      const result = await getDb()
-        .from("product_docs")
-        .select("name, title, body_md, kind")
-        .eq("product_id", p.id)
-        .order("sort")
-        .order("name");
+      const result = await getDb().from("product_docs").select("name, title, body_md, kind").eq("product_id", p.id).order("sort").order("name");
       if (result.error) throw new Error(`product_docs: ${result.error.message}`);
       const docs = (result.data ?? []).filter((item) => !args.kind || item.kind === args.kind);
       const title = (doc: (typeof docs)[number]) => doc.title ?? (doc.name === "readme" ? "Overview" : doc.name);

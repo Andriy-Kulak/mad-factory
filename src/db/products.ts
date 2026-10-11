@@ -62,7 +62,10 @@ export async function upsertProductDocs(rows: ProductDocInsert[]): Promise<void>
   unwrap(
     await getDb()
       .from("product_docs")
-      .upsert(rows.map((row) => ({ ...row, updated_at: updatedAt })), { onConflict: "product_id,name" })
+      .upsert(
+        rows.map((row) => ({ ...row, updated_at: updatedAt })),
+        { onConflict: "product_id,name" },
+      )
       .select("*"),
     "upsertProductDocs",
   );
@@ -82,14 +85,7 @@ export async function getTrackedSource(id: string): Promise<TrackedSourceRow | n
 
 /** Idempotent on (product, source, kind, value, country). */
 export async function addTrackedSource(input: TrackedSourceInsert): Promise<TrackedSourceRow> {
-  return unwrap(
-    await getDb()
-      .from("tracked_sources")
-      .upsert(input, { onConflict: "product_id,source,kind,value,country" })
-      .select("*")
-      .single(),
-    "addTrackedSource",
-  );
+  return unwrap(await getDb().from("tracked_sources").upsert(input, { onConflict: "product_id,source,kind,value,country" }).select("*").single(), "addTrackedSource");
 }
 
 export async function setTrackedSourceEnabled(id: string, enabled: boolean): Promise<void> {

@@ -79,10 +79,23 @@ function harness(objects: Record<string, Record<string, unknown>>) {
     },
   };
   const deps: CreateAdDeps = {
-    async requireProduct() { return { id: "p1", slug: "acme" } as ProductRow; },
-    async adAccount() { return "act_999"; },
-    async requirePlanDoc(_productId: string, ref: string) { return ref.split("/").pop()!.replace(/\.(?:md|json)$/i, ""); },
-    async insertChange(row) { changes.push(row); events.push(`insert ${row.object_type}`); return `change-${changes.length}`; },
+    async requireProduct() {
+      return { id: "p1", slug: "acme" } as ProductRow;
+    },
+    async adAccount() {
+      return "act_999";
+    },
+    async requirePlanDoc(_productId: string, ref: string) {
+      return ref
+        .split("/")
+        .pop()!
+        .replace(/\.(?:md|json)$/i, "");
+    },
+    async insertChange(row) {
+      changes.push(row);
+      events.push(`insert ${row.object_type}`);
+      return `change-${changes.length}`;
+    },
     async updateChange() {},
     log() {},
   };
@@ -125,10 +138,7 @@ test("the --video-id path fetches a thumbnail into video_data.image_url", async 
 
 test("a missing thumbnail throws before any create journal row", async () => {
   const { client, deps, changes, created } = harness(OBJECTS);
-  await assert.rejects(
-    createAdFromTemplate(client, "acme", { ...OPTS, videoId: "v-none" }, deps),
-    /no thumbnail for video v-none/,
-  );
+  await assert.rejects(createAdFromTemplate(client, "acme", { ...OPTS, videoId: "v-none" }, deps), /no thumbnail for video v-none/);
   assert.equal(changes.filter((row) => row.object_type === "ad").length, 0);
   assert.equal(created.length, 0);
 });
@@ -161,7 +171,8 @@ test("buildCreativeFromTemplate strips standard_enhancements, keeps other featur
 
 test("text override replaces asset_feed_spec in feed mode", () => {
   const creative = buildCreativeFromTemplate(TEMPLATE, {
-    media: { kind: "video", videoId: "v9", thumbnailUrl: null }, textMode: "feed",
+    media: { kind: "video", videoId: "v9", thumbnailUrl: null },
+    textMode: "feed",
     text: { titles: ["New title"], bodies: ["New body"] },
   }) as { asset_feed_spec: { titles: { text: string }[]; bodies: { text: string }[]; optimization_type: string } };
   assert.deepEqual(creative.asset_feed_spec.titles, [{ text: "New title" }]);
@@ -171,7 +182,8 @@ test("text override replaces asset_feed_spec in feed mode", () => {
 
 test("text override sets video_data title/message in single mode", () => {
   const creative = buildCreativeFromTemplate(TEMPLATE, {
-    media: { kind: "video", videoId: "v9", thumbnailUrl: null }, textMode: "single",
+    media: { kind: "video", videoId: "v9", thumbnailUrl: null },
+    textMode: "single",
     text: { titles: ["New title"], bodies: ["New body"] },
   }) as { object_story_spec: { video_data: { title?: string; message?: string } } };
   assert.equal(creative.object_story_spec.video_data.title, "New title");
@@ -180,15 +192,13 @@ test("text override sets video_data title/message in single mode", () => {
 
 test("--title without --body errors", async () => {
   const { client, deps } = harness(OBJECTS);
-  await assert.rejects(
-    createAdFromTemplate(client, "acme", { ...OPTS, videoId: "v-thumb", titles: ["t"] }, deps),
-    /together/,
-  );
+  await assert.rejects(createAdFromTemplate(client, "acme", { ...OPTS, videoId: "v-thumb", titles: ["t"] }, deps), /together/);
 });
 
 test("buildCreativeFromTemplate image media builds link_data from the video template's CTA", () => {
   const creative = buildCreativeFromTemplate(TEMPLATE, {
-    media: { kind: "image", imageHash: "hash1" }, textMode: "feed",
+    media: { kind: "image", imageHash: "hash1" },
+    textMode: "feed",
   }) as { object_story_spec: { link_data: Record<string, unknown>; video_data?: unknown }; asset_feed_spec: { titles: unknown[] } };
   const link = creative.object_story_spec.link_data;
   assert.equal(link.link, "https://store.example");
@@ -200,7 +210,8 @@ test("buildCreativeFromTemplate image media builds link_data from the video temp
 
 test("buildCreativeFromTemplate image single mode sets message/name, and throws with no link", () => {
   const creative = buildCreativeFromTemplate(TEMPLATE, {
-    media: { kind: "image", imageHash: "hash1" }, textMode: "single",
+    media: { kind: "image", imageHash: "hash1" },
+    textMode: "single",
   }) as { object_story_spec: { link_data: Record<string, unknown> } };
   assert.equal(creative.object_story_spec.link_data.message, "Body one");
   assert.equal(creative.object_story_spec.link_data.name, "Title one");
@@ -212,6 +223,9 @@ test("file extension routes to uploadImage or uploadVideo, gif throws", async ()
   const { client, deps, events } = harness(OBJECTS);
   await createAdFromTemplate(client, "acme", { ...OPTS, file: "/tmp/ad.png" }, deps);
   await createAdFromTemplate(client, "acme", { ...OPTS, file: "/tmp/ad.mp4" }, deps);
-  assert.deepEqual(events.filter((e) => e.startsWith("upload")), ["uploadImage", "uploadVideo"]);
+  assert.deepEqual(
+    events.filter((e) => e.startsWith("upload")),
+    ["uploadImage", "uploadVideo"],
+  );
   await assert.rejects(createAdFromTemplate(client, "acme", { ...OPTS, file: "/tmp/ad.gif" }, deps), /unsupported media extension/);
 });
