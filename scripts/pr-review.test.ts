@@ -39,11 +39,68 @@ test("migrations: append-only, RLS required, destructive SQL needs the owner", (
   }
 });
 
+test("migrations: destructive SQL is found past quoting, comments and schema-qualified names", () => {
+  const owner = (sql: string) => assert.deepEqual(levels([file("supabase/migrations/3_x.sql", sql.split("\n"))]), ["owner:supabase/migrations/3_x.sql"], sql);
+  const none = (sql: string) => assert.deepEqual(levels([file("supabase/migrations/3_x.sql", sql.split("\n"))]), [], sql);
+  owner("update public.products set name = 'x';");
+  owner('update "products" set name = 1;');
+  owner('update public."Products" p set name = 1;');
+  owner("update only t set a = 1;");
+  owner("select '--'; drop table products;");
+  owner("select 'it''s -- fine'; delete from t;");
+  owner("select E'\\'--'; drop table t;");
+  owner("set standard_conforming_strings = off; select '\\'--'; drop table t;");
+  owner('select 1 as "--"; truncate t;');
+  owner("drop/**/table t;");
+  owner("/* a /* nested */ comment */ drop table t;");
+  owner("do $$ begin drop table t; end $$;");
+  owner("do $x$ begin execute 'drop table t'; end $x$;");
+  owner("do 'begin delete from t; end';");
+  owner("alter table t drop c;");
+  owner("drop policy p on t;");
+  owner("alter table t no force row level security;");
+  owner("grant select on t to anon;");
+  owner("create policy p on t for select using (true);");
+  owner("merge into t using s on t.id = s.id when matched then delete;");
+  none("select '-- drop table t';");
+  none("/* drop table t */ select 1;");
+  none("alter table t add constraint f foreign key (x) references u on update cascade on delete set null;");
+  none("alter table t alter column c drop default, alter column d drop not null;");
+});
+
+test("migrations: every created table enables RLS itself", () => {
+  const lv = (sql: string) => levels([file("supabase/migrations/4_x.sql", sql.split("\n"))]);
+  const block = ["block:supabase/migrations/4_x.sql"];
+  assert.deepEqual(lv("create table a (id int);\ncreate table b (id int);\nalter table a enable row level security;"), block);
+  assert.deepEqual(lv("create table a (id int);\n/* alter table a enable row level security; */"), block);
+  assert.deepEqual(lv("create table a (id int);\nselect 'alter table a enable row level security';"), block);
+  assert.deepEqual(lv("create table a (id int);\n-- alter table a enable row level security;"), block);
+  assert.deepEqual(lv("create unlogged table a (id int);"), block);
+  assert.deepEqual(lv("create table if not exists public.a (id int);\nalter table b enable row level security;"), block);
+  assert.deepEqual(lv("do $$ begin execute 'create table a (id int)'; end $$;"), block);
+  assert.deepEqual(lv("create table if not exists public.a (id int);\nalter table a enable row level security;"), []);
+  assert.deepEqual(lv('create table "A" (id int);\nalter table if exists only public."A" enable row level security;'), []);
+  assert.deepEqual(lv('create table "A" (id int);\nalter table a enable row level security;'), block);
+});
+
 test("ad-account write guards and database deletes need the owner", () => {
   assert.deepEqual(levels([file("src/meta-ads/client.ts", ["x"], "modified")]), ["owner:src/meta-ads/client.ts"]);
   assert.deepEqual(levels([file("src/db/x.ts", ['await db.from("t").delete().eq("id", id);'])]), ["owner:src/db/x.ts"]);
   assert.deepEqual(levels([file("src/db/x.ts", ["seen.delete(key);"])]), []);
   assert.deepEqual(levels([file("src/db/x.test.ts", ['db.from("t").delete()'])]), []);
+  for (const line of [
+    'await db.from("t").delete({ count: "exact" }).eq("id", id);',
+    "  .delete()",
+    '  .delete({ count: "exact" })',
+    "q.delete();",
+    'q.delete({ count: "exact" });',
+    'db.from("t")["delete"]();',
+  ]) {
+    assert.deepEqual(levels([file("src/db/x.ts", [line])]), ["owner:src/db/x.ts"], line);
+  }
+  for (const line of ["map.delete(id);", 'res.cookies.delete({ name: COOKIE, path: "/" });', "res.cookies.delete(COOKIE);"]) {
+    assert.deepEqual(levels([file("web/app/x.ts", [line])]), [], line);
+  }
 });
 
 test("large diffs, large new files and new dependencies are warnings", () => {
