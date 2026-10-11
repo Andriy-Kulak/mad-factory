@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { groupAdCards, type AdCard, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
 import type { CreativeFields } from "./creative-groups.ts";
-import { advertiserMatrix, browseHref, cardsInScope, insightFiltersHref, insightTable, parseInsightFilters, workingHooks, type InsightFilters } from "./insights.ts";
+import { advertiserMatrix, browseHref, cardsInScope, drillCards, insightFiltersHref, insightTable, parseInsightFilters, workingHooks, type InsightFilters } from "./insights.ts";
 
 const NOW = Date.parse("2026-10-11T12:00:00Z");
 const daysAgo = (d: number) => new Date(NOW - d * 86_400_000).toISOString().slice(0, 10);
@@ -25,8 +25,8 @@ function cards(rows: AdSourceRow[], ranks: Record<string, number>, profiles: Rec
     profiles[c.id] === null ? c : { ...c, profile: { fields: fields(profiles[c.id] ?? {}), hook: hooks[c.id] ?? null } });
 }
 
-const ALL: InsightFilters = { dim: "angle", view: "totals", window: "all", relation: null };
-const DEFAULTS: InsightFilters = { dim: "angle", view: "totals", window: "all", relation: "competitor" };
+const ALL: InsightFilters = { dim: "angle", view: "totals", window: "all", relation: null, value: null, advertiserId: null };
+const DEFAULTS: InsightFilters = { ...ALL, relation: "competitor" };
 
 const sample = cards(
   [
@@ -49,7 +49,7 @@ test("all time: working share, lift and concentration per angle", () => {
   assert.equal(t.working, 2);
   assert.equal(t.unprofiled, 1);
   const a1 = t.rows.find((r) => r.value === "a1")!;
-  assert.deepEqual([a1.ads, a1.working, a1.advertisers], [2, 2, 2]);
+  assert.deepEqual([a1.ads, a1.working, a1.alive, a1.advertisers], [2, 2, 2, 2]);
   assert.equal(a1.lift, (2 / 2) / (2 / 6));
   assert.deepEqual(a1.top, { name: "Page one", working: 1 });
   assert.equal(t.rows[0]!.value, "a1");
@@ -75,7 +75,7 @@ test("relation narrows the scope; landing pages need no profile", () => {
 test("advertiser matrix puts direct competitors before adjacent niches", () => {
   const m = advertiserMatrix(sample, ALL, NOW);
   assert.deepEqual(m.columns.map((c) => [c.name, c.relation, c.ads, c.working]), [["Page one", "competitor", 4, 1], ["Page two", "competitor", 1, 1], ["Page three", "inspiration", 1, 0]]);
-  assert.deepEqual(m.rows.find((r) => r.value === "a1")!.cells["p2"], { ads: 1, working: 1 });
+  assert.deepEqual(m.rows.find((r) => r.value === "a1")!.cells["p2"], { ads: 1, working: 1, alive: 1 });
 });
 
 test("working hooks follow the window", () => {
@@ -84,13 +84,22 @@ test("working hooks follow the window", () => {
 });
 
 test("filters round-trip through the URL, and counts link into Competitor ads", () => {
-  const f: InsightFilters = { dim: "hook", view: "advertisers", window: "14d", relation: "inspiration" };
+  const f: InsightFilters = { dim: "hook", view: "advertisers", window: "14d", relation: "inspiration", value: "demo_first", advertiserId: "p3" };
   const qs = new URLSearchParams(insightFiltersHref(f).slice(1));
   assert.deepEqual(parseInsightFilters(Object.fromEntries(qs)), f);
   assert.deepEqual(parseInsightFilters({ tab: "bogus" }), DEFAULTS);
   assert.equal(insightFiltersHref(DEFAULTS), "?");
   assert.equal(insightFiltersHref(ALL), "?rel=all");
   assert.equal(parseInsightFilters({ rel: "all" }).relation, null);
-  assert.equal(browseHref("demo", f, { value: "demo_first", workingOnly: true }), "/p/demo/ads?rel=inspiration&signal=early&by=hook&v=demo_first&launched=14");
+  assert.equal(browseHref("demo", f, { value: "demo_first", mode: "working" }), "/p/demo/ads?rel=inspiration&signal=early&by=hook&v=demo_first&launched=14");
   assert.equal(browseHref("demo", ALL, { advertiserId: "p2" }), "/p/demo/ads?adv=p2");
+  assert.equal(browseHref("demo", ALL, { value: "a2", mode: "alive" }), "/p/demo/ads?status=active&by=angle&v=a2&mindays=21");
+});
+
+test("drilling into a row or an advertiser cell lists its ads, working first by rank", () => {
+  assert.equal(drillCards(sample, ALL, NOW), null);
+  const row = drillCards(sample, { ...ALL, value: "a1" }, NOW)!;
+  assert.deepEqual([row.working.map((c) => c.id), row.all.map((c) => c.id)], [["w1", "w2"], ["w1", "w2"]]);
+  const cell = drillCards(sample, { ...ALL, value: "a2", advertiserId: "p1" }, NOW)!;
+  assert.deepEqual([cell.advertiser, cell.working.length, cell.alive.map((c) => c.id), cell.all.length], ["Page one", 0, ["old"], 2]);
 });

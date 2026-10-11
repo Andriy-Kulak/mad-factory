@@ -20,13 +20,20 @@ export interface InsightFilters {
    * ads mostly land in "other"), adjacent niches, or both when null (`rel=all`).
    */
   relation: AdRelation | null;
+  /** The row (and optionally the advertiser cell) whose ads are open below the table. */
+  value: string | null;
+  advertiserId: string | null;
 }
+
+export type DrillMode = "working" | "alive" | "all";
 
 export interface InsightRow {
   value: string;
   label: string;
   ads: number;
   working: number;
+  /** Still running after 21+ days (all time) or still running (last 14 days), whatever the rank: the softer signal. */
+  alive: number;
   /** Share of all ads in scope, and of all working ads. */
   adShare: number;
   workingShare: number;
@@ -50,17 +57,30 @@ export interface InsightTable {
   unprofiled: number;
 }
 
-export interface AdvertiserColumn {
+export interface Counts {
+  ads: number;
+  working: number;
+  alive: number;
+}
+
+export interface AdvertiserColumn extends Counts {
   id: string;
   name: string;
   relation: AdRelation;
-  ads: number;
-  working: number;
 }
 
 export interface AdvertiserMatrix {
   columns: AdvertiserColumn[];
-  rows: { value: string; label: string; ads: number; cells: Record<string, { ads: number; working: number }> }[];
+  rows: { value: string; label: string; ads: number; cells: Record<string, Counts> }[];
+}
+
+/** One row's (or one advertiser cell's) ads, best first, split by signal. */
+export interface Drill {
+  label: string;
+  advertiser: string | null;
+  working: AdCard[];
+  alive: AdCard[];
+  all: AdCard[];
 }
 
 export interface WorkingHook {
@@ -84,6 +104,8 @@ export function parseInsightFilters(sp: SearchParams): InsightFilters {
     view: one(sp.view) === "advertisers" ? "advertisers" : "totals",
     window: WINDOWS.includes(window) ? window : "all",
     relation: relation === "all" ? null : relation === "inspiration" ? "inspiration" : "competitor",
+    value: one(sp.v) || null,
+    advertiserId: one(sp.v) ? one(sp.adv) || null : null,
   };
 }
 
@@ -93,6 +115,8 @@ export function insightFiltersHref(f: InsightFilters): string {
   if (f.view !== "totals") s.set("view", f.view);
   if (f.window !== "all") s.set("window", f.window);
   if (f.relation !== "competitor") s.set("rel", f.relation ?? "all");
+  if (f.value) s.set("v", f.value);
+  if (f.value && f.advertiserId) s.set("adv", f.advertiserId);
   const str = s.toString();
   return str ? `?${str}` : "?";
 }
@@ -107,6 +131,10 @@ export function cardsInScope(cards: AdCard[], f: Pick<InsightFilters, "window" |
 
 /** Working in the all-time window, early signal in the 14-day window. */
 export const isWorkingIn = (c: Pick<AdCard, "signal">, window: InsightWindow) => c.signal === (window === "all" ? "working" : "early");
+
+/** The softer signal: still running after 21+ days (all time) or simply still running (last 14 days). */
+export const isAliveIn = (c: Pick<AdCard, "isActive" | "days">, window: InsightWindow) =>
+  c.isActive === true && (window === "14d" || (c.days ?? 0) >= 21);
 
 function placed(cards: AdCard[], dim: InsightDim): { card: AdCard; value: string }[] {
   return cards.flatMap((card) => {
@@ -137,6 +165,7 @@ export function insightTable(cards: AdCard[], f: InsightFilters, now = Date.now(
       label: dimValueLabel(f.dim, value),
       ads: group.length,
       working: work.length,
+      alive: group.filter((c) => isAliveIn(c, f.window)).length,
       adShare,
       workingShare,
       lift: working ? workingShare / adShare : null,
@@ -158,21 +187,43 @@ export function advertiserMatrix(cards: AdCard[], f: InsightFilters, now = Date.
   for (const { card, value } of items) {
     const id = card.advertiserId ?? card.advertiserName ?? "unknown";
     const work = isWorkingIn(card, f.window) ? 1 : 0;
-    const col = columns.get(id) ?? { id, name: card.advertiserName ?? "Unknown advertiser", relation: card.relation, ads: 0, working: 0 };
+    const alive = isAliveIn(card, f.window) ? 1 : 0;
+    const col = columns.get(id) ?? { id, name: card.advertiserName ?? "Unknown advertiser", relation: card.relation, ads: 0, working: 0, alive: 0 };
     col.ads++;
     col.working += work;
+    col.alive += alive;
     columns.set(id, col);
     const row = rows.get(value) ?? { value, label: dimValueLabel(f.dim, value), ads: 0, cells: {} };
     row.ads++;
-    const cell = (row.cells[id] ??= { ads: 0, working: 0 });
+    const cell = (row.cells[id] ??= { ads: 0, working: 0, alive: 0 });
     cell.ads++;
     cell.working += work;
+    cell.alive += alive;
     rows.set(value, row);
   }
   const order = (r: AdRelation) => (r === "competitor" ? 0 : 1);
   return {
     columns: [...columns.values()].sort((a, b) => order(a.relation) - order(b.relation) || b.ads - a.ads || a.name.localeCompare(b.name)),
     rows: [...rows.values()].sort((a, b) => b.ads - a.ads || a.label.localeCompare(b.label)),
+  };
+}
+
+const byRankThenRun = (a: AdCard, b: AdCard) => (a.rank?.rank ?? Infinity) - (b.rank?.rank ?? Infinity) || (b.days ?? 0) - (a.days ?? 0) || a.id.localeCompare(b.id);
+const advertiserKey = (c: AdCard) => c.advertiserId ?? c.advertiserName ?? "unknown";
+
+/** The selected row's (or advertiser cell's) ads in scope: working, still alive, and all, each best rank first. */
+export function drillCards(cards: AdCard[], f: InsightFilters, now = Date.now()): Drill | null {
+  if (!f.value) return null;
+  const all = placed(cardsInScope(cards, f, now), f.dim)
+    .filter((it) => it.value === f.value && (!f.advertiserId || advertiserKey(it.card) === f.advertiserId))
+    .map((it) => it.card)
+    .sort(byRankThenRun);
+  return {
+    label: dimValueLabel(f.dim, f.value),
+    advertiser: f.advertiserId ? (all[0]?.advertiserName ?? null) : null,
+    working: all.filter((c) => isWorkingIn(c, f.window)),
+    alive: all.filter((c) => isAliveIn(c, f.window)),
+    all,
   };
 }
 
@@ -186,7 +237,7 @@ export function workingHooks(cards: AdCard[], f: InsightFilters, limit = 12, now
 }
 
 /** Competitor ads URL for the cards behind a count: same window and relation, this row's value, optionally working only. */
-export function browseHref(slug: string, f: InsightFilters, opts: { value?: string; advertiserId?: string; workingOnly?: boolean } = {}): string {
+export function browseHref(slug: string, f: InsightFilters, opts: { value?: string; advertiserId?: string; mode?: DrillMode } = {}): string {
   const filters: AdFilters = {
     ...NO_AD_FILTERS,
     sort: "impressions",
@@ -194,7 +245,9 @@ export function browseHref(slug: string, f: InsightFilters, opts: { value?: stri
     relation: f.relation,
     advertisers: opts.advertiserId ? [opts.advertiserId] : [],
     launchedDays: f.window === "14d" ? EARLY_MAX_AGE_DAYS : null,
-    signal: opts.workingOnly ? (f.window === "all" ? "working" : "early") : null,
+    signal: opts.mode === "working" ? (f.window === "all" ? "working" : "early") : null,
+    status: opts.mode === "alive" ? "active" : null,
+    minDays: opts.mode === "alive" && f.window === "all" ? 21 : null,
     by: opts.value ? f.dim : null,
     v: opts.value ?? null,
   };
