@@ -1,5 +1,6 @@
 import { daysBetween } from "./format.ts";
 import type { AdRelation } from "../../src/lib/tracked-source-input.ts";
+import { GROUP_FIELDS, labelOf, type CreativeFields } from "./creative-groups.ts";
 
 /*
  * Competitor ad cards: grouping Ad Library rows into one card per collation (Meta's "N ads use this creative"),
@@ -14,7 +15,26 @@ export interface ImpressionRank {
 
 export const WINNER_MAX_RANK = 10;
 export const WINNER_MIN_DAYS = 21;
+/** Working = still running 21+ days and top 10 by impressions or scaled to this many versions. */
+export const WORKING_MIN_VERSIONS = 5;
+/**
+ * Early signal = launched in the last 14 days, still running, and already top 10 by impressions. Versions don't
+ * count here: advertisers often launch a creative straight into many versions (languages, ad sets).
+ */
+export const EARLY_MAX_AGE_DAYS = 14;
 const DAY_MS = 86_400_000;
+
+/**
+ * What an ad card's longevity, rank and versions suggest. `working`: Meta and the advertiser have kept it alive for
+ * weeks. `early`: too new for that, but already ranking or scaling.
+ */
+export type AdSignal = "working" | "early";
+
+/** The card's media file's creative profile: the groupable fields plus the first spoken (else on-screen) line. */
+export interface CardProfile {
+  fields: CreativeFields;
+  hook: string | null;
+}
 
 /** One Ad Library row as the loader reads it (lib/queries.ts competitorAds). */
 export interface AdSourceRow {
@@ -52,7 +72,51 @@ export interface AdCard extends AdSourceRow {
   days: number | null;
   /** Every stored ad in the card's group; the card counts as a favorite when any of them is starred. */
   memberIds: string[];
+  signal: AdSignal | null;
+  /** Null until the media is profiled (`pnpm creatives profile`). */
+  profile: CardProfile | null;
 }
+
+export function signalOf(ad: { isActive: boolean | null; startDate: string | null; rank: ImpressionRank | null; versions: number }, now = Date.now()): AdSignal | null {
+  if (ad.isActive !== true) return null;
+  const age = daysSince(ad.startDate, now);
+  if (age == null) return null;
+  const top = !!ad.rank && ad.rank.rank <= WINNER_MAX_RANK;
+  if (age >= WINNER_MIN_DAYS && (top || ad.versions >= WORKING_MIN_VERSIONS)) return "working";
+  if (age <= EARLY_MAX_AGE_DAYS && top) return "early";
+  return null;
+}
+
+/** Dimensions the Insights tables group by; every one is also a Competitor ads filter (`by` + `v`). */
+export const INSIGHT_DIMS = {
+  angle: "Angle",
+  audience: "Persona",
+  hook: "Hook type",
+  format: "Format",
+  landing: "Landing page",
+} as const;
+export type InsightDim = keyof typeof INSIGHT_DIMS;
+export const isInsightDim = (v: string): v is InsightDim => v in INSIGHT_DIMS;
+
+/** Landing page without protocol, "www.", query, hash or trailing slash: "example.com/quiz". */
+export function landingOf(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return null;
+  }
+}
+
+/** A card's value on a dimension; "none" when the field is empty, null when the card isn't profiled (profile dims). */
+export function dimValue(card: Pick<AdCard, "linkUrl" | "profile">, dim: InsightDim): string | null {
+  if (dim === "landing") return landingOf(card.linkUrl) ?? "none";
+  if (!card.profile) return null;
+  return GROUP_FIELDS[dim].get(card.profile.fields) ?? "none";
+}
+
+export const dimValueLabel = (dim: InsightDim, value: string) => (dim === "landing" || value === "none" ? value : labelOf(value));
 
 /** Winner = top-ranked by impressions in its latest scrape, still running, and running for weeks. */
 export function isWinner(ad: { isActive: boolean | null; startDate: string | null }, rank: ImpressionRank | null | undefined, now = Date.now()): boolean {
@@ -78,13 +142,16 @@ export function groupAdCards(rows: AdSourceRow[], ranks: Map<string, ImpressionR
   return [...groups.values()].map((g) => {
     const rep = [...g].sort((a, b) => (ranks.get(a.id)?.rank ?? Infinity) - (ranks.get(b.id)?.rank ?? Infinity) || (b.startDate ?? "").localeCompare(a.startDate ?? ""))[0]!;
     const rank = ranks.get(rep.id) ?? null;
+    const versions = Math.max(g.length, ...g.map((r) => r.collationCount ?? 1));
     return {
       ...rep,
       rank,
       winner: isWinner(rep, rank, now),
-      versions: Math.max(g.length, ...g.map((r) => r.collationCount ?? 1)),
+      versions,
       days: rep.startDate ? (daysBetween(rep.startDate, rep.isActive ? null : rep.endDate) ?? null) : null,
       memberIds: g.map((r) => r.id),
+      signal: signalOf({ ...rep, rank, versions }, now),
+      profile: null,
     };
   });
 }
@@ -103,6 +170,10 @@ export interface AdFilters {
   status: AdStatus | null;
   format: AdFormat | null;
   winners: boolean;
+  signal: AdSignal | null;
+  /** One Insights dimension and its value (from an Insights link). */
+  by: InsightDim | null;
+  v: string | null;
   favorites: boolean;
   /** Launched within the last N days. */
   launchedDays: number | null;
@@ -114,7 +185,7 @@ export interface AdFilters {
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
-export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = { relation: null, advertisers: [], q: "", status: null, format: null, winners: false, favorites: false, launchedDays: null, minDays: null };
+export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = { relation: null, advertisers: [], q: "", status: null, format: null, winners: false, signal: null, by: null, v: null, favorites: false, launchedDays: null, minDays: null };
 const SORTS: AdSort[] = ["impressions", "newest", "longest", "variants"];
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
@@ -129,6 +200,9 @@ export function parseAdFilters(sp: SearchParams): AdFilters {
   const status = one(sp.status) || (one(sp.active) === "yes" ? "active" : one(sp.active) === "no" ? "ended" : "");
   const format = one(sp.format);
   const relation = one(sp.rel);
+  const signal = one(sp.signal);
+  const by = one(sp.by);
+  const v = one(sp.v);
   return {
     relation: relation === "competitor" || relation === "inspiration" ? relation : null,
     advertisers: many(sp.adv),
@@ -136,6 +210,9 @@ export function parseAdFilters(sp: SearchParams): AdFilters {
     status: status === "active" || status === "ended" ? status : null,
     format: format === "video" || format === "image" ? format : null,
     winners: one(sp.winners) === "1",
+    signal: signal === "working" || signal === "early" ? signal : null,
+    by: isInsightDim(by) && v ? by : null,
+    v: isInsightDim(by) && v ? v : null,
     favorites: one(sp.fav) === "1",
     launchedDays: posInt(sp.launched),
     minDays: posInt(sp.mindays),
@@ -153,6 +230,8 @@ export function adFiltersHref(f: AdFilters): string {
   if (f.status) s.set("status", f.status);
   if (f.format) s.set("format", f.format);
   if (f.winners) s.set("winners", "1");
+  if (f.signal) s.set("signal", f.signal);
+  if (f.by && f.v) s.set("by", f.by), s.set("v", f.v);
   if (f.favorites) s.set("fav", "1");
   if (f.launchedDays) s.set("launched", String(f.launchedDays));
   if (f.minDays) s.set("mindays", String(f.minDays));
@@ -163,7 +242,7 @@ export function adFiltersHref(f: AdFilters): string {
 }
 
 export function activeAdFilterCount(f: AdFilters): number {
-  return [!!f.relation, f.advertisers.length > 0, !!f.q, !!f.status, !!f.format, f.winners, f.favorites, !!f.launchedDays, !!f.minDays].filter(Boolean).length;
+  return [!!f.relation, f.advertisers.length > 0, !!f.q, !!f.status, !!f.format, f.winners, !!f.signal, !!f.v, f.favorites, !!f.launchedDays, !!f.minDays].filter(Boolean).length;
 }
 
 export const mediaFormat = (c: Pick<AdCard, "media" | "format">): AdFormat | null =>
@@ -181,6 +260,8 @@ export function applyAdFilters(cards: AdCard[], f: AdFilters, now = Date.now(), 
     (!f.status || (f.status === "active" ? c.isActive === true : c.isActive === false)) &&
     (!f.format || mediaFormat(c) === f.format) &&
     (!f.winners || c.winner) &&
+    (!f.signal || c.signal === f.signal) &&
+    (!f.by || !f.v || dimValue(c, f.by) === f.v) &&
     (!f.favorites || c.memberIds.some((id) => favorites.has(id))) &&
     (!since || (c.startDate != null && c.startDate.slice(0, 10) >= since)) &&
     (!f.minDays || (c.days ?? 0) >= f.minDays),

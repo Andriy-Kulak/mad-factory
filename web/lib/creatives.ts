@@ -2,7 +2,7 @@ import "server-only";
 import { getDb } from "./db";
 import { fetchAll } from "./apple-ads";
 import { daysBetween } from "./format";
-import { adSourceRelations } from "./queries";
+import { adSourceRelations } from "./tracked-sources";
 import { mergeAdRelations, type AdRelation } from "../../src/lib/tracked-source-input.ts";
 import type { CreativeFields, CreativeItem, RunBucket } from "./creative-groups.ts";
 
@@ -43,6 +43,22 @@ const slim = (p: SlimProfile): Pick<CreativeItem, "hook" | "fields"> => ({
   hook: { spoken: p.hook_spoken, onscreen: p.hook_onscreen, visual: p.hook_visual },
   fields: { angle: p.angle, angle_suggestion: p.angle_suggestion, audience: p.audience, hook_type: p.hook_type, awareness: p.awareness, response: p.response, format: p.format, style: p.style, structure: p.structure },
 });
+
+/** A media file's hook lines and groupable profile fields, as the Creatives grid and the Insights tables use them. */
+export type SlimCreative = Pick<CreativeItem, "hook" | "fields">;
+
+/** Slim profiles for these media files; files without a profile are left out of the map. */
+export async function loadSlimProfiles(shas: string[]): Promise<Map<string, SlimCreative>> {
+  const out = new Map<string, SlimCreative>();
+  await Promise.all(
+    chunks([...new Set(shas)]).map(async (part) => {
+      const res = await getDb().from("creative_profiles").select(SLIM_PROFILE).in("sha256", part);
+      if (res.error) throw new Error(`creative_profiles: ${res.error.message}`);
+      for (const row of (res.data ?? []) as unknown as SlimProfile[]) out.set(row.sha256, slim(row));
+    }),
+  );
+  return out;
+}
 
 function chunks<T>(values: T[]): T[][] {
   const out: T[][] = [];
@@ -109,32 +125,27 @@ export async function listCreativeItems(productId: string): Promise<CreativeItem
   }
 
   const shas = [...ownNames.keys(), ...comp.keys()];
-  const profiles = new Map<string, SlimProfile>();
   const media = new Map<string, { media_type: string; public_url: string | null }>();
-  await Promise.all(
-    chunks(shas).map(async (part) => {
-      const [p, m] = await Promise.all([
-        db.from("creative_profiles").select(SLIM_PROFILE).in("sha256", part),
-        db.from("creatives").select("sha256, media_type, public_url").in("sha256", part),
-      ]);
-      if (p.error) throw new Error(`creative_profiles: ${p.error.message}`);
+  const [profiles] = await Promise.all([
+    loadSlimProfiles(shas),
+    ...chunks(shas).map(async (part) => {
+      const m = await db.from("creatives").select("sha256, media_type, public_url").in("sha256", part);
       if (m.error) throw new Error(`creatives: ${m.error.message}`);
-      for (const row of (p.data ?? []) as unknown as SlimProfile[]) profiles.set(row.sha256, row);
       for (const row of m.data ?? []) media.set(row.sha256, row);
     }),
-  );
+  ]);
 
   const items: CreativeItem[] = [];
   for (const [sha256, names] of ownNames) {
     const profile = profiles.get(sha256);
     if (!profile) continue;
-    items.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: "own", source: [...names].sort().join(", ") || "Own creative", days: null, active: null, bucket: null, ...slim(profile) });
+    items.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: "own", source: [...names].sort().join(", ") || "Own creative", days: null, active: null, bucket: null, ...profile });
   }
   const competitors: CreativeItem[] = [];
   for (const [sha256, c] of comp) {
     const profile = profiles.get(sha256);
     if (!profile) continue;
-    competitors.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: c.relation, source: c.source, days: c.days, active: c.active, bucket: bucketOf(c.days, c.active), ...slim(profile) });
+    competitors.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: c.relation, source: c.source, days: c.days, active: c.active, bucket: bucketOf(c.days, c.active), ...profile });
   }
   competitors.sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
   return [...items, ...competitors];
