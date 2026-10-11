@@ -10,6 +10,8 @@ export interface ChangedFile {
   status: "added" | "modified" | "deleted";
   added: string[];
   removed: number;
+  /** Set when the diff for this file couldn't be read reliably; `reviewChanges` blocks it. */
+  unreadable?: string;
 }
 
 /** block = `pnpm ready` fails; owner = fails until the owner says yes (`--owner-approved`); warn = answer it in the Goal check. */
@@ -55,7 +57,9 @@ export function goalCheckTemplate(): string {
 
 const CODE_DIRS = /^(src|scripts|web|playbooks|examples|\.github)\//;
 const GENERATED = /(^|\/)(database\.types\.ts|pnpm-lock\.yaml)$/;
-const MIGRATION = /^supabase\/migrations\/.+\.sql$/;
+const MIGRATION = /^supabase\/migrations\//;
+/** What scripts/migrate.ts and the Supabase CLI expect; anything else under supabase/migrations/ is blocked. */
+const MIGRATION_NAME = /^supabase\/migrations\/\d+_[a-z0-9_]+\.sql$/;
 /** Where the ad-account write allowlists live. Widening them widens what any agent can do to a live account. */
 const AD_WRITE_GUARDS = ["src/meta-ads/client.ts", "src/apple-ads/client.ts"];
 const IDENT = String.raw`(?:"(?:[^"]|"")*"|[a-z_][\w$]*)`;
@@ -170,7 +174,10 @@ export function reviewChanges(files: ChangedFile[]): Finding[] {
   for (const f of files) {
     if (!GENERATED.test(f.path)) size += f.added.length + f.removed;
 
+    if (f.unreadable) out.push({ level: "block", path: f.path, message: `Couldn't read this file's diff (${f.unreadable}), so the rules weren't checked.` });
+
     if (MIGRATION.test(f.path)) {
+      if (f.status !== "deleted" && !MIGRATION_NAME.test(f.path)) out.push({ level: "block", path: f.path, message: "Migration files must be named `<digits>_<lowercase_words>.sql`." });
       if (f.status !== "added") out.push({ level: "block", path: f.path, message: "Migrations are append-only once committed: add a new migration instead of editing or deleting this one." });
       const sql = f.added.join("\n");
       // Read both ways a string can end (standard_conforming_strings on or off), and flag what either reading finds.
@@ -205,15 +212,56 @@ export function reviewChanges(files: ChangedFile[]): Finding[] {
   return out;
 }
 
-/** Parses `git diff -U0 --no-renames` output. */
+/** Reads one C-style quoted path as git writes it (`"a/x\\"y"`), returning it and the rest of the line. */
+function readQuoted(s: string): [string, string] | null {
+  if (!s.startsWith('"')) return null;
+  const bytes: number[] = [];
+  const simple: Record<string, number> = { a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13, '"': 34, "\\": 92 };
+  for (let i = 1; i < s.length; i++) {
+    const c = s[i]!;
+    if (c === '"') return [Buffer.from(bytes).toString("utf8"), s.slice(i + 1)];
+    if (c !== "\\") {
+      bytes.push(...Buffer.from(c, "utf8"));
+      continue;
+    }
+    const next = s[++i];
+    if (next === undefined) return null;
+    const octal = s.slice(i, i + 3);
+    if (/^[0-3][0-7]{2}$/.test(octal)) {
+      bytes.push(parseInt(octal, 8));
+      i += 2;
+    } else if (next in simple) bytes.push(simple[next]!);
+    else return null;
+  }
+  return null;
+}
+
+/** The path in a `diff --git` header from a `--no-renames` diff (both sides are the same path), quoted or not. */
+export function parseDiffHeader(line: string): string | null {
+  if (!line.startsWith("diff --git ")) return null;
+  const rest = line.slice("diff --git ".length);
+  if (rest.startsWith('"')) {
+    const a = readQuoted(rest);
+    if (!a || !a[1].startsWith(" ")) return null;
+    const b = readQuoted(a[1].slice(1));
+    if (!b || b[1] !== "" || !a[0].startsWith("a/") || !b[0].startsWith("b/")) return null;
+    return a[0].slice(2) === b[0].slice(2) ? b[0].slice(2) : null;
+  }
+  const len = (rest.length - 5) / 2;
+  if (!Number.isInteger(len) || len < 1) return null;
+  const path = rest.slice(2, 2 + len);
+  return rest === `a/${path} b/${path}` ? path : null;
+}
+
+/** Parses `git diff -U0 --no-renames` output. A header it can't read becomes an `unreadable` entry, never a skip. */
 export function parseDiff(diff: string): ChangedFile[] {
   const files: ChangedFile[] = [];
   let cur: ChangedFile | null = null;
   let inHunk = false;
   for (const line of diff.split("\n")) {
-    const head = line.match(/^diff --git a\/(.+) b\/(.+)$/);
-    if (head) {
-      cur = { path: head[2]!, status: "modified", added: [], removed: 0 };
+    if (line.startsWith("diff ")) {
+      const path = parseDiffHeader(line);
+      cur = path === null ? { path: line, status: "modified", added: [], removed: 0, unreadable: "unrecognised diff header" } : { path, status: "modified", added: [], removed: 0 };
       files.push(cur);
       inHunk = false;
     } else if (!cur) continue;
@@ -227,9 +275,39 @@ export function parseDiff(diff: string): ChangedFile[] {
   return files;
 }
 
+/** Parses `git diff --name-status -z --no-renames` output: NUL-separated, paths never quoted. */
+export function parseNameStatus(out: string): { path: string; status: ChangedFile["status"] }[] {
+  const parts = out.split("\0");
+  const files: { path: string; status: ChangedFile["status"] }[] = [];
+  for (let i = 0; i + 1 < parts.length; i += 2) {
+    const code = parts[i]!;
+    if (!code) break;
+    files.push({ path: parts[i + 1]!, status: code.startsWith("A") ? "added" : code.startsWith("D") ? "deleted" : "modified" });
+  }
+  return files;
+}
+
+/** Joins the authoritative path list with the parsed diff; a path missing on either side is `unreadable`. */
+export function mergeChanges(names: { path: string; status: ChangedFile["status"] }[], parsed: ChangedFile[]): ChangedFile[] {
+  const byPath = new Map<string, ChangedFile>();
+  const out: ChangedFile[] = [];
+  for (const f of parsed) {
+    if (f.unreadable || byPath.has(f.path)) out.push({ ...f, unreadable: f.unreadable ?? "listed twice in the diff" });
+    else byPath.set(f.path, f);
+  }
+  for (const { path, status } of names) {
+    const f = byPath.get(path);
+    byPath.delete(path);
+    out.push(f ? { ...f, status } : { path, status, added: [], removed: 0, unreadable: "missing from the diff" });
+  }
+  for (const f of byPath.values()) out.push({ ...f, unreadable: "not in git's list of changed files" });
+  return out;
+}
+
 /** Collects the diff against a base, including untracked files and binary additions. */
 export function collectChanges(base?: string, root = "."): { base: string; files: ChangedFile[] } {
-  const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim();
+  const run = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const git = (...args: string[]) => run(...args).trim();
   const resolvedBase =
     base ??
     (() => {
@@ -240,7 +318,9 @@ export function collectChanges(base?: string, root = "."): { base: string; files
       }
       throw new Error("No main or origin/main to compare against; pass --base <ref>");
     })();
-  const files: ChangedFile[] = parseDiff(git("diff", "--no-color", "--no-renames", "-U0", resolvedBase));
+  const names = parseNameStatus(run("diff", "--name-status", "-z", "--no-renames", resolvedBase));
+  const parsed = parseDiff(run("-c", "core.quotePath=false", "diff", "--no-color", "--no-renames", "--no-ext-diff", "-U0", resolvedBase));
+  const files = mergeChanges(names, parsed);
   for (const path of git("ls-files", "--others", "--exclude-standard", "-z").split("\0").filter(Boolean)) {
     let text = "";
     try {
