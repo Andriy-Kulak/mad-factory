@@ -1,7 +1,12 @@
 # Runs `pnpm ready` on every PR and push to main: typecheck, tests, db types, web typecheck, diff rules, and private
-# term checks. The term list comes from the PRIVATE_TERMS secret; terms are masked in CI logs. A change only the owner
-# may approve (ad-account write guards, destructive database changes) fails until the owner adds the `owner-approved`
-# label to the PR. The goal section is skipped here.
+# term checks. The term list comes from the PRIVATE_TERMS secret; terms are masked in CI logs. The goal section is
+# skipped here.
+#
+# A change only the owner may approve (ad-account write guards, destructive database changes, database deletes in code)
+# fails until the repo owner adds the `owner-approved` label. The approval covers the commits that were on the PR
+# when the owner added it: every push removes the label, a label added by anyone else or before the latest push
+# does not count, and the diff rules are run from the base branch's scripts/pr-review.ts before any of the PR's own
+# code runs, so a PR cannot switch the gate off from inside itself.
 name: ci
 on:
   push:
@@ -13,25 +18,99 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  owner-approval:
+    name: owner approval
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Runs no code from the PR: GitHub API calls only, so the write token never meets PR code.
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
+    outputs:
+      approved: ${{ steps.check.outputs.approved }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          approved=false
+          if [ "$ACTION" = synchronize ]; then
+            # New commits: an earlier approval doesn't cover them.
+            if gh api "repos/$REPO/issues/$PR/labels" --jq '.[].name' | grep -qx owner-approved; then
+              gh api -X DELETE "repos/$REPO/issues/$PR/labels/owner-approved" >/dev/null \
+                && echo "New commits: removed the owner-approved label; the owner re-adds it to approve them." \
+                || echo "::warning::Could not remove the stale owner-approved label."
+            fi
+          elif gh api "repos/$REPO/issues/$PR/labels" --jq '.[].name' | grep -qx owner-approved; then
+            last=$(gh api --paginate "repos/$REPO/issues/$PR/events" \
+              --jq '.[] | select(.event == "labeled" and .label.name == "owner-approved") | "\(.created_at) \(.actor.login)"' | tail -n 1)
+            labeled_at=${last%% *}
+            labeled_by=${last#* }
+            # When the head commit became the PR head: GitHub's own record of its first CI run for that commit.
+            pushed_at=$(gh api --paginate "repos/$REPO/actions/workflows/ci.yml/runs?event=pull_request&head_sha=$HEAD_SHA" \
+              --jq '.workflow_runs[].created_at' | sort | head -n 1)
+            if [ "$labeled_by" != "$OWNER" ]; then
+              echo "::warning::owner-approved was added by '$labeled_by', not the repo owner ($OWNER): not counted."
+            elif [ -z "$pushed_at" ] || [[ ! "$labeled_at" > "$pushed_at" ]]; then
+              echo "::warning::owner-approved was added before the latest push ($labeled_at vs $pushed_at): not counted."
+            else
+              approved=true
+              echo "Approved by $OWNER at $labeled_at for $HEAD_SHA."
+            fi
+          fi
+          echo "approved=$approved" >> "$GITHUB_OUTPUT"
+
   ready:
     name: pnpm ready
+    needs: owner-approval
+    # Runs even when owner-approval fails or is skipped (push to main), so this required check never reports "skipped".
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+      # Before install, so no code from the PR has run yet. The rules come from the base branch, not the PR.
+      - name: Hard rules from the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          APPROVED: ${{ needs.owner-approval.outputs.approved }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" "origin/$BASE_REF"
+          node --input-type=module -e '
+            const { collectChanges, reviewChanges, formatFindings } = await import(`${process.env.RUNNER_TEMP}/base/scripts/pr-review.ts`);
+            const findings = reviewChanges(collectChanges(`origin/${process.env.BASE_REF}`).files).filter((f) => f.level !== "warn");
+            console.log(findings.length ? formatFindings(findings).join("\n") : "no rule violations");
+            const owner = findings.some((f) => f.level === "owner");
+            if (owner && process.env.APPROVED === "true") console.log("Owner approval given for this commit.");
+            else if (owner) console.log("Only the owner can approve this: the owner adds the `owner-approved` label (again after every push).");
+            if (findings.some((f) => f.level === "block") || (owner && process.env.APPROVED !== "true")) process.exit(1);
+          '
+          git worktree remove --force "$RUNNER_TEMP/base"
       - run: pnpm install --frozen-lockfile
       - run: pnpm ready --base "origin/${BASE_REF:-main}" $OWNER_APPROVED
         env:
           BASE_REF: ${{ github.base_ref }}
-          OWNER_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'owner-approved') && '--owner-approved' || '' }}
+          OWNER_APPROVED: ${{ needs.owner-approval.outputs.approved == 'true' && '--owner-approved' || '' }}
           PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
