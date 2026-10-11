@@ -5,7 +5,9 @@ import type { OrganicAccount, OrganicPost, OrganicSort } from "@/lib/social";
 import { activeFilterCount, applyOrganicFilters, NO_FILTERS, organicHref, PAGE_SIZE, parseNum, sortPosts, type AgeUnit, type OrganicFilters, type OrganicView, type Range } from "@/lib/organic-filters";
 import { fmtCount, platformLabel, PostTable } from "@/components/social";
 import { handleOf, PlatformIcon, PostGrid, PostPreview } from "@/components/post-grid";
-import { ActiveFilters, BrowseLayout, Chips, DraftInput, FilterSection, LoadMore, MultiSelect, NoMatches, RangeFilter, ResultsBar, SearchInput, Toggle, useInfiniteList, useUrlState, type ActiveFilter } from "@/components/controls";
+import type { Favorites } from "@/components/ad-card";
+import { setFavorite } from "@/lib/favorite-actions";
+import { ActiveFilters, BrowseLayout, Chips, DraftInput, FilterSection, LoadMore, MultiSelect, NoMatches, RangeFilter, ResultsBar, SearchInput, Toggle, useFavoriteSet, useInfiniteList, useUrlState, type ActiveFilter } from "@/components/controls";
 
 /*
  * The Organic tab's post browser. Every stored post arrives once from the server; filtering, sorting and paging run
@@ -50,10 +52,17 @@ function Avatar({ a, size = 28 }: { a: OrganicAccount; size?: number }) {
   );
 }
 
-export function OrganicBrowser({ posts, accounts, initial, now }: { posts: OrganicPost[]; accounts: OrganicAccount[]; initial: OrganicFilters; now: number }) {
+export function OrganicBrowser({ posts, accounts, productId, favoriteIds, initial, now }: {
+  posts: OrganicPost[]; accounts: OrganicAccount[]; productId: string; favoriteIds: string[]; initial: OrganicFilters; now: number;
+}) {
   const [f, setF] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
-  const matched = useMemo(() => sortPosts(applyOrganicFilters(posts, f, now), f.sort), [posts, f, now]);
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "post", ids, on));
+  // The favorites filter uses the set as of when it was applied, so unstarring a post doesn't make it vanish mid-browse.
+  const [filterFavs, setFilterFavs] = useState(favs);
+  const matched = useMemo(() => sortPosts(applyOrganicFilters(posts, f, now, filterFavs), f.sort), [posts, f, now, filterFavs]);
+  const fav: Favorites<OrganicPost> = { has: (p) => favs.has(p.id), toggle: (p) => setFavs([p.id], !favs.has(p.id)) };
+  const favCount = useMemo(() => posts.filter((p) => favs.has(p.id)).length, [posts, favs]);
   const list = useInfiniteList(matched.length, PAGE_SIZE);
   const shown = useMemo(() => matched.slice(0, list.limit), [matched, list.limit]);
   const count = activeFilterCount(f);
@@ -62,6 +71,7 @@ export function OrganicBrowser({ posts, accounts, initial, now }: { posts: Organ
 
   const update = (patch: Partial<OrganicFilters>) => {
     setF((cur) => ({ ...cur, ...patch }));
+    setFilterFavs(favs);
     list.reset();
   };
   const clear = () => update(NO_FILTERS);
@@ -87,6 +97,9 @@ export function OrganicBrowser({ posts, accounts, initial, now }: { posts: Organ
             value: a.id, label: handleOf(a), keywords: `${a.displayName ?? ""} ${a.label ?? ""}`,
             icon: <Avatar a={a} />, detail: `${a.postsTracked} posts · ${fmtCount(a.followers)} followers`,
           }))} />
+      </FilterSection>
+      <FilterSection label="Favorites" hint="star a post to save it">
+        <Chips items={[{ key: "", label: "All posts" }, { key: "1", label: `Favorites only (${favCount})` }]} active={f.favorites ? "1" : ""} onChange={(k) => update({ favorites: k === "1" })} />
       </FilterSection>
       <FilterSection label="Caption contains">
         <SearchInput value={f.q} onChange={(q) => update({ q })} placeholder="Search captions" label="Search captions" />
@@ -131,6 +144,7 @@ export function OrganicBrowser({ posts, accounts, initial, now }: { posts: Organ
   );
 
   const chips: ActiveFilter[] = [
+    ...(f.favorites ? [{ key: "fav", label: "Favorites", remove: () => update({ favorites: false }) }] : []),
     ...f.channels.map((id) => {
       const a = accountById.get(id);
       return { key: `ch:${id}`, label: a ? <><PlatformIcon platform={a.platform} size={14} />{handleOf(a)}</> : "Unknown channel", remove: () => update({ channels: f.channels.filter((c) => c !== id) }) };
@@ -156,11 +170,12 @@ export function OrganicBrowser({ posts, accounts, initial, now }: { posts: Organ
       ) : f.view === "table" ? (
         <PostTable posts={shown} />
       ) : (
-        <PostGrid posts={shown} now={now} onOpen={setOpenId} />
+        <PostGrid posts={shown} now={now} onOpen={setOpenId} fav={fav} />
       )}
       <LoadMore list={list} total={matched.length} noun="posts" />
       <PostPreview
         post={openPost}
+        fav={fav}
         account={openPost ? (accountById.get(openPost.account.id) ?? null) : null}
         now={now}
         position={openPost ? `${openIndex + 1} / ${matched.length}` : ""}

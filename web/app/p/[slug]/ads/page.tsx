@@ -5,6 +5,7 @@ import { Shell } from "@/components/shell";
 import { Empty, Stat } from "@/components/ui";
 import { AdBrowser } from "@/components/ad-browser";
 import { addAdLibrarySource } from "@/lib/source-actions";
+import { favoriteIds } from "@/lib/favorites";
 import { listTrackedSourceItems } from "@/lib/tracked-sources";
 import { SourceForm } from "@/components/source-form";
 import { AdLibraryFields, TrackedSourcesPanel } from "@/components/tracked-sources";
@@ -15,7 +16,7 @@ export default async function CompetitorAdsPage({ params, searchParams }: { para
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [ads, tracked] = await Promise.all([competitorAds(product.id), listTrackedSourceItems(product.id, { kind: "ad_library" })]);
+  const [ads, tracked, favorites] = await Promise.all([competitorAds(product.id), listTrackedSourceItems(product.id, { kind: "ad_library" }), favoriteIds(product.id, "ad")]);
   const running = ads.filter((a) => a.isActive);
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const longest = Math.max(0, ...running.map((a) => a.days ?? 0));
@@ -30,7 +31,7 @@ export default async function CompetitorAdsPage({ params, searchParams }: { para
       </div>
       <TrackedSourcesPanel productId={product.id} slug={slug} title="Ad Library pages" items={tracked} open={tracked.length === 0}
         form={<SourceForm action={addAdLibrarySource.bind(null, product.id, slug)} submitLabel="Add page"><AdLibraryFields /></SourceForm>} />
-      {ads.length === 0 ? <Empty>No ads yet. Add a competitor page above; its ads are fetched on the next <code>pnpm scrape --product {slug}</code> run.</Empty> : <AdBrowser ads={ads} slug={slug} initial={parseAdFilters(sp)} />}
+      {ads.length === 0 ? <Empty>No ads yet. Add a competitor page above; its ads are fetched on the next <code>pnpm scrape --product {slug}</code> run.</Empty> : <AdBrowser ads={ads} slug={slug} productId={product.id} favoriteIds={favorites} initial={parseAdFilters(sp)} />}
     </Shell>
   );
 }

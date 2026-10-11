@@ -10,7 +10,7 @@ function row(id: string, over: Partial<AdSourceRow> = {}): AdSourceRow {
   return {
     id, externalId: id, advertiserId: "p1", advertiserName: "Page one", avatarUrl: null, body: null, title: null, cta: null, linkUrl: null, caption: null,
     format: "VIDEO", startDate: daysAgo(30), endDate: null, isActive: true, platforms: [], collationId: null, collationCount: 1,
-    firstSeenAt: "2026-10-01T00:00:00Z", media: { url: "https://x/v.mp4", type: "video" }, relation: "competitor", ...over,
+    firstSeenAt: "2026-10-01T00:00:00Z", media: { url: "https://x/v.mp4", type: "video", sha256: "v" }, relation: "competitor", ...over,
   };
 }
 
@@ -57,7 +57,7 @@ test("applyAdFilters narrows by relation", () => {
 test("applyAdFilters narrows by advertiser, copy, status, format, winners, launch and longevity", () => {
   const cards = groupAdCards([
     row("a", { advertiserId: "p1", body: "Grow with confidence", startDate: daysAgo(40) }),
-    row("b", { advertiserId: "p2", title: "Take the quiz", isActive: false, endDate: daysAgo(2), startDate: daysAgo(10), media: { url: "i.jpg", type: "image" } }),
+    row("b", { advertiserId: "p2", title: "Take the quiz", isActive: false, endDate: daysAgo(2), startDate: daysAgo(10), media: { url: "i.jpg", type: "image", sha256: "i" } }),
     row("c", { advertiserId: "p2", startDate: daysAgo(3) }),
   ], new Map([["a", rank(1)]]), NOW);
   const run = (sp: Record<string, string | string[]>) => applyAdFilters(cards, parseAdFilters(sp), NOW).map((c) => c.id).sort();
@@ -72,12 +72,21 @@ test("applyAdFilters narrows by advertiser, copy, status, format, winners, launc
   assert.deepEqual(run({ mindays: "30" }), ["a"]);
 });
 
+test("applyAdFilters favorites match a card when any ad in its group is starred", () => {
+  const cards = groupAdCards([row("v1", { collationId: "c" }), row("v2", { collationId: "c" }), row("solo")], new Map([["v1", rank(1)]]), NOW);
+  const run = (favs: string[]) => applyAdFilters(cards, parseAdFilters({ fav: "1" }), NOW, new Set(favs)).map((c) => c.id).sort();
+  assert.deepEqual(run([]), []);
+  assert.deepEqual(run(["v2"]), ["v1"]);
+  assert.deepEqual(run(["v2", "solo"]), ["solo", "v1"]);
+  assert.deepEqual(applyAdFilters(cards, parseAdFilters({}), NOW, new Set()).length, 2);
+});
+
 test("adFiltersHref round-trips and omits defaults", () => {
-  const f = parseAdFilters({ rel: "inspiration", adv: ["p1", "p2"], q: "quiz", status: "active", format: "video", winners: "1", launched: "30", mindays: "14", sort: "newest", view: "table" });
+  const f = parseAdFilters({ rel: "inspiration", adv: ["p1", "p2"], q: "quiz", status: "active", format: "video", winners: "1", fav: "1", launched: "30", mindays: "14", sort: "newest", view: "table" });
   const qs = new URLSearchParams(adFiltersHref(f).slice(1));
   const back = parseAdFilters(Object.fromEntries([...new Set(qs.keys())].map((k) => [k, qs.getAll(k)])));
   assert.deepEqual(back, f);
-  assert.equal(activeAdFilterCount(f), 8);
+  assert.equal(activeAdFilterCount(f), 9);
   assert.equal(adFiltersHref(parseAdFilters({ sort: "bogus" })), "?");
 });
 

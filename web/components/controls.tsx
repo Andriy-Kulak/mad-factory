@@ -21,6 +21,22 @@ export function useUrlState(query: string) {
   }, [query]);
 }
 
+/** Starred ids, updated instantly; `save` persists a change and a failed save is rolled back. */
+export function useFavoriteSet(initial: string[], save: (ids: string[], on: boolean) => Promise<void>) {
+  const [favs, setFavs] = useState(() => new Set(initial));
+  const apply = (ids: string[], on: boolean) =>
+    setFavs((cur) => {
+      const next = new Set(cur);
+      for (const id of ids) if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  const set = (ids: string[], on: boolean) => {
+    apply(ids, on);
+    save(ids, on).catch(() => apply(ids, !on));
+  };
+  return [favs, set] as const;
+}
+
 /** Runs `fn` when `key` is pressed outside any input, e.g. "/" to focus search. */
 export function useHotkey(key: string, fn: () => void) {
   const ref = useRef(fn);

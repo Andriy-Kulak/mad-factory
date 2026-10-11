@@ -6,7 +6,9 @@ import { cleanText, hookOf, mediaFormat, type AdCard } from "@/lib/ad-cards";
 import { fmtDate } from "@/lib/format";
 import { Badge } from "@/components/ui";
 import { Modal, previewClick } from "@/components/controls";
-import { Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
+import { FavoriteStar, Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
+import { Transcript } from "@/components/transcript";
+import { loadMediaTranscript } from "@/lib/transcript-actions";
 
 /*
  * Competitor ads drawn the way they look in the feed: page, run dates, primary text, media, then the link bar with
@@ -74,7 +76,10 @@ function LinkBar({ ad }: { ad: AdCard }) {
   );
 }
 
-export function AdTile({ ad, href, onOpen }: { ad: AdCard; href: string; onOpen: () => void }) {
+/** Favorite state for cards and previews; absent where starring isn't offered. */
+export interface Favorites<T> { has: (item: T) => boolean; toggle: (item: T) => void }
+
+export function AdTile({ ad, href, onOpen, fav }: { ad: AdCard; href: string; onOpen: () => void; fav?: Favorites<AdCard> }) {
   const body = cleanText(ad.body);
   return (
     <a href={href} onClick={(e) => previewClick(e, onOpen)}
@@ -95,6 +100,7 @@ export function AdTile({ ad, href, onOpen }: { ad: AdCard; href: string; onOpen:
           {ad.relation === "inspiration" && <MediaTag title="Adjacent niche, tracked for inspiration">Adjacent</MediaTag>}
           {ad.versions > 1 && <MediaTag title="Ads using this creative">{ad.versions} versions</MediaTag>}
         </div>
+        {fav && <span className="absolute top-2 right-2"><FavoriteStar on={fav.has(ad)} onToggle={() => fav.toggle(ad)} /></span>}
         {mediaFormat(ad) === "video" && (
           <span className="absolute inset-0 grid place-items-center pointer-events-none">
             <span className="w-11 h-11 rounded-full bg-black/45 grid place-items-center transition-transform duration-200 group-hover:scale-110">
@@ -108,10 +114,10 @@ export function AdTile({ ad, href, onOpen }: { ad: AdCard; href: string; onOpen:
   );
 }
 
-export function AdGrid({ ads, slug, onOpen }: { ads: AdCard[]; slug: string; onOpen: (id: string) => void }) {
+export function AdGrid({ ads, slug, onOpen, fav }: { ads: AdCard[]; slug: string; onOpen: (id: string) => void; fav?: Favorites<AdCard> }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-      {ads.map((ad) => <AdTile key={ad.id} ad={ad} href={`/p/${slug}/ads/${ad.id}`} onOpen={() => onOpen(ad.id)} />)}
+      {ads.map((ad) => <AdTile key={ad.id} ad={ad} href={`/p/${slug}/ads/${ad.id}`} onOpen={() => onOpen(ad.id)} fav={fav} />)}
     </div>
   );
 }
@@ -149,8 +155,8 @@ export function AdTable({ ads, slug, onOpen }: { ads: AdCard[]; slug: string; on
   );
 }
 
-export function AdPreview({ ad, slug, position, onClose, onPrev, onNext }: {
-  ad: AdCard | null; slug: string; position: string; onClose: () => void; onPrev: (() => void) | null; onNext: (() => void) | null;
+export function AdPreview({ ad, slug, position, onClose, onPrev, onNext, fav }: {
+  ad: AdCard | null; slug: string; position: string; onClose: () => void; onPrev: (() => void) | null; onNext: (() => void) | null; fav?: Favorites<AdCard>;
 }) {
   const body = ad ? cleanText(ad.body) : null;
   return (
@@ -179,10 +185,12 @@ export function AdPreview({ ad, slug, position, onClose, onPrev, onNext }: {
                 <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{body ?? <span className="text-fg-3">(no primary text)</span>}</p>
               </div>
               <div className="card overflow-hidden"><LinkBar ad={ad} /></div>
+              {mediaFormat(ad) !== "image" && <Transcript id={ad.media?.sha256 ?? null} load={loadMediaTranscript} />}
               {ad.linkUrl && <div className="text-[12px] text-fg-3 break-all">Links to <a href={ad.linkUrl} target="_blank" rel="noreferrer" title={ad.linkUrl} className="text-fg-2 hover:text-fg underline underline-offset-2">{ad.linkUrl.split("?")[0]}</a></div>}
             </div>
             <div className="px-5 py-3 border-t border-line-2 flex items-center gap-2">
               <a href={`https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.externalId)}`} target="_blank" rel="noreferrer" className="btn btn-primary">Ad Library ↗</a>
+              {fav && <FavoriteStar variant="button" on={fav.has(ad)} onToggle={() => fav.toggle(ad)} />}
               <Link href={`/p/${slug}/ads/${ad.id}`} className="btn">Full details</Link>
               {ad.media && <a href={ad.media.url} download className="btn">Download {ad.media.type === "image" ? "image" : "video"}</a>}
               <span className="ml-auto text-[12px] text-fg-3 hidden xl:inline whitespace-nowrap">← → browse · Esc close</span>
