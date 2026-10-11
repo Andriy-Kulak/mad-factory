@@ -28,6 +28,9 @@
   --pop-3: #e9e2cf;
   --pop-4: #d9e2df;
 
+  /* sign-in screen: the paper of the factory illustration */
+  --paper: #f4e6d0;
+
   /* chrome */
   --signal: #c6f432;
   --signal-hover: #d6ff4f;
@@ -69,6 +72,7 @@
   --color-pop-3: var(--pop-3);
   --color-pop-4: var(--pop-4);
   --color-signal: var(--signal);
+  --color-paper: var(--paper);
   --color-chrome: var(--chrome);
   --color-chrome-2: var(--chrome-2);
   --color-chrome-3: var(--chrome-3);
@@ -187,4 +191,24 @@ details[open]::details-content { height: auto; }
   .switch input:focus-visible + .switch-track, .switch:focus-visible .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
   .switch:focus-visible { outline: none; }
   .switch-track[data-busy]::after { opacity: 0.6; }
+}
+
+/* Sign-in art (components/factory-art.tsx): smoke rises from the chimneys, clouds drift across the right half */
+@keyframes puff {
+  0% { transform: translate(-50%, 10%) scale(0.35); opacity: 0; }
+  8% { opacity: 1; }
+  60% { opacity: 0.85; }
+  100% { transform: translate(-30%, -150%) scale(1.1); opacity: 0; }
+}
+.puff { opacity: 0; transform-origin: 50% 100%; filter: brightness(1.12) saturate(0.8); animation: puff 6.5s cubic-bezier(0.3, 0.55, 0.45, 1) infinite; }
+@keyframes drift {
+  0% { transform: translateX(50cqw); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translateX(100cqw); opacity: 1; }
+}
+.drift { animation: drift 60s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .puff, .drift { animation: none !important; }
+  .puff-rest { opacity: 1; transform: translate(-50%, -40%); }
+  .drift { transform: translateX(var(--rest, 0)); }
 }

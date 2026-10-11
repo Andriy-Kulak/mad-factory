@@ -4,7 +4,7 @@ import { Shell } from "@/components/shell";
 import { SIDEBAR_COOKIE } from "@/components/nav";
 import { Button, Stat } from "@/components/ui";
 
-export const metadata = { title: "App frame · mad-factory" };
+export const metadata = { title: "App frame · Mad Factory" };
 
 /** The product frame with placeholder content, so the sidebar and header can be tried without a product in the database. */
 export default async function FramePreview() {

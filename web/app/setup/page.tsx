@@ -18,7 +18,7 @@ export default function Setup() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="h-12 shrink-0 flex items-center px-4 bg-chrome border-b border-chrome-line text-[13px] font-semibold text-chrome-fg">
-        <Link href="/" className="hover:text-signal transition-colors duration-200">mad-factory</Link>
+        <Link href="/" className="hover:text-signal transition-colors duration-200">Mad Factory</Link>
       </div>
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 enter">
         <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.01em]">Setup</h1>

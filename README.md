@@ -1,34 +1,99 @@
+<div align="center">
+
+<img src="web/public/home/emblem.webp" alt="" height="96">
+
 # Mad Factory
 
-**Open-source marketing and ads automation for app makers.** Mad Factory collects what your competitors run, what
-your own ads and posts do, and what you earn, puts it in one Postgres database, and shows one number on top: your
-monthly profit against your goal. AI agents (Claude, Codex, Devin, or any MCP client) read the same data and work
-from the same playbooks.
+**Open-source agents for marketing and ads.**<br>
+Watch your competitors, run your Meta and Apple Ads, and make your next ads and posts.<br>
+Self-hosted. You approve every change.
 
-- **Competitor research**: ads from the Meta Ad Library, and Instagram, TikTok and Facebook reels from accounts you
-  follow, with video downloads and ranks over time.
-- **Your channels**: your own Meta ad account and Apple Ads campaigns (spend, installs, trials, keywords, search
-  terms), your own posts' views, and RevenueCat revenue for attribution and profit.
-- **Creative analysis**: Gemini breaks each video or image into its hook, script, angle and production style, so
-  you can compare what works.
-- **Experiments**: a test record per idea, a dated log and follow-ups, across channels.
-- **A web app and an MCP server** on top of all of it, plus a `pnpm brief` that tells an agent where things stand.
+[![License: MIT](https://img.shields.io/badge/license-MIT-c6f432?style=flat-square&labelColor=1e2a44)](LICENSE)
+![Node 22](https://img.shields.io/badge/node-22.6%2B-c6f432?style=flat-square&labelColor=1e2a44)
+![Supabase](https://img.shields.io/badge/database-Supabase-c6f432?style=flat-square&labelColor=1e2a44)
+![MCP](https://img.shields.io/badge/agents-MCP-c6f432?style=flat-square&labelColor=1e2a44)
+
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Integrations](#keys-and-integrations) · [Agents](#working-with-ai-agents) · [Feature map](docs/feature-map.md)
+
+<br>
+
+<img src="web/public/home/factory-simple.webp" alt="A paper-cut factory with two striped smokestacks and a lime flag on a hill above the sea" width="900">
+
+</div>
+
+<br>
+
+Mad Factory collects what your competitors run, what your own ads and posts do, and what you earn. It keeps all of
+it in one Postgres database and puts one number on top: your monthly profit against your goal. AI agents (Claude,
+Codex, Devin or any MCP client) read the same data and follow the same playbooks.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="web/public/home/blimp.webp" alt="" height="44"><br>
+<b>Competitor research</b><br>
+Ads from the Meta Ad Library, plus Instagram, TikTok and Facebook reels from accounts you follow. Videos are
+downloaded and ranked over time.
+</td>
+<td width="50%" valign="top">
+<img src="web/public/home/gears.webp" alt="" height="44"><br>
+<b>Your channels</b><br>
+Your Meta ad account and Apple Ads campaigns (spend, installs, trials, keywords, search terms), your own posts'
+views, and RevenueCat revenue for attribution and profit.
+</td>
+</tr>
+<tr>
+<td valign="top">
+<img src="web/public/home/megaphone.webp" alt="" height="44"><br>
+<b>Creative analysis</b><br>
+Gemini breaks each video or image into its hook, script, angle and production style, so you can see what works.
+</td>
+<td valign="top">
+<img src="web/public/home/conveyor.webp" alt="" height="44"><br>
+<b>Experiments and agents</b><br>
+A record per test with a dated log and follow-ups. On top: a web app, a read-only MCP server and
+<code>pnpm brief</code>, which tells an agent where things stand.
+</td>
+</tr>
+</table>
 
 Everything specific to a product (competitors, keywords, accounts, goals) lives in the database, so the code
 stays generic. Every integration except the database is optional: turn on only what you use.
 
+## What's built and what's next
+
+| Channel | Status | What it does |
+|---|---|---|
+| **Meta Ad Library** | ✅ Built | Tracks competitor pages and search keywords, downloads every ad's video or image, and records each ad's rank and status on every run, so long-running ads stand out. Sources are tagged as competitors or inspiration from nearby niches. `pnpm scrape` |
+| **Organic** | ✅ Built | Instagram, TikTok and Facebook reels from competitor, inspiration and your own accounts, with views tracked over time so outlier posts float up. `pnpm social` |
+| **Meta Ads** | ✅ Built | Syncs your own ad account (campaigns, ad sets, ads, creatives, daily numbers by country). It can pause, activate, create paused ads and launch tests, each from a plan you approve first and journaled before it is sent. It never deletes. `pnpm meta-ads` |
+| **Apple Ads** | ✅ Built | Syncs your campaigns, keywords and search terms per country, every day. Changes are drafted as a plan for you to apply. `pnpm apple-ads` |
+| **RevenueCat** | ✅ Built | Trials and proceeds, so the overview shows profit against your monthly goal. `pnpm revenuecat` |
+| **Creative analysis** | ✅ Built | Gemini breaks each stored video or image into its hook, script, angle and production style. `pnpm creatives profile` |
+| **Google Ads** | 🛠 Next | Your own Google Ads campaigns (Search and video): spend, keywords and conversions, synced like Meta and Apple Ads. |
+| **SEO** | 🛠 Next | Search rankings and organic traffic for your site and app store pages. |
+
+**Automations.** The syncs and the daily review (`playbooks/daily-review.md`) run on a schedule. Today that
+scheduling lives in Devin and isn't part of this repository; it may be open-sourced later. Every step is a plain
+`pnpm` command, so cron, GitHub Actions or any agent that can run a shell works too.
+
 ## How it works
 
-```
- CLI syncs (your machine or a scheduled job)        Supabase Postgres          Web app (Next.js)
- pnpm scrape · social · meta-ads · apple-ads  ───▶  products, ads, posts,  ───▶  overview, research,
- pnpm revenuecat · creatives profile                metrics, experiments        channels, setup
-                │                                           │
-                └──▶ Cloudflare R2 (media)                  └───▶  /api/mcp (read-only, for agents)
+```mermaid
+flowchart LR
+  cli["<b>CLI syncs</b><br/>scrape · social · meta-ads<br/>apple-ads · revenuecat<br/>creatives profile"]
+  db[("<b>Supabase Postgres</b><br/>products, ads, posts,<br/>metrics, experiments")]
+  r2[("Cloudflare R2<br/>media")]
+  web["<b>Web app</b><br/>overview, research,<br/>channels, setup"]
+  mcp["<b>/api/mcp</b><br/>read-only, for agents"]
+  cli --> db
+  cli --> r2
+  db --> web
+  db --> mcp
 ```
 
-The commands hold the API keys and write to the database. The web app only reads the database, so a hosted web
-server never needs your ad-account keys.
+The commands hold the API keys and write to the database. The web app only reads it, so a hosted web server never
+needs your ad-account keys.
 
 ## Quick start
 
