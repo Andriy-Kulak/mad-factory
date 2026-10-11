@@ -142,14 +142,14 @@ export const INTEGRATIONS: Integration[] = [
   {
     key: "web-auth",
     name: "Web sign-in (GitHub)",
-    env: [["AUTH_GITHUB_CLIENT_ID", "AUTH_GITHUB_CLIENT_SECRET", "AUTH_SECRET", "AUTH_ALLOWED_GITHUB_USERS"]],
+    env: [["AUTH_GITHUB_CLIENT_ID", "AUTH_GITHUB_CLIENT_SECRET", "AUTH_SECRET", "AUTH_ALLOWED_GITHUB_IDS"]],
     optional: ["AUTH_URL", "AUTH_DISABLED"],
     required: false,
     where: "web",
     summary: "Web app sign-in",
-    enables: "Sign in to the web app with GitHub, limited to the listed usernames.",
+    enables: "Sign in to the web app with GitHub, limited to the listed numeric GitHub user IDs.",
     without: "The web app refuses to serve pages. For local `pnpm web` only, AUTH_DISABLED=true skips sign-in.",
-    setup: "github.com/settings/developers → New OAuth app, callback <app url>/api/auth/callback; AUTH_SECRET: openssl rand -base64 32",
+    setup: "github.com/settings/developers → New OAuth app, callback <app url>/api/auth/callback; AUTH_SECRET: openssl rand -base64 32; your ID: api.github.com/users/<username> → id",
   },
 ];
 
