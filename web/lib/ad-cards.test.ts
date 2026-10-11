@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { activeAdFilterCount, adFiltersHref, applyAdFilters, groupAdCards, hookOf, isWinner, parseAdFilters, sortAdCards, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
+import { activeAdFilterCount, adFiltersHref, applyAdFilters, groupAdCards, hookOf, isWinner, landingOf, parseAdFilters, signalOf, sortAdCards, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
 
 const NOW = Date.parse("2026-10-08T12:00:00Z");
 const daysAgo = (d: number) => new Date(NOW - d * 86_400_000).toISOString().slice(0, 10);
@@ -93,4 +93,26 @@ test("adFiltersHref round-trips and omits defaults", () => {
 test("hookOf skips Meta template placeholders", () => {
   assert.equal(hookOf({ title: "{{product.name}}", body: "\nReal first line\nmore", advertiserName: "X" }), "Real first line");
   assert.equal(hookOf({ title: null, body: null, advertiserName: "X" }), "X");
+});
+
+test("signalOf: working after 21 days with a top-10 rank or 5+ versions, early within 14 days with a top-10 rank", () => {
+  const card = (age: number, r: number | null, versions: number, isActive: boolean | null = true) => ({ isActive, startDate: daysAgo(age), rank: r ? rank(r) : null, versions });
+  assert.equal(signalOf(card(30, 3, 1), NOW), "working");
+  assert.equal(signalOf(card(30, null, 5), NOW), "working");
+  assert.equal(signalOf(card(30, 11, 4), NOW), null);
+  assert.equal(signalOf(card(30, 3, 1, false), NOW), null);
+  assert.equal(signalOf(card(5, 8, 1), NOW), "early");
+  assert.equal(signalOf(card(5, null, 15), NOW), null);
+  assert.equal(signalOf(card(17, 1, 9), NOW), null);
+});
+
+test("landingOf strips protocol, www, query and trailing slash; by/v filters on a dimension", () => {
+  assert.equal(landingOf("https://www.example.com/quiz/?utm_source=x#top"), "example.com/quiz");
+  assert.equal(landingOf("http://example.com/"), "example.com");
+  assert.equal(landingOf("not a url"), null);
+  const cards = groupAdCards([row("a", { linkUrl: "https://example.com/a" }), row("b", { linkUrl: "https://example.com/b" })], new Map(), NOW);
+  assert.deepEqual(applyAdFilters(cards, parseAdFilters({ by: "landing", v: "example.com/b" }), NOW).map((c) => c.id), ["b"]);
+  // Profile dimensions only match profiled cards.
+  assert.deepEqual(applyAdFilters(cards, parseAdFilters({ by: "angle", v: "none" }), NOW), []);
+  assert.equal(parseAdFilters({ by: "bogus", v: "x" }).by, null);
 });

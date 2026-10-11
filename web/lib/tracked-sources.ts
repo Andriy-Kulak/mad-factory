@@ -1,7 +1,7 @@
 import "server-only";
 import { getDb } from "./db";
 import { SOCIAL_PLATFORMS } from "./social";
-import { adRelationOf } from "../../src/lib/tracked-source-input.ts";
+import { adRelationOf, type AdRelation } from "../../src/lib/tracked-source-input.ts";
 
 export interface TrackedSourceItem {
   id: string;
@@ -62,4 +62,11 @@ export function trackedSourceUrl(s: Pick<TrackedSourceItem, "source" | "kind" | 
     return `https://www.facebook.com/ads/library/?${p}`;
   }
   return null;
+}
+
+/** Direct competitor or adjacent niche, per tracked Ad Library source id (tracked_sources.config.relation). */
+export async function adSourceRelations(productId: string): Promise<Map<string, AdRelation>> {
+  const res = await getDb().from("tracked_sources").select("id,config").eq("product_id", productId).eq("source", "meta");
+  if (res.error) throw new Error(`tracked_sources: ${res.error.message}`);
+  return new Map((res.data ?? []).map((s) => [s.id, adRelationOf(s.config)]));
 }

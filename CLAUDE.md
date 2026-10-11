@@ -220,6 +220,10 @@ See docs/creative-profile.md.
 - The overview (`/p/<slug>`) is goal-first and renders `overviewFor` from src/scorecard (web/lib/overview.ts), the
   same data as `pnpm brief`; the product profile and tracked sources live under Brand → "Profile & sources".
   `DataTable` rows take an `href`, so tables are sortable and rows link to their detail.
+- Insights (`/p/<slug>/insights`, `components/insights-view.tsx`, pure logic in `lib/insights.ts`) aggregates the same
+  ad cards as Competitor ads (`competitorAds()` attaches each card's slim creative profile and its `signal`: working
+  or early) by angle, persona, hook type, format and landing page; every count links into Competitor ads with
+  `by`/`v`/`signal` filters. Opens on direct competitors. No LLM calls.
 - Competitor ads (`/p/<slug>/ads`) and Organic load every card once and filter in the browser
   (`components/ad-browser.tsx`, `organic-browser.tsx`; pure logic in `lib/ad-cards.ts`, `lib/organic-filters.ts`).
 - The Organic tab shows `competitor`/`inspiration` accounts; the My Accounts tab (`/p/<slug>/my-accounts`) shows `own` accounts' reels/videos only (`social_posts.kind` = `reel` or `video`), grouped by `tracked_sources.label`.

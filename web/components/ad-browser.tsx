@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { activeAdFilterCount, adFiltersHref, applyAdFilters, NO_AD_FILTERS, sortAdCards, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
+import { activeAdFilterCount, adFiltersHref, applyAdFilters, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, sortAdCards, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
 import { AdGrid, AdPreview, AdTable, PageAvatar, type Favorites } from "@/components/ad-card";
 import { setFavorite } from "@/lib/favorite-actions";
 import { ActiveFilters, BrowseLayout, Chips, FilterSection, LoadMore, MultiSelect, NoMatches, ResultsBar, SearchInput, Toggle, useFavoriteSet, useInfiniteList, useUrlState, type ActiveFilter } from "@/components/controls";
@@ -103,6 +103,10 @@ export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads:
       <FilterSection label="Winners" hint="top 10 by impressions, running 21+ days">
         <Chips items={[{ key: "", label: "All ads" }, { key: "1", label: "Winners only" }]} active={f.winners ? "1" : ""} onChange={(k) => update({ winners: k === "1" })} />
       </FilterSection>
+      <FilterSection label="Working" hint="working: 21+ days, top 10 or 5+ versions · early: launched ≤14 days and already top 10">
+        <Chips items={[{ key: "", label: "All ads" }, { key: "working", label: "Working" }, { key: "early", label: "Early signal" }]} active={f.signal ?? ""}
+          onChange={(k) => update({ signal: (k || null) as AdFilters["signal"] })} />
+      </FilterSection>
       <FilterSection label="Launched in the last">
         <Chips items={[{ key: "", label: "Any" }, ...LAUNCHED.map((d) => ({ key: String(d), label: `${d}d` }))]} active={f.launchedDays ? String(f.launchedDays) : ""}
           onChange={(k) => update({ launchedDays: k ? Number(k) : null })} />
@@ -122,6 +126,8 @@ export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads:
     ...(f.status ? [{ key: "status", label: f.status === "active" ? "Running" : "Ended", remove: () => update({ status: null }) }] : []),
     ...(f.format ? [{ key: "format", label: f.format === "video" ? "Video" : "Image", remove: () => update({ format: null }) }] : []),
     ...(f.winners ? [{ key: "winners", label: "Winners", remove: () => update({ winners: false }) }] : []),
+    ...(f.signal ? [{ key: "signal", label: f.signal === "working" ? "Working" : "Early signal", remove: () => update({ signal: null }) }] : []),
+    ...(f.by && f.v ? [{ key: "by", label: <><span className="text-fg-3 font-normal">{INSIGHT_DIMS[f.by]}</span> {dimValueLabel(f.by, f.v)}</>, remove: () => update({ by: null, v: null }) }] : []),
     ...(f.launchedDays ? [{ key: "launched", label: <><span className="text-fg-3 font-normal">Launched</span> last {f.launchedDays}d</>, remove: () => update({ launchedDays: null }) }] : []),
     ...(f.minDays ? [{ key: "mindays", label: <><span className="text-fg-3 font-normal">Running</span> {f.minDays}d+</>, remove: () => update({ minDays: null }) }] : []),
   ];

@@ -139,6 +139,10 @@ media in R2 (exists), gaps and briefs in `competitor_insights`.
 1. **Insights tables from existing data**: Angles, Personas, Hooks, Formats, Landing pages with working share, lift
    and concentration, Totals and By competitor views, the relation filter, and links into the browser (which gains
    angle, persona, hook and landing-page filters). No schema change, no LLM. This answers question 1 on day one.
+   Built: `/p/<slug>/insights` with two windows. **All time**: working = still running after 21+ days and top 10
+   by impressions or 5+ versions. **Last 14 days**: ads launched since, with an early signal = still running and
+   already top 10 (versions don't count for new ads, which often launch straight into many). Opens on direct
+   competitors; adjacent niches and all advertisers are one click away.
 2. **"We run it" column**: join our own ads' profiles (`--source own`) and spend. This turns the map into "where
    are we vs them".
 3. **Survival-gated profiling**: `--min-days` and the daily-review step (built 2026-10-09; `--top-rank` and a cost

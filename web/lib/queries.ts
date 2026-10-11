@@ -2,7 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { getDb } from "./db";
 import { groupAdCards, type AdCard, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
-import { adRelationOf, mergeAdRelations, type AdRelation } from "../../src/lib/tracked-source-input.ts";
+import { mergeAdRelations } from "../../src/lib/tracked-source-input.ts";
+import { adSourceRelations } from "./tracked-sources";
+import { loadSlimProfiles } from "./creatives";
 import type { AdRow, CreativeRow, ProductRow, ScrapeRunRow, TrackedSourceRow } from "@db/types";
 
 function fail(ctx: string, e: { message: string } | null): never {
@@ -119,19 +121,13 @@ export async function impressionRanks(productId: string): Promise<Map<string, Im
   return out;
 }
 
-/** Direct competitor or adjacent niche, per tracked Ad Library source id (tracked_sources.config.relation). */
-export async function adSourceRelations(productId: string): Promise<Map<string, AdRelation>> {
-  const res = await getDb().from("tracked_sources").select("id,config").eq("product_id", productId).eq("source", "meta");
-  if (res.error) fail("tracked_sources", res.error);
-  return new Map((res.data ?? []).map((s) => [s.id, adRelationOf(s.config)]));
-}
-
 /** Longest primary text sent to the browser per card; Ad Library copy rarely runs past it. */
 const BODY_MAX = 2000;
 
 /**
  * Every Ad Library ad a product tracks, one card per collation, ranked by the latest impressions scrape. One
- * paged, embedded query (ad + first creative + a few raw payload fields) runs alongside the rank lookup.
+ * paged, embedded query (ad + first creative + a few raw payload fields) runs alongside the rank lookup; each card
+ * then gets its media file's slim creative profile (angle, persona, hook…) when one exists.
  */
 export async function competitorAds(productId: string): Promise<AdCard[]> {
   const db = getDb();
@@ -188,7 +184,12 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
       });
     }
   }
-  return groupAdCards([...rows.values()], ranks);
+  const cards = groupAdCards([...rows.values()], ranks);
+  const profiles = await loadSlimProfiles(cards.flatMap((c) => (c.media ? [c.media.sha256] : [])));
+  return cards.map((c) => {
+    const p = c.media ? profiles.get(c.media.sha256) : undefined;
+    return p ? { ...c, profile: { fields: p.fields, hook: p.hook.spoken ?? p.hook.onscreen } } : c;
+  });
 }
 
 async function creativesForAds(adIds: string[]): Promise<Map<string, CreativeRow[]>> {
