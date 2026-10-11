@@ -18,7 +18,9 @@ export default function Setup() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="h-12 shrink-0 flex items-center px-4 bg-chrome border-b border-chrome-line text-[13px] font-semibold text-chrome-fg">
-        <Link href="/" className="hover:text-signal transition-colors duration-200">Mad Factory</Link>
+        <Link href="/" className="hover:text-signal transition-colors duration-200">
+          Mad Factory
+        </Link>
       </div>
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 enter">
         <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.01em]">Setup</h1>
@@ -28,33 +30,52 @@ export default function Setup() {
 
         <h2 className="text-[15px] font-semibold mt-8 mb-2">This web server</h2>
         <Card className="divide-y divide-line-2">
-          {web.map((it) => <Row key={it.key} it={it} missingTone="red" />)}
+          {web.map((it) => (
+            <Row key={it.key} it={it} missingTone="red" />
+          ))}
         </Card>
         {!auth.disabled && !auth.config && (
-          <p className="text-[12px] text-fg-3 mt-2">Running locally? AUTH_DISABLED=true in .env skips sign-in for <code className="num">pnpm web</code> only.</p>
+          <p className="text-[12px] text-fg-3 mt-2">
+            Running locally? AUTH_DISABLED=true in .env skips sign-in for <code className="num">pnpm web</code> only.
+          </p>
         )}
 
         {full && (
           <>
             <h2 className="text-[15px] font-semibold mt-8 mb-1">Syncs and analysis</h2>
             <p className="text-[13px] text-fg-2 mb-2">
-              These keys belong on the machine that runs the commands; run <code className="num">pnpm doctor</code> there to check them. A hosted web
-              server only reads the database, so “not on this server” is expected there, and it should never hold ad-account keys.
+              These keys belong on the machine that runs the commands; run <code className="num">pnpm doctor</code> there to check them. A hosted web server only reads the database, so “not on this
+              server” is expected there, and it should never hold ad-account keys.
             </p>
             <Card className="divide-y divide-line-2">
-              {cli.map((it) => <Row key={it.key} it={it} missingTone="neutral" />)}
+              {cli.map((it) => (
+                <Row key={it.key} it={it} missingTone="neutral" />
+              ))}
             </Card>
           </>
         )}
 
-        {db && full && <Link href="/" className="btn mt-8">Open the app →</Link>}
+        {db && full && (
+          <Link href="/" className="btn mt-8">
+            Open the app →
+          </Link>
+        )}
       </main>
     </div>
   );
 }
 
 /** The registry writes commands in backticks; show them as code. */
-const code = (text: string) => text.split("`").map((part, i) => (i % 2 ? <code key={i} className="num text-[12px]">{part}</code> : part));
+const code = (text: string) =>
+  text.split("`").map((part, i) =>
+    i % 2 ? (
+      <code key={i} className="num text-[12px]">
+        {part}
+      </code>
+    ) : (
+      part
+    ),
+  );
 
 function Row({ it, missingTone }: { it: Integration; missingTone: "red" | "neutral" }) {
   const { configured, missing } = integrationStatus(it.key);
@@ -70,14 +91,20 @@ function Row({ it, missingTone }: { it: Integration; missingTone: "red" | "neutr
         {!configured && (
           <>
             <p className="text-[12px] text-fg-3 mt-1">Without it: {code(it.without)}</p>
-            <p className="text-[12px] text-fg-3 mt-1">Set <span className="num text-fg-2">{envHint(it)}</span>. {it.setup}.</p>
+            <p className="text-[12px] text-fg-3 mt-1">
+              Set <span className="num text-fg-2">{envHint(it)}</span>. {it.setup}.
+            </p>
           </>
         )}
       </div>
       <div className="shrink-0">
-        {configured
-          ? <Badge tone="green">set</Badge>
-          : <span title={`Missing: ${missing.join(", ")}`}><Badge tone={tone}>{tone === "red" ? "missing" : "not on this server"}</Badge></span>}
+        {configured ? (
+          <Badge tone="green">set</Badge>
+        ) : (
+          <span title={`Missing: ${missing.join(", ")}`}>
+            <Badge tone={tone}>{tone === "red" ? "missing" : "not on this server"}</Badge>
+          </span>
+        )}
       </div>
     </div>
   );

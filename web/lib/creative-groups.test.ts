@@ -5,7 +5,14 @@ import { applyCreativeFilters, applyScopeFilters, creativeFiltersHref, groupItem
 function item(sha256: string, over: Partial<CreativeItem> & { angle?: string; audience?: string } = {}): CreativeItem {
   const { angle = "a1", audience = "p1", ...rest } = over;
   return {
-    sha256, mediaType: "video", url: null, owner: "competitor", source: "Page one", days: 40, active: true, bucket: "long",
+    sha256,
+    mediaType: "video",
+    url: null,
+    owner: "competitor",
+    source: "Page one",
+    days: 40,
+    active: true,
+    bucket: "long",
     hook: { spoken: "Say it clearly", onscreen: null, visual: null },
     fields: { angle, angle_suggestion: null, audience, hook_type: "question", awareness: null, response: null, format: null, style: null, structure: null },
     ...rest,
@@ -20,9 +27,24 @@ const items = [
 ];
 
 test("groupItems counts owners and run buckets per value", () => {
-  assert.deepEqual(groupItems(items, "angle").map((g) => [g.value, g.total, g.own, g.long, g.stopped]), [["a1", 2, 0, 1, 1], ["a2", 2, 1, 0, 0]]);
-  assert.deepEqual(groupItems(items, "angle").map((g) => [g.value, g.competitor, g.inspiration]), [["a1", 2, 0], ["a2", 0, 1]]);
-  assert.deepEqual(groupItems(items, "audience").map((g) => g.value), ["p1", "p2"]);
+  assert.deepEqual(
+    groupItems(items, "angle").map((g) => [g.value, g.total, g.own, g.long, g.stopped]),
+    [
+      ["a1", 2, 0, 1, 1],
+      ["a2", 2, 1, 0, 0],
+    ],
+  );
+  assert.deepEqual(
+    groupItems(items, "angle").map((g) => [g.value, g.competitor, g.inspiration]),
+    [
+      ["a1", 2, 0],
+      ["a2", 0, 1],
+    ],
+  );
+  assert.deepEqual(
+    groupItems(items, "audience").map((g) => g.value),
+    ["p1", "p2"],
+  );
 });
 
 test("filters narrow by owner, advertiser, run length, hook text and the picked breakdown row", () => {

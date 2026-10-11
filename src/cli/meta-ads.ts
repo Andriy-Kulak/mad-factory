@@ -121,22 +121,24 @@ async function syncCommand(): Promise<void> {
   let failures = 0;
 
   for (const ts of sources) {
-    const journal = values["dry-run"] ? undefined : async (entry: MetaAdsCallJournalEntry) => {
-      await addMetaAdsChange({
-        at: new Date().toISOString(),
-        actor: "meta-ads sync",
-        ad_account_id: ts.value,
-        product_id: ts.product_id,
-        method: entry.method,
-        path: entry.path,
-        is_write: entry.method !== "GET",
-        request: entry.params as Json,
-        status: entry.status,
-        response: entry.error ? { error: entry.error } : null,
-        usage: entry.usage,
-        note: entry.error ?? null,
-      });
-    };
+    const journal = values["dry-run"]
+      ? undefined
+      : async (entry: MetaAdsCallJournalEntry) => {
+          await addMetaAdsChange({
+            at: new Date().toISOString(),
+            actor: "meta-ads sync",
+            ad_account_id: ts.value,
+            product_id: ts.product_id,
+            method: entry.method,
+            path: entry.path,
+            is_write: entry.method !== "GET",
+            request: entry.params as Json,
+            status: entry.status,
+            response: entry.error ? { error: entry.error } : null,
+            usage: entry.usage,
+            note: entry.error ?? null,
+          });
+        };
     const client = metaClient({ journal });
     console.log(`== ${ts.label ?? `account ${ts.value}`}`);
     try {
@@ -165,21 +167,30 @@ async function statusCommand(): Promise<void> {
 
   for (const ts of sources) {
     ensureAccountSource(ts);
-    const latestDailyResult = await db.from("meta_ads_ad_daily").select("date")
-      .eq("product_id", product.id).order("date", { ascending: false }).limit(1).maybeSingle();
+    const latestDailyResult = await db.from("meta_ads_ad_daily").select("date").eq("product_id", product.id).order("date", { ascending: false }).limit(1).maybeSingle();
     if (latestDailyResult.error) throw new Error(`status: ${statusError(latestDailyResult.error)}`);
     const latestDate = latestDailyResult.data?.date ?? null;
     const startDate = latestDate ? new Date(`${latestDate}T00:00:00.000Z`) : null;
     if (startDate) startDate.setUTCDate(startDate.getUTCDate() - 6);
     const startDateText = startDate?.toISOString().slice(0, 10) ?? null;
-    const runResult = await db.from("scrape_runs").select("id,status,started_at,finished_at,error,ads_seen")
-      .eq("tracked_source_id", ts.id).eq("source", SOURCE).order("started_at", { ascending: false }).limit(1).maybeSingle();
+    const runResult = await db
+      .from("scrape_runs")
+      .select("id,status,started_at,finished_at,error,ads_seen")
+      .eq("tracked_source_id", ts.id)
+      .eq("source", SOURCE)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (runResult.error) throw new Error(`status: ${statusError(runResult.error)}`);
     const run = runResult.data;
 
     const campaignIds: string[] = [];
     for (let offset = 0; ; offset += 1000) {
-      const page = await db.from("meta_ads_campaigns").select("id").eq("product_id", product.id).range(offset, offset + 999);
+      const page = await db
+        .from("meta_ads_campaigns")
+        .select("id")
+        .eq("product_id", product.id)
+        .range(offset, offset + 999);
       if (page.error) throw new Error(`status: ${statusError(page.error)}`);
       campaignIds.push(...(page.data ?? []).map((row) => row.id));
       if ((page.data ?? []).length < 1000) break;
@@ -195,11 +206,9 @@ async function statusCommand(): Promise<void> {
       if (ads.error) throw new Error(`status: ${statusError(ads.error)}`);
       adCount += ads.count ?? 0;
     }
-    const creativeResult = await db.from("meta_ads_creatives").select("id", { count: "exact", head: true })
-      .eq("product_id", product.id);
+    const creativeResult = await db.from("meta_ads_creatives").select("id", { count: "exact", head: true }).eq("product_id", product.id);
     if (creativeResult.error) throw new Error(`status: ${statusError(creativeResult.error)}`);
-    const emptyCreativeResult = await db.from("meta_ads_creatives").select("id", { count: "exact", head: true })
-      .eq("product_id", product.id).eq("attributes", "{}");
+    const emptyCreativeResult = await db.from("meta_ads_creatives").select("id", { count: "exact", head: true }).eq("product_id", product.id).eq("attributes", "{}");
     if (emptyCreativeResult.error) throw new Error(`status: ${statusError(emptyCreativeResult.error)}`);
 
     let metricsLine = "Last 7 days: no daily rows";
@@ -208,8 +217,13 @@ async function statusCommand(): Promise<void> {
       let installs = 0;
       let trials = 0;
       for (let offset = 0; ; offset += 1000) {
-        const dailyResult = await db.from("meta_ads_ad_daily").select("spend,installs,trials")
-          .eq("product_id", product.id).gte("date", startDateText).lte("date", latestDate).range(offset, offset + 999);
+        const dailyResult = await db
+          .from("meta_ads_ad_daily")
+          .select("spend,installs,trials")
+          .eq("product_id", product.id)
+          .gte("date", startDateText)
+          .lte("date", latestDate)
+          .range(offset, offset + 999);
         if (dailyResult.error) throw new Error(`status: ${statusError(dailyResult.error)}`);
         for (const row of dailyResult.data ?? []) {
           spend += Number(row.spend ?? 0);
@@ -223,8 +237,7 @@ async function statusCommand(): Promise<void> {
 
     let callCount = 0;
     if (run) {
-      let callsQuery = db.from("meta_ads_changes").select("id", { count: "exact", head: true })
-        .eq("product_id", product.id).eq("ad_account_id", ts.value).gte("at", run.started_at);
+      let callsQuery = db.from("meta_ads_changes").select("id", { count: "exact", head: true }).eq("product_id", product.id).eq("ad_account_id", ts.value).gte("at", run.started_at);
       if (run.finished_at) callsQuery = callsQuery.lte("at", run.finished_at);
       const callsResult = await callsQuery;
       if (callsResult.error) throw new Error(`status: ${statusError(callsResult.error)}`);
@@ -244,10 +257,16 @@ async function mediaCommand(): Promise<void> {
   if (values.creative || values.file) {
     if (!values.creative || !values.file) throw new Error("--creative and --file go together");
     const product = await requireProduct(values.product);
-    await importMediaFile(product.id, values.creative, values.file, { force: values.force }, {
-      ...defaultDeps,
-      log: (line) => console.log(`   ${line}`),
-    });
+    await importMediaFile(
+      product.id,
+      values.creative,
+      values.file,
+      { force: values.force },
+      {
+        ...defaultDeps,
+        log: (line) => console.log(`   ${line}`),
+      },
+    );
     return;
   }
   const limit = values.limit === undefined ? undefined : Number(values.limit);
@@ -278,13 +297,17 @@ async function mediaCommand(): Promise<void> {
     };
     const client = metaClient({ journal });
     console.log(`== ${ts.label ?? `account ${ts.value}`}`);
-    const stats = await downloadMedia(client, ts.value, product.id, { limit }, {
-      ...defaultDeps,
-      log: (line) => console.log(`   ${line}`),
-    });
-    console.log(
-      `   ${stats.scanned} creative(s): ${stats.videos} video(s), ${stats.images} image(s) stored; ${stats.skipped} skipped, ${stats.failures} failed; ${client.calls} API call(s)`,
+    const stats = await downloadMedia(
+      client,
+      ts.value,
+      product.id,
+      { limit },
+      {
+        ...defaultDeps,
+        log: (line) => console.log(`   ${line}`),
+      },
     );
+    console.log(`   ${stats.scanned} creative(s): ${stats.videos} video(s), ${stats.images} image(s) stored; ${stats.skipped} skipped, ${stats.failures} failed; ${client.calls} API call(s)`);
   }
 }
 
@@ -312,9 +335,10 @@ async function tagCommand(): Promise<void> {
   const currentResult = await db.from("meta_ads_creatives").select("attributes").eq("id", creativeId).maybeSingle();
   if (currentResult.error) throw new Error(`tag: ${currentResult.error.message}`);
   if (!currentResult.data) throw new Error(`Creative not found: ${creativeId}`);
-  const attributes = currentResult.data.attributes && typeof currentResult.data.attributes === "object" && !Array.isArray(currentResult.data.attributes)
-    ? { ...(currentResult.data.attributes as Record<string, Json>) }
-    : {};
+  const attributes =
+    currentResult.data.attributes && typeof currentResult.data.attributes === "object" && !Array.isArray(currentResult.data.attributes)
+      ? { ...(currentResult.data.attributes as Record<string, Json>) }
+      : {};
   for (const key of removes) delete attributes[key];
   Object.assign(attributes, updates);
   const result = await db.from("meta_ads_creatives").update({ attributes }).eq("id", creativeId);
@@ -331,11 +355,16 @@ async function pauseCommand(): Promise<void> {
   if (!adIds.length) throw new Error("pause needs at least one --ad <id>");
   if (!values.plan) throw new Error("pause needs --plan <name> (a reviewed plan document)");
   const client = metaClient();
-  const stats = await pauseAds(client, values.product, {
-    adIds,
-    plan: values.plan,
-    dryRun: values["dry-run"],
-  }, { ...pauseDeps, log: (line) => console.log(line) });
+  const stats = await pauseAds(
+    client,
+    values.product,
+    {
+      adIds,
+      plan: values.plan,
+      dryRun: values["dry-run"],
+    },
+    { ...pauseDeps, log: (line) => console.log(line) },
+  );
   console.log(`   ${stats.paused} ad(s) paused, ${stats.skipped} already paused${values["dry-run"] ? " (dry-run, nothing written)" : ""}`);
 }
 
@@ -343,12 +372,17 @@ async function activateCommand(): Promise<void> {
   if (!values.product) throw new Error("activate needs --product <id|slug>");
   if (!values.plan) throw new Error("activate needs --plan <name> (a reviewed plan document)");
   const client = metaClient();
-  const stats = await activateObjects(client, values.product, {
-    adIds: values.ad ?? [],
-    adsetIds: values.adset ?? [],
-    plan: values.plan,
-    dryRun: values["dry-run"],
-  }, { ...activateDeps, log: (line) => console.log(line) });
+  const stats = await activateObjects(
+    client,
+    values.product,
+    {
+      adIds: values.ad ?? [],
+      adsetIds: values.adset ?? [],
+      plan: values.plan,
+      dryRun: values["dry-run"],
+    },
+    { ...activateDeps, log: (line) => console.log(line) },
+  );
   console.log(`   ${stats.activated} object(s) activated, ${stats.skipped} already active${values["dry-run"] ? " (dry-run, nothing written)" : ""}`);
 }
 
@@ -364,13 +398,18 @@ async function adsetUpdateCommand(): Promise<void> {
     dailyMinSpendCents = Math.round(usd * 100);
   }
   const client = metaClient();
-  await updateAdset(client, values.product, {
-    adsetId,
-    name: values.name,
-    dailyMinSpendCents,
-    plan: values.plan,
-    dryRun: values["dry-run"],
-  }, { ...updateAdsetDeps, log: (line) => console.log(line) });
+  await updateAdset(
+    client,
+    values.product,
+    {
+      adsetId,
+      name: values.name,
+      dailyMinSpendCents,
+      plan: values.plan,
+      dryRun: values["dry-run"],
+    },
+    { ...updateAdsetDeps, log: (line) => console.log(line) },
+  );
 }
 
 async function createAdCommand(): Promise<void> {
@@ -383,19 +422,24 @@ async function createAdCommand(): Promise<void> {
   const textMode = values["text-mode"] as TextMode;
   if (textMode !== "feed" && textMode !== "single") throw new Error("--text-mode must be feed or single");
   const client = metaClient();
-  await createAdFromTemplate(client, values.product, {
-    adsetId,
-    templateAdId: values["template-ad"],
-    file: values.file,
-    videoId: values["video-id"],
-    imageHash: values["image-hash"],
-    name: values.name,
-    plan: values.plan,
-    validateOnly: values["validate-only"],
-    textMode,
-    titles: values.title,
-    bodies: values.body,
-  }, { ...createAdDeps, log: (line) => console.log(line) });
+  await createAdFromTemplate(
+    client,
+    values.product,
+    {
+      adsetId,
+      templateAdId: values["template-ad"],
+      file: values.file,
+      videoId: values["video-id"],
+      imageHash: values["image-hash"],
+      name: values.name,
+      plan: values.plan,
+      validateOnly: values["validate-only"],
+      textMode,
+      titles: values.title,
+      bodies: values.body,
+    },
+    { ...createAdDeps, log: (line) => console.log(line) },
+  );
 }
 
 async function launchCommand(): Promise<void> {
@@ -453,14 +497,19 @@ async function adTextCommand(): Promise<void> {
   const textMode = values["text-mode"] as TextMode;
   if (textMode !== "feed" && textMode !== "single") throw new Error("--text-mode must be feed or single");
   const client = metaClient();
-  await updateAdText(client, values.product, {
-    adId,
-    titles: values.title ?? [],
-    bodies: values.body ?? [],
-    plan: values.plan,
-    validateOnly: values["validate-only"],
-    textMode,
-  }, { ...adTextDeps, log: (line) => console.log(line) });
+  await updateAdText(
+    client,
+    values.product,
+    {
+      adId,
+      titles: values.title ?? [],
+      bodies: values.body ?? [],
+      plan: values.plan,
+      validateOnly: values["validate-only"],
+      textMode,
+    },
+    { ...adTextDeps, log: (line) => console.log(line) },
+  );
 }
 
 /** Every Meta call goes through here, so a missing token stops with the setup steps instead of a stack trace. */

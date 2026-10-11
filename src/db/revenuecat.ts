@@ -18,7 +18,14 @@ export async function appleAdsNames(productId: string): Promise<{ campaigns: { i
   const campaigns = unwrap(await getDb().from("apple_ads_campaigns").select("id,name").eq("product_id", productId), "appleAdsNames campaigns");
   if (!campaigns.length) return { campaigns, keywords: [] };
   const keywords = unwrap(
-    await getDb().from("apple_ads_keywords").select("id,campaign_id,text").in("campaign_id", campaigns.map((c) => c.id)).eq("is_negative", false),
+    await getDb()
+      .from("apple_ads_keywords")
+      .select("id,campaign_id,text")
+      .in(
+        "campaign_id",
+        campaigns.map((c) => c.id),
+      )
+      .eq("is_negative", false),
     "appleAdsNames keywords",
   );
   return { campaigns, keywords };

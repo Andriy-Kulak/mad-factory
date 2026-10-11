@@ -30,14 +30,19 @@ export async function getAppleKeywords(productId: string, days: number): Promise
         db.from("apple_ads_keywords").select("id,campaign_id,text,match_type,bid").in("campaign_id", ids).eq("is_negative", false).eq("deleted", false),
         db.from("apple_ads_keyword_daily").select("keyword_id,impressions,taps,tap_installs").in("campaign_id", ids).gte("date", since),
       ])
-    : [{ data: [], error: null }, { data: [], error: null }];
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
   if (kw.error) throw new Error(`apple_ads_keywords: ${kw.error.message}`);
   if (daily.error) throw new Error(`apple_ads_keyword_daily: ${daily.error.message}`);
 
   const perf = new Map<number, { impressions: number; taps: number; installs: number }>();
   for (const d of (daily.data ?? []) as Pick<AppleAdsKeywordDailyRow, "keyword_id" | "impressions" | "taps" | "tap_installs">[]) {
     const t = perf.get(d.keyword_id) ?? perf.set(d.keyword_id, { impressions: 0, taps: 0, installs: 0 }).get(d.keyword_id)!;
-    t.impressions += d.impressions; t.taps += d.taps; t.installs += d.tap_installs;
+    t.impressions += d.impressions;
+    t.taps += d.taps;
+    t.installs += d.tap_installs;
   }
   const byText = new Map<string, KeywordPopularity["targeted"]>();
   for (const k of (kw.data ?? []) as Pick<AppleAdsKeywordRow, "id" | "campaign_id" | "text" | "match_type" | "bid">[]) {

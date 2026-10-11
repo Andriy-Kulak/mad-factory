@@ -62,9 +62,28 @@ function SortIcon({ dir }: { dir: "asc" | "desc" | null }) {
  * tables; `stickyFirst` pins the name column while the numbers scroll sideways. `views` (a Toggle over row tags)
  * and `searchLabel` (a live search over row.search) add a toolbar above the table.
  */
-export function DataTable({ columns, rows, defaultSort = null, maxHeight, className = "mb-6", empty = "Nothing to show.", dense = false, stickyFirst = false, views, searchLabel }: {
-  columns: Column[]; rows: Row[]; defaultSort?: Sort; maxHeight?: string; className?: string; empty?: ReactNode;
-  dense?: boolean; stickyFirst?: boolean; views?: { key: string; label: string }[]; searchLabel?: string;
+export function DataTable({
+  columns,
+  rows,
+  defaultSort = null,
+  maxHeight,
+  className = "mb-6",
+  empty = "Nothing to show.",
+  dense = false,
+  stickyFirst = false,
+  views,
+  searchLabel,
+}: {
+  columns: Column[];
+  rows: Row[];
+  defaultSort?: Sort;
+  maxHeight?: string;
+  className?: string;
+  empty?: ReactNode;
+  dense?: boolean;
+  stickyFirst?: boolean;
+  views?: { key: string; label: string }[];
+  searchLabel?: string;
 }) {
   const [sort, setSort] = useState<Sort>(defaultSort);
   const [view, setView] = useState(views?.[0]?.key ?? "");
@@ -140,7 +159,11 @@ export function DataTable({ columns, rows, defaultSort = null, maxHeight, classN
         </thead>
         <tbody>
           {sorted.length === 0 && (
-            <tr><td colSpan={columns.length} className="px-3 py-8 text-center text-fg-3">{empty}</td></tr>
+            <tr>
+              <td colSpan={columns.length} className="px-3 py-8 text-center text-fg-3">
+                {empty}
+              </td>
+            </tr>
           )}
           {sorted.map((r) => (
             <tr
@@ -148,11 +171,25 @@ export function DataTable({ columns, rows, defaultSort = null, maxHeight, classN
               className={`${r.className ?? ""} ${r.href || r.onClick ? "cursor-pointer transition-colors duration-150 hover:bg-bg-3 focus-visible:bg-bg-3 outline-none" : ""}`}
               style={{ viewTransitionName: `${prefix}-${order.get(r.id)}` }}
               tabIndex={r.href || r.onClick ? 0 : undefined}
-              onClick={r.href || r.onClick ? (e) => { if (!(e.target as HTMLElement).closest("a,button,input,select")) open(r); } : undefined}
-              onKeyDown={r.href || r.onClick ? (e) => { if (e.key === "Enter" && e.target === e.currentTarget) open(r); } : undefined}
+              onClick={
+                r.href || r.onClick
+                  ? (e) => {
+                      if (!(e.target as HTMLElement).closest("a,button,input,select")) open(r);
+                    }
+                  : undefined
+              }
+              onKeyDown={
+                r.href || r.onClick
+                  ? (e) => {
+                      if (e.key === "Enter" && e.target === e.currentTarget) open(r);
+                    }
+                  : undefined
+              }
             >
               {r.cells.map((c, i) => (
-                <td key={i} className={`${pad} whitespace-nowrap ${columns[i]?.align === "right" ? "text-right num" : ""} ${c.dim ? "text-fg-3" : ""} ${pin(i)} ${c.className ?? ""}`}>{c.node}</td>
+                <td key={i} className={`${pad} whitespace-nowrap ${columns[i]?.align === "right" ? "text-right num" : ""} ${c.dim ? "text-fg-3" : ""} ${pin(i)} ${c.className ?? ""}`}>
+                  {c.node}
+                </td>
               ))}
             </tr>
           ))}
@@ -164,8 +201,27 @@ export function DataTable({ columns, rows, defaultSort = null, maxHeight, classN
   return (
     <div className={className}>
       <div className="card rounded-b-none flex flex-wrap items-center gap-2 px-2.5 py-2">
-        {views && <Toggle size="sm" label="Show" active={view} onChange={setView} items={views.map((v) => ({ key: v.key, label: <>{v.label} <span className="num text-[11px] opacity-60 ml-1">{counts.get(v.key)}</span></> }))} />}
-        {searchLabel && <div className="ml-auto w-full sm:w-64"><SearchInput value={q} onChange={setQ} placeholder={searchLabel} label={searchLabel} /></div>}
+        {views && (
+          <Toggle
+            size="sm"
+            label="Show"
+            active={view}
+            onChange={setView}
+            items={views.map((v) => ({
+              key: v.key,
+              label: (
+                <>
+                  {v.label} <span className="num text-[11px] opacity-60 ml-1">{counts.get(v.key)}</span>
+                </>
+              ),
+            }))}
+          />
+        )}
+        {searchLabel && (
+          <div className="ml-auto w-full sm:w-64">
+            <SearchInput value={q} onChange={setQ} placeholder={searchLabel} label={searchLabel} />
+          </div>
+        )}
       </div>
       {table}
     </div>

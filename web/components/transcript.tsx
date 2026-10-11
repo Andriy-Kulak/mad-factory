@@ -40,12 +40,17 @@ export function Transcript({
       },
       () => live && setState("error"),
     );
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [id, load]);
   const text = state && state !== "error" && state.id === id ? state.text : null;
   const copy = () => {
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => setCopied(true), () => {});
+    navigator.clipboard.writeText(text).then(
+      () => setCopied(true),
+      () => {},
+    );
   };
   const run = () => {
     if (!id || !transcribe) return;
@@ -68,23 +73,32 @@ export function Transcript({
     <div>
       <div className="flex items-center gap-2 mb-1.5">
         <div className="label">Transcript</div>
-        {text && <button type="button" onClick={copy} className="btn btn-ghost btn-sm !h-6 !px-1.5 text-[12px] ml-auto">{copied ? "Copied" : "Copy"}</button>}
+        {text && (
+          <button type="button" onClick={copy} className="btn btn-ghost btn-sm !h-6 !px-1.5 text-[12px] ml-auto">
+            {copied ? "Copied" : "Copy"}
+          </button>
+        )}
       </div>
-      {!id ? <p className="text-[13px] text-fg-3">No video stored.</p>
-        : state === "error" ? <p className="text-[13px] text-danger">Couldn't load the transcript.</p>
-        : state === null || state.id !== id ? <p className="text-[13px] text-fg-3">Loading…</p>
-        : text === "" ? <p className="text-[13px] text-fg-3">No speech in this video.</p>
-           : text ? <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{text}</p>
-        : (
-             <div className="flex items-center gap-2">
-               <p className="text-[13px] text-fg-3">Not transcribed yet.</p>
-               {transcribe && (
-                 <button type="button" onClick={run} disabled={busy} className="btn btn-sm">
-                   {busy ? "Transcribing…" : "Transcribe"}
-                 </button>
-               )}
-             </div>
-           )}
+      {!id ? (
+        <p className="text-[13px] text-fg-3">No video stored.</p>
+      ) : state === "error" ? (
+        <p className="text-[13px] text-danger">Couldn't load the transcript.</p>
+      ) : state === null || state.id !== id ? (
+        <p className="text-[13px] text-fg-3">Loading…</p>
+      ) : text === "" ? (
+        <p className="text-[13px] text-fg-3">No speech in this video.</p>
+      ) : text ? (
+        <p className="text-[14px] leading-relaxed whitespace-pre-line break-words">{text}</p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <p className="text-[13px] text-fg-3">Not transcribed yet.</p>
+          {transcribe && (
+            <button type="button" onClick={run} disabled={busy} className="btn btn-sm">
+              {busy ? "Transcribing…" : "Transcribe"}
+            </button>
+          )}
+        </div>
+      )}
       {failure && <p className="text-[13px] text-danger mt-1">{failure}</p>}
     </div>
   );

@@ -21,11 +21,7 @@ export type TrackedSourceScope = { kind: "social"; relations: string[] } | { kin
 
 /** Tracked sources a tab manages, paused ones included. */
 export async function listTrackedSourceItems(productId: string, scope: TrackedSourceScope): Promise<TrackedSourceItem[]> {
-  let q = getDb()
-    .from("tracked_sources")
-    .select("id,source,kind,value,country,label,enabled,config,last_scraped_at")
-    .eq("product_id", productId)
-    .order("created_at");
+  let q = getDb().from("tracked_sources").select("id,source,kind,value,country,label,enabled,config,last_scraped_at").eq("product_id", productId).order("created_at");
   q = scope.kind === "social" ? q.eq("kind", "account").in("source", [...SOCIAL_PLATFORMS]) : q.eq("source", "meta").in("kind", ["page", "keyword"]);
   const res = await q;
   if (res.error) throw new Error(`tracked_sources: ${res.error.message}`);
@@ -33,18 +29,20 @@ export async function listTrackedSourceItems(productId: string, scope: TrackedSo
     const cfg = s.config && typeof s.config === "object" && !Array.isArray(s.config) ? s.config : {};
     const relation = scope.kind === "social" ? (typeof cfg.relation === "string" ? cfg.relation : "inspiration") : adRelationOf(cfg);
     if (scope.kind === "social" && !scope.relations.includes(relation!)) return [];
-    return [{
-      id: s.id,
-      source: s.source,
-      kind: s.kind,
-      value: s.value,
-      country: s.country,
-      label: s.label,
-      enabled: s.enabled,
-      relation,
-      synced: scope.kind === "social" ? typeof cfg.account_id === "string" : s.last_scraped_at != null,
-      lastScrapedAt: s.last_scraped_at,
-    }];
+    return [
+      {
+        id: s.id,
+        source: s.source,
+        kind: s.kind,
+        value: s.value,
+        country: s.country,
+        label: s.label,
+        enabled: s.enabled,
+        relation,
+        synced: scope.kind === "social" ? typeof cfg.account_id === "string" : s.last_scraped_at != null,
+        lastScrapedAt: s.last_scraped_at,
+      },
+    ];
   });
 }
 

@@ -1,12 +1,4 @@
-import {
-  count,
-  firstText,
-  hashtagsFromText,
-  record,
-  rawWithoutKeys,
-  text,
-  unixTimestamp,
-} from "../../../util.ts";
+import { count, firstText, hashtagsFromText, record, rawWithoutKeys, text, unixTimestamp } from "../../../util.ts";
 import type { Json, SocialPost, SocialProfile } from "../../../types.ts";
 
 type JsonRecord = Record<string, unknown>;

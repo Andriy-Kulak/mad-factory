@@ -80,7 +80,10 @@ const [cmd, arg, docRef, docNameRef] = positionals;
 
 function list(v: string | undefined): string[] | undefined {
   if (v === undefined) return undefined;
-  return v.split("|").map((s) => s.trim()).filter(Boolean);
+  return v
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function fieldsFromFlags(): ProductUpdate {

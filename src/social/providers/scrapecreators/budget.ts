@@ -27,11 +27,8 @@ export function createCreditBudget(
       }
       options.onUsage?.(result.creditsCharged);
       if (creditsUsed > options.maxCredits) {
-        const remaining =
-          creditsRemaining === null ? "" : `; API reports ${creditsRemaining} credits remaining`;
-        throw new Error(
-          `${platform} account exceeded the ${options.maxCredits}-credit limit after ${creditsUsed} credits${remaining}`,
-        );
+        const remaining = creditsRemaining === null ? "" : `; API reports ${creditsRemaining} credits remaining`;
+        throw new Error(`${platform} account exceeded the ${options.maxCredits}-credit limit after ${creditsUsed} credits${remaining}`);
       }
       return result.body;
     },

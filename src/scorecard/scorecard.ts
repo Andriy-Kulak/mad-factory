@@ -64,8 +64,7 @@ function totals(proceeds: number, spend: Record<string, number>, fixedCosts: num
   };
 }
 
-const scale = (t: Totals, f: number, fixedCosts: number): Totals =>
-  totals(t.proceeds * f, Object.fromEntries(Object.entries(t.spend).map(([k, v]) => [k, v * f])), fixedCosts);
+const scale = (t: Totals, f: number, fixedCosts: number): Totals => totals(t.proceeds * f, Object.fromEntries(Object.entries(t.spend).map(([k, v]) => [k, v * f])), fixedCosts);
 
 export function buildScorecard(input: { product: string; month: string; through: string; goal: Goal | null; data: ScorecardData }): Scorecard {
   const { month, through, goal, data } = input;
@@ -123,13 +122,11 @@ export function buildScorecard(input: { product: string; month: string; through:
   };
 }
 
-const fmt = (n: number | null | undefined) =>
-  n == null ? "—" : (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n: number | null | undefined) => (n == null ? "—" : (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
 export function formatScorecard(s: Scorecard): string {
   const cols = [s.monthToDate, s.projected, s.sevenDayPace];
-  const row = (label: string, pick: (t: Totals) => number) =>
-    label.padEnd(24) + cols.map((t) => (t ? fmt(pick(t)) : "—").padStart(16)).join("");
+  const row = (label: string, pick: (t: Totals) => number) => label.padEnd(24) + cols.map((t) => (t ? fmt(pick(t)) : "—").padStart(16)).join("");
   const lines = [
     `${s.product} · ${s.month} through ${s.through} (${s.daysElapsed} of ${s.daysInMonth} days) · ${s.currency}`,
     s.goal ? `Goal: monthly profit ${fmt(s.goal.target)}` : "Goal: not set",

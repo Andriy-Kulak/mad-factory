@@ -5,7 +5,11 @@ import type { McpApiKeyRow } from "./types.ts";
 /** Creates a key for an agent and returns it in plain text (the only time it exists outside the agent). */
 export async function createMcpKey(name: string): Promise<{ row: McpApiKeyRow; key: string }> {
   const key = newMcpKey();
-  const res = await getDb().from("mcp_api_keys").insert({ name, key_hash: hashMcpKey(key) }).select("*").single();
+  const res = await getDb()
+    .from("mcp_api_keys")
+    .insert({ name, key_hash: hashMcpKey(key) })
+    .select("*")
+    .single();
   if (res.error?.code === "23505") throw new Error(`An active key named "${name}" exists; revoke it first or pick another name`);
   return { row: unwrap(res, "createMcpKey"), key };
 }

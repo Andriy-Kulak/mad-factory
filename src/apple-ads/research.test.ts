@@ -5,7 +5,10 @@ import { termsMissingPopularity } from "./research.ts";
 test("skips known terms without regard to case or whitespace", () => {
   assert.deepEqual(
     termsMissingPopularity(
-      [{ text: "  Alpha   Phrase ", country: "US" }, { text: "new term", country: "CA" }],
+      [
+        { text: "  Alpha   Phrase ", country: "US" },
+        { text: "new term", country: "CA" },
+      ],
       ["alpha phrase"],
       10,
     ),
@@ -16,7 +19,10 @@ test("skips known terms without regard to case or whitespace", () => {
 test("deduplicates normalized text and keeps the first country", () => {
   assert.deepEqual(
     termsMissingPopularity(
-      [{ text: "  Beta  phrase", country: "CA" }, { text: "beta phrase ", country: "US" }],
+      [
+        { text: "  Beta  phrase", country: "CA" },
+        { text: "beta phrase ", country: "US" },
+      ],
       [],
       10,
     ),
@@ -27,7 +33,11 @@ test("deduplicates normalized text and keeps the first country", () => {
 test("sorts lookups by normalized text", () => {
   assert.deepEqual(
     termsMissingPopularity(
-      [{ text: "zeta", country: "US" }, { text: "Alpha", country: "US" }, { text: "middle", country: "CA" }],
+      [
+        { text: "zeta", country: "US" },
+        { text: "Alpha", country: "US" },
+        { text: "middle", country: "CA" },
+      ],
       [],
       10,
     ),
@@ -45,7 +55,11 @@ test("sorts lookups by normalized text", () => {
 test("caps lookups and reports the remaining count as deferred", () => {
   assert.deepEqual(
     termsMissingPopularity(
-      [{ text: "gamma", country: "US" }, { text: "alpha", country: "CA" }, { text: "beta", country: "US" }],
+      [
+        { text: "gamma", country: "US" },
+        { text: "alpha", country: "CA" },
+        { text: "beta", country: "US" },
+      ],
       [],
       2,
     ),

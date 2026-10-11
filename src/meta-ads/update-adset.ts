@@ -37,12 +37,7 @@ export const defaultDeps: UpdateAdsetDeps = {
 // Updates an ad set's name and/or daily_min_spend_target (cents). Journal-then-
 // write: the meta_ads_changes row records the old name/min spend in the note and
 // is inserted BEFORE the Meta call, then updated with status and response.
-export async function updateAdset(
-  client: Pick<MetaAdsClient, "get" | "updateAdset">,
-  productSlug: string,
-  options: UpdateAdsetOptions,
-  deps: UpdateAdsetDeps = defaultDeps,
-): Promise<void> {
+export async function updateAdset(client: Pick<MetaAdsClient, "get" | "updateAdset">, productSlug: string, options: UpdateAdsetOptions, deps: UpdateAdsetDeps = defaultDeps): Promise<void> {
   if (options.name === undefined && options.dailyMinSpendCents === undefined) {
     throw new Error("adset-update needs --name and/or --min-spend");
   }
@@ -50,10 +45,7 @@ export async function updateAdset(
   const accountId = await deps.adAccount(product.id);
   const planName = await deps.requirePlanDoc(product.id, options.plan);
 
-  const current = await client.get<{ name?: string; daily_min_spend_target?: string; account_id?: string }>(
-    `/${options.adsetId}`,
-    { fields: "name,daily_min_spend_target,account_id" },
-  );
+  const current = await client.get<{ name?: string; daily_min_spend_target?: string; account_id?: string }>(`/${options.adsetId}`, { fields: "name,daily_min_spend_target,account_id" });
   if (`act_${current.account_id ?? ""}` !== accountId) {
     throw new Error(`ad set ${options.adsetId} belongs to act_${current.account_id}, not ${accountId}; refusing to write to another account`);
   }

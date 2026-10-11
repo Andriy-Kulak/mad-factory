@@ -27,7 +27,9 @@ function harness(ad: Record<string, unknown>) {
   const changes: MetaAdsChangeInsert[] = [];
   const sent: { creative: Record<string, unknown>; validateOnly: boolean }[] = [];
   const client = {
-    async get<T = unknown>(_path: string): Promise<T> { return ad as T; },
+    async get<T = unknown>(_path: string): Promise<T> {
+      return ad as T;
+    },
     async videoThumbnail(videoId: string) {
       events.push(`thumb ${videoId}`);
       return "https://t.example/fallback.jpg";
@@ -39,10 +41,23 @@ function harness(ad: Record<string, unknown>) {
     },
   };
   const deps: UpdateAdTextDeps = {
-    async requireProduct() { return { id: "p1", slug: "acme" } as ProductRow; },
-    async adAccount() { return "act_999"; },
-    async requirePlanDoc(_productId: string, ref: string) { return ref.split("/").pop()!.replace(/\.(?:md|json)$/i, ""); },
-    async insertChange(row) { changes.push(row); events.push(`insert ${row.object_id}`); return `change-${changes.length}`; },
+    async requireProduct() {
+      return { id: "p1", slug: "acme" } as ProductRow;
+    },
+    async adAccount() {
+      return "act_999";
+    },
+    async requirePlanDoc(_productId: string, ref: string) {
+      return ref
+        .split("/")
+        .pop()!
+        .replace(/\.(?:md|json)$/i, "");
+    },
+    async insertChange(row) {
+      changes.push(row);
+      events.push(`insert ${row.object_id}`);
+      return `change-${changes.length}`;
+    },
     async updateChange() {},
     log() {},
   };

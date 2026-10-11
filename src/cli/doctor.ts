@@ -41,11 +41,17 @@ async function checkDatabase(): Promise<{ ok: boolean; detail: string }> {
 const db = await checkDatabase();
 
 if (values.json) {
-  console.log(JSON.stringify({
-    envFile: existsSync(".env"),
-    integrations: rows.map(({ it, configured, missing }) => ({ key: it.key, name: it.name, required: it.required, where: it.where, configured, missing })),
-    database: db,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        envFile: existsSync(".env"),
+        integrations: rows.map(({ it, configured, missing }) => ({ key: it.key, name: it.name, required: it.required, where: it.where, configured, missing })),
+        database: db,
+      },
+      null,
+      2,
+    ),
+  );
   process.exit(rows.some((r) => r.it.required && !r.configured) || !db.ok ? 1 : 0);
 }
 

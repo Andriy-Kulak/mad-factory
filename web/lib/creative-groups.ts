@@ -129,11 +129,12 @@ export function activeCreativeFilterCount(f: CreativeFilters): number {
 export function applyScopeFilters(items: CreativeItem[], f: CreativeFilters): CreativeItem[] {
   const sources = new Set(f.sources);
   const q = f.q.toLowerCase();
-  return items.filter((it) =>
-    (!f.owner || it.owner === f.owner) &&
-    (!sources.size || sources.has(it.source)) &&
-    (!f.run || (f.run === "live" ? it.active === true : it.bucket === f.run)) &&
-    (!q || [it.hook.spoken, it.hook.onscreen, it.hook.visual, it.source].some((s) => s?.toLowerCase().includes(q))),
+  return items.filter(
+    (it) =>
+      (!f.owner || it.owner === f.owner) &&
+      (!sources.size || sources.has(it.source)) &&
+      (!f.run || (f.run === "live" ? it.active === true : it.bucket === f.run)) &&
+      (!q || [it.hook.spoken, it.hook.onscreen, it.hook.visual, it.source].some((s) => s?.toLowerCase().includes(q))),
   );
 }
 

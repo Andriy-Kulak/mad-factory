@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { INSIGHT_DIMS, type AdCard, type InsightDim } from "@/lib/ad-cards";
 import {
-  advertiserMatrix, browseHref, drillCards, insightFiltersHref, insightTable, workingHooks,
-  type DrillMode, type InsightFilters, type InsightRow, type InsightView, type InsightWindow,
+  advertiserMatrix,
+  browseHref,
+  drillCards,
+  insightFiltersHref,
+  insightTable,
+  workingHooks,
+  type DrillMode,
+  type InsightFilters,
+  type InsightRow,
+  type InsightView,
+  type InsightWindow,
 } from "@/lib/insights";
 import { DataTable, type Column, type Row } from "@/components/data-table";
 import { AdGrid, AdPreview, type Favorites } from "@/components/ad-card";
@@ -37,8 +46,20 @@ const DRILL_PAGE = 12;
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? "<1%" : `${Math.round(x * 100)}%`);
 
-export function InsightsView({ cards, slug, productId, favoriteIds, initial, hasAdjacent }: {
-  cards: AdCard[]; slug: string; productId: string; favoriteIds: string[]; initial: InsightFilters; hasAdjacent: boolean;
+export function InsightsView({
+  cards,
+  slug,
+  productId,
+  favoriteIds,
+  initial,
+  hasAdjacent,
+}: {
+  cards: AdCard[];
+  slug: string;
+  productId: string;
+  favoriteIds: string[];
+  initial: InsightFilters;
+  hasAdjacent: boolean;
 }) {
   const [f, setF] = useState(initial);
   // Same favorites as Competitor ads: a card is starred when any ad in its group is.
@@ -49,8 +70,7 @@ export function InsightsView({ cards, slug, productId, favoriteIds, initial, has
   const update = (patch: Partial<InsightFilters>) => setF((cur) => ({ ...cur, ...patch }));
   /** A new grouping, window or scope closes the drill-down; its row may not exist there. */
   const rescope = (patch: Partial<InsightFilters>) => update({ ...patch, value: null, advertiserId: null });
-  const select = (value: string, advertiserId: string | null = null) =>
-    update(f.value === value && f.advertiserId === advertiserId ? { value: null, advertiserId: null } : { value, advertiserId });
+  const select = (value: string, advertiserId: string | null = null) => update(f.value === value && f.advertiserId === advertiserId ? { value: null, advertiserId: null } : { value, advertiserId });
   const table = useMemo(() => insightTable(cards, f), [cards, f]);
   const advertisers = useMemo(() => new Set(cards.filter((c) => !f.relation || c.relation === f.relation).map((c) => c.advertiserId)).size, [cards, f.relation]);
 
@@ -59,8 +79,15 @@ export function InsightsView({ cards, slug, productId, favoriteIds, initial, has
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 mb-4">
         <Toggle label="Time window" items={WINDOWS} active={f.window} onChange={(window) => rescope({ window })} />
         {hasAdjacent && (
-          <Chips items={[{ key: "competitor", label: "Direct competitors" }, { key: "inspiration", label: "Adjacent niches" }, { key: "all", label: "All advertisers" }]}
-            active={f.relation ?? "all"} onChange={(k) => rescope({ relation: k === "all" ? null : (k as InsightFilters["relation"]) })} />
+          <Chips
+            items={[
+              { key: "competitor", label: "Direct competitors" },
+              { key: "inspiration", label: "Adjacent niches" },
+              { key: "all", label: "All advertisers" },
+            ]}
+            active={f.relation ?? "all"}
+            onChange={(k) => rescope({ relation: k === "all" ? null : (k as InsightFilters["relation"]) })}
+          />
         )}
       </div>
       <p className="text-[13px] text-fg-3 mb-4 max-w-[760px]">{RULE[f.window]} Click a row or a cell to see its ads.</p>
@@ -78,15 +105,15 @@ export function InsightsView({ cards, slug, productId, favoriteIds, initial, has
       </div>
 
       {f.view === "totals" ? <TotalsTable rows={table.rows} f={f} onSelect={select} /> : <AdvertiserTable cards={cards} f={f} onSelect={select} />}
-      {f.value && <DrillPanel key={`${f.dim}:${f.value}:${f.advertiserId}:${f.window}:${f.relation}`} cards={cards} f={f} slug={slug} fav={fav} onClose={() => update({ value: null, advertiserId: null })} />}
+      {f.value && (
+        <DrillPanel key={`${f.dim}:${f.value}:${f.advertiserId}:${f.window}:${f.relation}`} cards={cards} f={f} slug={slug} fav={fav} onClose={() => update({ value: null, advertiserId: null })} />
+      )}
       {f.dim === "hook" && <TopHooks cards={cards} f={f} slug={slug} />}
     </>
   );
 }
 
-const rowName = (f: InsightFilters, label: string, active: boolean) => (
-  <span className={`font-medium ${f.dim === "landing" ? "num text-[12.5px]" : ""} ${active ? "text-accent" : ""}`}>{label}</span>
-);
+const rowName = (f: InsightFilters, label: string, active: boolean) => <span className={`font-medium ${f.dim === "landing" ? "num text-[12.5px]" : ""} ${active ? "text-accent" : ""}`}>{label}</span>;
 
 function TotalsTable({ rows, f, onSelect }: { rows: InsightRow[]; f: InsightFilters; onSelect: (value: string) => void }) {
   const columns: Column[] = [
@@ -109,8 +136,17 @@ function TotalsTable({ rows, f, onSelect }: { rows: InsightRow[]; f: InsightFilt
         { node: rowName(f, r.label, active), value: r.label },
         { node: <Pair top={<span className="num">{r.ads}</span>} sub={`${pct(r.adShare)} of ads`} />, value: r.ads },
         {
-          node: r.working ? <Pair strong top={<span className="num text-accent">{r.working}</span>} sub={r.top && (r.working === 1 ? r.top.name : r.top.working === r.working ? `all ${r.top.name}` : `${r.top.working} from ${r.top.name}`)} /> : "–",
-          value: r.working, dim: !r.working,
+          node: r.working ? (
+            <Pair
+              strong
+              top={<span className="num text-accent">{r.working}</span>}
+              sub={r.top && (r.working === 1 ? r.top.name : r.top.working === r.working ? `all ${r.top.name}` : `${r.top.working} from ${r.top.name}`)}
+            />
+          ) : (
+            "–"
+          ),
+          value: r.working,
+          dim: !r.working,
         },
         { node: r.alive ? <span className="num">{r.alive}</span> : "–", value: r.alive, dim: !r.alive },
         { node: <span className="num">{r.advertisers}</span>, value: r.advertisers },
@@ -119,8 +155,9 @@ function TotalsTable({ rows, f, onSelect }: { rows: InsightRow[]; f: InsightFilt
       ],
     };
   });
-  return <DataTable dense stickyFirst columns={columns} rows={data} searchLabel={`Search ${INSIGHT_DIMS[f.dim].toLowerCase()}s`}
-    defaultSort={{ col: 2, dir: "desc" }} empty="No ads in this window yet." />;
+  return (
+    <DataTable dense stickyFirst columns={columns} rows={data} searchLabel={`Search ${INSIGHT_DIMS[f.dim].toLowerCase()}s`} defaultSort={{ col: 2, dir: "desc" }} empty="No ads in this window yet." />
+  );
 }
 
 function AdvertiserTable({ cards, f, onSelect }: { cards: AdCard[]; f: InsightFilters; onSelect: (value: string, advertiserId?: string | null) => void }) {
@@ -131,7 +168,15 @@ function AdvertiserTable({ cards, f, onSelect }: { cards: AdCard[]; f: InsightFi
     ...m.columns.map((c) => ({
       align: "right" as const,
       title: `${c.name}: ${c.ads} ads, ${c.working} ${WORKING[f.window].toLowerCase()}, ${c.alive} ${ALIVE[f.window].toLowerCase()}${c.relation === "inspiration" ? " · adjacent niche" : ""}`,
-      label: <span className="inline-flex flex-col items-end leading-tight normal-case"><span className="max-w-[140px] truncate">{c.name}</span><span className="text-[10.5px] text-fg-3">{c.relation === "inspiration" ? "adjacent · " : ""}{c.working} {WORKING[f.window].toLowerCase()}</span></span>,
+      label: (
+        <span className="inline-flex flex-col items-end leading-tight normal-case">
+          <span className="max-w-[140px] truncate">{c.name}</span>
+          <span className="text-[10.5px] text-fg-3">
+            {c.relation === "inspiration" ? "adjacent · " : ""}
+            {c.working} {WORKING[f.window].toLowerCase()}
+          </span>
+        </span>
+      ),
     })),
   ];
   const data: Row[] = m.rows.map((r) => ({
@@ -149,19 +194,30 @@ function AdvertiserTable({ cards, f, onSelect }: { cards: AdCard[]; f: InsightFi
         return {
           value: cell.ads,
           node: (
-            <button type="button" onClick={(e) => { e.stopPropagation(); onSelect(r.value, c.id); }}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(r.value, c.id);
+              }}
               title={`${c.name}: ${cell.ads} ads · ${cell.working} ${WORKING[f.window].toLowerCase()} · ${cell.alive} ${ALIVE[f.window].toLowerCase()} · ${pct(cell.ads / c.ads)} of its ads`}
-              className={`inline-flex flex-col items-end leading-tight min-w-[52px] rounded-[3px] px-1.5 py-1 -my-1 transition-colors duration-150 hover:outline hover:outline-1 hover:outline-fg-3 ${active ? "outline outline-2 outline-accent" : ""} ${cell.working ? "bg-accent-soft" : ""}`}>
+              className={`inline-flex flex-col items-end leading-tight min-w-[52px] rounded-[3px] px-1.5 py-1 -my-1 transition-colors duration-150 hover:outline hover:outline-1 hover:outline-fg-3 ${active ? "outline outline-2 outline-accent" : ""} ${cell.working ? "bg-accent-soft" : ""}`}
+            >
               <span className={`num ${cell.working ? "font-semibold" : "text-fg-2"}`}>{cell.ads}</span>
-              {cell.working > 0 && <span className="text-[11px] text-accent font-medium">{cell.working} {WORKING[f.window].toLowerCase()}</span>}
+              {cell.working > 0 && (
+                <span className="text-[11px] text-accent font-medium">
+                  {cell.working} {WORKING[f.window].toLowerCase()}
+                </span>
+              )}
             </button>
           ),
         };
       }),
     ],
   }));
-  return <DataTable dense stickyFirst columns={columns} rows={data} searchLabel={`Search ${INSIGHT_DIMS[f.dim].toLowerCase()}s`}
-    defaultSort={{ col: 1, dir: "desc" }} empty="No ads in this window yet." />;
+  return (
+    <DataTable dense stickyFirst columns={columns} rows={data} searchLabel={`Search ${INSIGHT_DIMS[f.dim].toLowerCase()}s`} defaultSort={{ col: 1, dir: "desc" }} empty="No ads in this window yet." />
+  );
 }
 
 /** The selected row's or cell's ads, as feed cards: working first, then the softer signal, then everything. */
@@ -192,23 +248,54 @@ function DrillPanel({ cards, f, slug, fav, onClose }: { cards: AdCard[]; f: Insi
   ];
   return (
     <section ref={ref} className="mb-6 scroll-mt-4" aria-label="Ads behind the selected row">
-      <SectionHead right={
-        <span className="flex items-center gap-3">
-          <Link href={browseHref(slug, f, { value: f.value!, advertiserId: f.advertiserId ?? undefined, mode })} className="text-[12.5px] text-fg-2 hover:text-fg">Open in Competitor ads →</Link>
-          <button type="button" onClick={onClose} className="btn btn-sm btn-ghost" aria-label="Close">×</button>
-        </span>
-      }>
-        {INSIGHT_DIMS[f.dim]}: {drill.label}{drill.advertiser ? ` · ${drill.advertiser}` : ""}
+      <SectionHead
+        right={
+          <span className="flex items-center gap-3">
+            <Link href={browseHref(slug, f, { value: f.value!, advertiserId: f.advertiserId ?? undefined, mode })} className="text-[12.5px] text-fg-2 hover:text-fg">
+              Open in Competitor ads →
+            </Link>
+            <button type="button" onClick={onClose} className="btn btn-sm btn-ghost" aria-label="Close">
+              ×
+            </button>
+          </span>
+        }
+      >
+        {INSIGHT_DIMS[f.dim]}: {drill.label}
+        {drill.advertiser ? ` · ${drill.advertiser}` : ""}
       </SectionHead>
-      <div className="mb-3"><Toggle size="sm" label="Which ads" items={modes} active={mode} onChange={(m) => { setMode(m); setLimit(DRILL_PAGE); }} /></div>
-      {shown.length ? <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} /> : <p className="text-[13px] text-fg-3 py-6">None of these ads {mode === "working" ? `count as ${WORKING[f.window].toLowerCase()}` : "are still running"} yet.</p>}
+      <div className="mb-3">
+        <Toggle
+          size="sm"
+          label="Which ads"
+          items={modes}
+          active={mode}
+          onChange={(m) => {
+            setMode(m);
+            setLimit(DRILL_PAGE);
+          }}
+        />
+      </div>
+      {shown.length ? (
+        <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} />
+      ) : (
+        <p className="text-[13px] text-fg-3 py-6">None of these ads {mode === "working" ? `count as ${WORKING[f.window].toLowerCase()}` : "are still running"} yet.</p>
+      )}
       {list.length > limit && (
         <div className="mt-4 flex justify-center">
-          <button type="button" className="btn btn-sm" onClick={() => setLimit((l) => l + DRILL_PAGE)}>Show {Math.min(DRILL_PAGE, list.length - limit)} more of {list.length - limit}</button>
+          <button type="button" className="btn btn-sm" onClick={() => setLimit((l) => l + DRILL_PAGE)}>
+            Show {Math.min(DRILL_PAGE, list.length - limit)} more of {list.length - limit}
+          </button>
         </div>
       )}
-      <AdPreview ad={openAd} slug={slug} fav={fav} position={openAd ? `${openIndex + 1} / ${list.length}` : ""} onClose={() => setOpenId(null)}
-        onPrev={openIndex > 0 ? () => step(-1) : null} onNext={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null} />
+      <AdPreview
+        ad={openAd}
+        slug={slug}
+        fav={fav}
+        position={openAd ? `${openIndex + 1} / ${list.length}` : ""}
+        onClose={() => setOpenId(null)}
+        onPrev={openIndex > 0 ? () => step(-1) : null}
+        onNext={openIndex >= 0 && openIndex < list.length - 1 ? () => step(1) : null}
+      />
     </section>
   );
 }
@@ -228,7 +315,11 @@ function TopHooks({ cards, f, slug }: { cards: AdCard[]; f: InsightFilters; slug
             <span className="mt-auto flex flex-wrap items-center gap-1.5 text-[11.5px] text-fg-3">
               <span className="font-medium text-fg-2">{card.advertiserName ?? "Unknown advertiser"}</span>
               {card.relation === "inspiration" && <Badge>adjacent</Badge>}
-              {card.profile?.fields.hook_type && <Badge>{INSIGHT_DIMS.hook.toLowerCase()}: {card.profile.fields.hook_type.replace(/_/g, " ")}</Badge>}
+              {card.profile?.fields.hook_type && (
+                <Badge>
+                  {INSIGHT_DIMS.hook.toLowerCase()}: {card.profile.fields.hook_type.replace(/_/g, " ")}
+                </Badge>
+              )}
               {card.rank && <span className="num">#{card.rank.rank} impressions</span>}
               {card.days != null && <span className="num">· {card.days}d</span>}
               {card.versions > 1 && <span className="num">· {card.versions} versions</span>}

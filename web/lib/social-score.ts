@@ -12,13 +12,7 @@ export function outlierScore(views: number | null, accountMedian: number | null)
 }
 
 /** (likes + comments + shares + saves) / views, counting only the interactions the platform reports. */
-export function engagementRate(
-  views: number | null,
-  likes: number | null,
-  comments: number | null,
-  shares: number | null = null,
-  saves: number | null = null,
-): number | null {
+export function engagementRate(views: number | null, likes: number | null, comments: number | null, shares: number | null = null, saves: number | null = null): number | null {
   const parts = [likes, comments, shares, saves];
   if (!views || parts.every((v) => v == null)) return null;
   return parts.reduce<number>((sum, v) => sum + (v ?? 0), 0) / views;

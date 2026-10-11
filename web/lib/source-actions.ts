@@ -23,11 +23,7 @@ async function insertSource(
   const db = getDb();
   const res = await db.from("tracked_sources").insert(row).select("id").single();
   if (res.error?.code === "23505") {
-    const existing = await db
-      .from("tracked_sources")
-      .select("enabled")
-      .match({ product_id: row.product_id, source: row.source, kind: row.kind, value: row.value, country: row.country })
-      .maybeSingle();
+    const existing = await db.from("tracked_sources").select("enabled").match({ product_id: row.product_id, source: row.source, kind: row.kind, value: row.value, country: row.country }).maybeSingle();
     return { error: existing.data?.enabled === false ? `${what} is already tracked but paused. Resume it below.` : `${what} is already tracked.` };
   }
   if (res.error) return { error: res.error.message };
@@ -79,7 +75,10 @@ export async function setAdSourceRelation(productId: string, slug: string, id: s
   const cur = await db.from("tracked_sources").select("config").match({ id, product_id: productId, source: "meta" }).single();
   if (cur.error) throw new Error(cur.error.message);
   const config = cur.data.config && typeof cur.data.config === "object" && !Array.isArray(cur.data.config) ? cur.data.config : {};
-  const res = await db.from("tracked_sources").update({ config: { ...config, relation } }).match({ id, product_id: productId, source: "meta" });
+  const res = await db
+    .from("tracked_sources")
+    .update({ config: { ...config, relation } })
+    .match({ id, product_id: productId, source: "meta" });
   if (res.error) throw new Error(res.error.message);
   revalidatePath(`/p/${slug}`, "layout");
 }

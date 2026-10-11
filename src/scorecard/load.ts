@@ -15,9 +15,7 @@ export async function scorecardFor(product: { id: string; slug: string }, opts: 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(through)) throw new Error("through is YYYY-MM-DD");
 
   const [g] = await listProductGoals(product.id);
-  const goal: Goal | null = g
-    ? { target: Number(g.target), currency: g.currency, monthlyFixedCosts: g.monthly_fixed_costs == null ? null : Number(g.monthly_fixed_costs) }
-    : null;
+  const goal: Goal | null = g ? { target: Number(g.target), currency: g.currency, monthlyFixedCosts: g.monthly_fixed_costs == null ? null : Number(g.monthly_fixed_costs) } : null;
   const data = await loadScorecardData(product.id, scorecardFrom(month, through), through);
   return buildScorecard({ product: product.slug, month, through, goal, data });
 }

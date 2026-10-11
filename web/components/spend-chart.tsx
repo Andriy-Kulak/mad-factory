@@ -47,13 +47,17 @@ export function SpendChart({ days, tapsLabel = "taps" }: { days: DayPoint[]; tap
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--line)" strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">${t.toFixed(max < 10 ? 2 : 0)}</text>
+            <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">
+              ${t.toFixed(max < 10 ? 2 : 0)}
+            </text>
           </g>
         ))}
         {days.map((d, i) =>
           // Regular ticks, plus the last day unless it would sit on top of the previous tick.
           (i % labelEvery === 0 && days.length - 1 - i >= labelEvery) || i === days.length - 1 ? (
-            <text key={d.date} x={x(i)} y={H - 8} textAnchor={i === days.length - 1 ? "end" : i === 0 ? "start" : "middle"} fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">{shortDate(d.date)}</text>
+            <text key={d.date} x={x(i)} y={H - 8} textAnchor={i === days.length - 1 ? "end" : i === 0 ? "start" : "middle"} fontSize={11} fill="var(--fg-3)" fontFamily="var(--font-mono)">
+              {shortDate(d.date)}
+            </text>
           ) : null,
         )}
         <path d={area} fill="var(--accent)" opacity={0.08} />
@@ -77,7 +81,9 @@ export function SpendChart({ days, tapsLabel = "taps" }: { days: DayPoint[]; tap
         >
           <div className="text-fg-3">{shortDate(h.date)}</div>
           <div className="text-[15px] font-medium text-fg">${h.spend.toFixed(2)}</div>
-          <div className="text-fg-2">{h.impressions.toLocaleString("en-US")} impr · {h.taps} {tapsLabel} · {h.installs} installs</div>
+          <div className="text-fg-2">
+            {h.impressions.toLocaleString("en-US")} impr · {h.taps} {tapsLabel} · {h.installs} installs
+          </div>
         </div>
       )}
     </div>

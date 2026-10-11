@@ -102,7 +102,11 @@ export interface LaunchDeps {
   requirePlanDoc(productId: string, ref: string): Promise<string>;
   pathExists(path: string): Promise<boolean>;
   readFile(path: string): Promise<string>;
-  createAd(client: Pick<MetaAdsClient, "get" | "createAd" | "uploadVideo" | "uploadImage" | "videoThumbnail">, slug: string, options: Parameters<typeof createAdFromTemplate>[2]): Promise<{ adId: string | null }>;
+  createAd(
+    client: Pick<MetaAdsClient, "get" | "createAd" | "uploadVideo" | "uploadImage" | "videoThumbnail">,
+    slug: string,
+    options: Parameters<typeof createAdFromTemplate>[2],
+  ): Promise<{ adId: string | null }>;
   activate(client: Pick<MetaAdsClient, "get" | "activate">, slug: string, options: { adIds: string[]; adsetIds: string[]; plan: string; dryRun: boolean }): Promise<ActivateStats>;
   upsertCreatives(rows: MetaAdsCreativeInsert[]): Promise<number>;
   upsertAds(rows: MetaAdsAdInsert[]): Promise<number>;
@@ -234,7 +238,7 @@ export async function launch(
   for (const c of created) {
     if (!c.adId) continue;
     const ad = await client.get<ApiObject>(`/${c.adId}`, { fields: AD_FIELDS });
-    const creative = ad.creative && typeof ad.creative === "object" ? ad.creative as ApiObject : null;
+    const creative = ad.creative && typeof ad.creative === "object" ? (ad.creative as ApiObject) : null;
     if (creative?.id !== undefined) {
       creativeById.set(String(creative.id), creative);
       creativeIdByAd.set(c.adId, String(creative.id));

@@ -1,12 +1,4 @@
-import {
-  count,
-  firstText,
-  hashtagsFromText,
-  record,
-  rawWithoutKeys,
-  text,
-  unixTimestamp,
-} from "../../../util.ts";
+import { count, firstText, hashtagsFromText, record, rawWithoutKeys, text, unixTimestamp } from "../../../util.ts";
 import type { Json, SocialPost, SocialProfile } from "../../../types.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -72,19 +64,8 @@ export function normalizeInstagramPost(item: JsonRecord): SocialPost {
     caption,
     postedAt: unixTimestamp(item.taken_at),
     durationS: count(item.video_duration),
-    audioId: firstText(
-      musicInfo?.audio_id,
-      musicInfo?.music_canonical_id,
-      musicAssetInfo?.audio_id,
-      musicAssetInfo?.music_canonical_id,
-      originalSoundInfo?.audio_asset_id,
-    ),
-    audioTitle: firstText(
-      musicInfo?.title,
-      musicInfo?.song_name,
-      musicAssetInfo?.title,
-      originalSoundInfo?.original_audio_title,
-    ),
+    audioId: firstText(musicInfo?.audio_id, musicInfo?.music_canonical_id, musicAssetInfo?.audio_id, musicAssetInfo?.music_canonical_id, originalSoundInfo?.audio_asset_id),
+    audioTitle: firstText(musicInfo?.title, musicInfo?.song_name, musicAssetInfo?.title, originalSoundInfo?.original_audio_title),
     hashtags: hashtagsFromText(caption),
     isPaidPartnership: typeof item.is_paid_partnership === "boolean" ? item.is_paid_partnership : null,
     thumbnailUrl: firstMediaUrl(item.image_versions2, "candidates") ?? text(item.display_uri),

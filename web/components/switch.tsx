@@ -16,7 +16,12 @@ export function ActionSwitch({ checked, action, label, children }: { checked: bo
       aria-checked={on}
       aria-label={label}
       title={label}
-      onClick={() => start(async () => { setOn(!on); await action(); })}
+      onClick={() =>
+        start(async () => {
+          setOn(!on);
+          await action();
+        })
+      }
       aria-busy={pending}
       className="switch"
     >

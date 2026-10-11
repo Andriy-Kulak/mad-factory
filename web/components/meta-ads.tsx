@@ -9,7 +9,15 @@ export const META_RANGES = [7, 14, 28, 90];
 /** Meta ads sub-tabs; the date range carries over between them. */
 export function MetaTabs({ slug, active, range }: { slug: string; active: "ads" | "attributes"; range: MetaRange }) {
   const qs = range.custom ? `?from=${range.since}&to=${range.until}` : range.days !== 28 ? `?days=${range.days}` : "";
-  return <Tabs active={active} items={[{ key: "ads", label: "Campaigns & ads", href: `/p/${slug}/meta-ads${qs}` }, { key: "attributes", label: "By creative attribute", href: `/p/${slug}/meta-ads/creatives${qs}` }]} />;
+  return (
+    <Tabs
+      active={active}
+      items={[
+        { key: "ads", label: "Campaigns & ads", href: `/p/${slug}/meta-ads${qs}` },
+        { key: "attributes", label: "By creative attribute", href: `/p/${slug}/meta-ads/creatives${qs}` },
+      ]}
+    />
+  );
 }
 const isoDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)) ? s : null);
 export const shortDay = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -42,7 +50,9 @@ export function RangePicker({ href, range, extra = {} }: { href: string; range: 
     <div className="flex flex-wrap items-center gap-2 shrink-0">
       <nav aria-label="Range" className="segmented">
         {META_RANGES.map((d) => (
-          <Link key={d} href={`${href}${qs({ days: String(d) })}`} aria-current={!range.custom && d === range.days ? "page" : undefined}>{d}D</Link>
+          <Link key={d} href={`${href}${qs({ days: String(d) })}`} aria-current={!range.custom && d === range.days ? "page" : undefined}>
+            {d}D
+          </Link>
         ))}
       </nav>
       <DateRangeForm action={href} since={range.since} until={range.until} max={today} custom={range.custom} extra={extra} />
@@ -54,11 +64,15 @@ export function RangePicker({ href, range, extra = {} }: { href: string; range: 
 export function DateRangeForm({ action, since, until, max, custom, extra = {} }: { action: string; since: string; until: string; max: string; custom: boolean; extra?: Record<string, string> }) {
   return (
     <form action={action} className={`segmented ${custom ? "!border-fg" : ""}`}>
-      {Object.entries(extra).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+      {Object.entries(extra).map(([k, v]) => (
+        <input key={k} type="hidden" name={k} value={v} />
+      ))}
       <input type="date" name="from" aria-label="From" defaultValue={since} max={max} required className="num bg-transparent text-[11px] outline-none" />
       <span className="!px-0 text-fg-3">–</span>
       <input type="date" name="to" aria-label="To" defaultValue={until} max={max} className="num bg-transparent text-[11px] outline-none" />
-      <button type="submit" aria-pressed={custom}>Apply</button>
+      <button type="submit" aria-pressed={custom}>
+        Apply
+      </button>
     </form>
   );
 }
@@ -85,16 +99,32 @@ export function metaMetrics(all: MetaTotals[], currency: string | null): { colum
   const cost = (t: MetaTotals, n: number) => (n ? t.spend / n : null);
   const defs: { col: Column; cell: (t: MetaTotals) => Cell; show: boolean; name: string }[] = [
     { name: "spend", show: true, col: { label: "Spend", align: "right" }, cell: (t) => ({ node: whole(t.spend), value: t.spend, dim: !t.spend }) },
-    { name: "impressions", show: true, col: { label: "Impr · CTR", align: "right", title: "Impressions, click-through rate underneath" },
-      cell: (t) => ({ node: <Pair top={compact.format(t.impressions)} sub={pct(t.clicks, t.impressions)} />, value: t.impressions, dim: !t.impressions }) },
+    {
+      name: "impressions",
+      show: true,
+      col: { label: "Impr · CTR", align: "right", title: "Impressions, click-through rate underneath" },
+      cell: (t) => ({ node: <Pair top={compact.format(t.impressions)} sub={pct(t.clicks, t.impressions)} />, value: t.impressions, dim: !t.impressions }),
+    },
     { name: "clicks", show: true, col: { label: "Clicks", align: "right" }, cell: (t) => ({ node: int(t.clicks), value: t.clicks, dim: !t.clicks }) },
-    { name: "installs", show: any("installs"), col: { label: "Installs", align: "right", title: "Installs, cost per install underneath" },
-      cell: (t) => ({ node: <Pair top={int(t.installs)} sub={t.installs ? per(t.spend, t.installs) : null} />, value: t.installs, dim: !t.installs }) },
+    {
+      name: "installs",
+      show: any("installs"),
+      col: { label: "Installs", align: "right", title: "Installs, cost per install underneath" },
+      cell: (t) => ({ node: <Pair top={int(t.installs)} sub={t.installs ? per(t.spend, t.installs) : null} />, value: t.installs, dim: !t.installs }),
+    },
     { name: "trials", show: any("trials"), col: { label: "Trials", align: "right" }, cell: (t) => ({ node: int(t.trials), value: t.trials, dim: !t.trials }) },
-    { name: "cost per trial", show: any("trials"), col: { label: "$ / trial", align: "right", firstDir: "asc", title: "Cost per trial: the current decision metric" },
-      cell: (t) => ({ node: t.trials ? <span className="font-semibold">{per(t.spend, t.trials)}</span> : "–", value: cost(t, t.trials), dim: !t.trials }) },
-    { name: "purchases", show: any("purchases"), col: { label: "Purchases", align: "right", title: "Purchases, cost per purchase underneath" },
-      cell: (t) => ({ node: <Pair top={int(t.purchases)} sub={t.purchases ? per(t.spend, t.purchases) : null} />, value: t.purchases, dim: !t.purchases }) },
+    {
+      name: "cost per trial",
+      show: any("trials"),
+      col: { label: "$ / trial", align: "right", firstDir: "asc", title: "Cost per trial: the current decision metric" },
+      cell: (t) => ({ node: t.trials ? <span className="font-semibold">{per(t.spend, t.trials)}</span> : "–", value: cost(t, t.trials), dim: !t.trials }),
+    },
+    {
+      name: "purchases",
+      show: any("purchases"),
+      col: { label: "Purchases", align: "right", title: "Purchases, cost per purchase underneath" },
+      cell: (t) => ({ node: <Pair top={int(t.purchases)} sub={t.purchases ? per(t.spend, t.purchases) : null} />, value: t.purchases, dim: !t.purchases }),
+    },
   ];
   const shown = defs.filter((d) => d.show);
   return { columns: shown.map((d) => d.col), cells: (t) => shown.map((d) => d.cell(t)), hidden: defs.filter((d) => !d.show).map((d) => d.name) };

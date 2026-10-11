@@ -93,9 +93,7 @@ export function normalize(node: Record<string, unknown>): CollectedAd {
     startDate: unixToDate(node.start_date),
     endDate: unixToDate(node.end_date),
     isActive: typeof node.is_active === "boolean" ? node.is_active : null,
-    platforms: Array.isArray(node.publisher_platform)
-      ? node.publisher_platform.filter((p): p is string => typeof p === "string")
-      : [],
+    platforms: Array.isArray(node.publisher_platform) ? node.publisher_platform.filter((p): p is string => typeof p === "string") : [],
     collationId: str(node.collation_id),
     collationCount: num(node.collation_count),
     reachEstimate: node.reach_estimate ?? null,

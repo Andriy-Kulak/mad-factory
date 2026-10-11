@@ -59,12 +59,7 @@ export const scrapeCreatorsTikTokCollector: SocialCollector = {
 
       const moreAvailable = body.has_more === true || body.has_more === 1;
       const nextCursor = text(body.max_cursor);
-      if (
-        postsSeen >= options.maxPosts ||
-        !moreAvailable ||
-        !nextCursor ||
-        seenCursors.has(nextCursor)
-      ) {
+      if (postsSeen >= options.maxPosts || !moreAvailable || !nextCursor || seenCursors.has(nextCursor)) {
         break;
       }
       seenCursors.add(nextCursor);

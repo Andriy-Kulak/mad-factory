@@ -129,8 +129,7 @@ export function cardsInScope(cards: AdCard[], f: Pick<InsightFilters, "window" |
 export const isWorkingIn = (c: Pick<AdCard, "signal">, window: InsightWindow) => c.signal === (window === "all" ? "working" : "early");
 
 /** The softer signal: still running after 21+ days (all time) or simply still running (last 14 days). */
-export const isAliveIn = (c: Pick<AdCard, "isActive" | "days">, window: InsightWindow) =>
-  c.isActive === true && (window === "14d" || (c.days ?? 0) >= 21);
+export const isAliveIn = (c: Pick<AdCard, "isActive" | "days">, window: InsightWindow) => c.isActive === true && (window === "14d" || (c.days ?? 0) >= 21);
 
 function placed(cards: AdCard[], dim: InsightDim): { card: AdCard; value: string }[] {
   return cards.flatMap((card) => {

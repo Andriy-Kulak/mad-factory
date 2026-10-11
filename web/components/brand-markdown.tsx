@@ -12,7 +12,10 @@ function textContent(children: ReactNode): string {
 }
 
 function headingId(children: ReactNode): string {
-  return textContent(children).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return textContent(children)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export function BrandMarkdown({ slug, document, docs }: { slug: string; document: BrandDoc; docs: BrandDoc[] }) {
@@ -23,8 +26,16 @@ export function BrandMarkdown({ slug, document, docs }: { slug: string; document
       remarkPlugins={[remarkGfm]}
       components={{
         h1: ({ children }) => <h1 className="max-w-[80ch] mt-1 mb-5 text-2xl sm:text-3xl leading-tight font-semibold tracking-tight">{children}</h1>,
-        h2: ({ children }) => <h2 id={headingId(children)} className="max-w-[80ch] mt-8 mb-3 scroll-mt-4 text-xl leading-tight font-semibold tracking-tight">{children}</h2>,
-        h3: ({ children }) => <h3 id={headingId(children)} className="max-w-[80ch] mt-6 mb-2 scroll-mt-4 text-base font-semibold">{children}</h3>,
+        h2: ({ children }) => (
+          <h2 id={headingId(children)} className="max-w-[80ch] mt-8 mb-3 scroll-mt-4 text-xl leading-tight font-semibold tracking-tight">
+            {children}
+          </h2>
+        ),
+        h3: ({ children }) => (
+          <h3 id={headingId(children)} className="max-w-[80ch] mt-6 mb-2 scroll-mt-4 text-base font-semibold">
+            {children}
+          </h3>
+        ),
         p: ({ children }) => <p className="max-w-[80ch] my-3 leading-7 text-fg-2">{children}</p>,
         ul: ({ children }) => <ul className="max-w-[80ch] my-3 list-disc space-y-1 pl-6 marker:text-fg-3">{children}</ul>,
         ol: ({ children }) => <ol className="max-w-[80ch] my-3 list-decimal space-y-1 pl-6 marker:text-fg-3">{children}</ol>,
@@ -48,7 +59,11 @@ export function BrandMarkdown({ slug, document, docs }: { slug: string; document
         strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
         a: ({ href, children }) => {
           if (href && /^https?:\/\//i.test(href)) {
-            return <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline underline-offset-2">{children}</a>;
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline underline-offset-2">
+                {children}
+              </a>
+            );
           }
 
           const sibling = href?.match(/^(?:\.\/)?([^/?#]+\.md)(#[^?]*)?$/);

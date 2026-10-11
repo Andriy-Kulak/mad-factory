@@ -185,7 +185,20 @@ export interface AdFilters {
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
-export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = { relation: null, advertisers: [], q: "", status: null, format: null, winners: false, signal: null, by: null, v: null, favorites: false, launchedDays: null, minDays: null };
+export const NO_AD_FILTERS: Omit<AdFilters, "sort" | "view"> = {
+  relation: null,
+  advertisers: [],
+  q: "",
+  status: null,
+  format: null,
+  winners: false,
+  signal: null,
+  by: null,
+  v: null,
+  favorites: false,
+  launchedDays: null,
+  minDays: null,
+};
 const SORTS: AdSort[] = ["impressions", "newest", "longest", "variants"];
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
@@ -253,18 +266,19 @@ export function applyAdFilters(cards: AdCard[], f: AdFilters, now = Date.now(), 
   const advertisers = new Set(f.advertisers);
   const q = f.q.toLowerCase();
   const since = f.launchedDays ? new Date(now - f.launchedDays * DAY_MS).toISOString().slice(0, 10) : null;
-  return cards.filter((c) =>
-    (!f.relation || c.relation === f.relation) &&
-    (!advertisers.size || advertisers.has(c.advertiserId ?? "")) &&
-    (!q || [c.body, c.title, c.advertiserName, c.caption].some((s) => s?.toLowerCase().includes(q))) &&
-    (!f.status || (f.status === "active" ? c.isActive === true : c.isActive === false)) &&
-    (!f.format || mediaFormat(c) === f.format) &&
-    (!f.winners || c.winner) &&
-    (!f.signal || c.signal === f.signal) &&
-    (!f.by || !f.v || dimValue(c, f.by) === f.v) &&
-    (!f.favorites || c.memberIds.some((id) => favorites.has(id))) &&
-    (!since || (c.startDate != null && c.startDate.slice(0, 10) >= since)) &&
-    (!f.minDays || (c.days ?? 0) >= f.minDays),
+  return cards.filter(
+    (c) =>
+      (!f.relation || c.relation === f.relation) &&
+      (!advertisers.size || advertisers.has(c.advertiserId ?? "")) &&
+      (!q || [c.body, c.title, c.advertiserName, c.caption].some((s) => s?.toLowerCase().includes(q))) &&
+      (!f.status || (f.status === "active" ? c.isActive === true : c.isActive === false)) &&
+      (!f.format || mediaFormat(c) === f.format) &&
+      (!f.winners || c.winner) &&
+      (!f.signal || c.signal === f.signal) &&
+      (!f.by || !f.v || dimValue(c, f.by) === f.v) &&
+      (!f.favorites || c.memberIds.some((id) => favorites.has(id))) &&
+      (!since || (c.startDate != null && c.startDate.slice(0, 10) >= since)) &&
+      (!f.minDays || (c.days ?? 0) >= f.minDays),
   );
 }
 
@@ -290,7 +304,11 @@ export function sortAdCards(cards: AdCard[], sort: AdSort): AdCard[] {
 
 /** Hook line: the headline if it isn't a Meta template, else the first clean line of body copy. */
 export function hookOf(ad: { title: string | null; body: string | null; advertiserName: string | null }): string {
-  const clean = (v: string | null) => (v ?? "").split("\n").map((s) => s.trim()).find((s) => s && !s.includes("{{"));
+  const clean = (v: string | null) =>
+    (v ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .find((s) => s && !s.includes("{{"));
   return clean(ad.title) ?? clean(ad.body) ?? ad.advertiserName ?? "Untitled";
 }
 

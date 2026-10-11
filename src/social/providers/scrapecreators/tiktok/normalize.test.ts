@@ -47,10 +47,7 @@ test("normalizes TikTok video metrics, duration, URLs, audio, and ad raw data", 
 test("prefers a browser-supported cover image over a HEIC URL", () => {
   const item = structuredClone(videoItems[1]!) as Record<string, unknown>;
   const video = item.video as { cover: { url_list: string[] } };
-  video.cover.url_list = [
-    "https://cdn.example.test/cover.heic?token=heic",
-    "https://cdn.example.test/cover.jpeg?token=jpeg",
-  ];
+  video.cover.url_list = ["https://cdn.example.test/cover.heic?token=heic", "https://cdn.example.test/cover.jpeg?token=jpeg"];
 
   const post = normalizeTikTokPost(item, "sample_creator");
 

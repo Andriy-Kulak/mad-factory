@@ -30,17 +30,34 @@ function harness(objects: Record<string, Record<string, unknown>>, opts?: { acco
     },
   };
   const base = {
-    async requireProduct() { return { id: "p1", slug: "acme" } as ProductRow; },
-    async adAccount() { return opts?.account ?? "act_999"; },
-    async requirePlanDoc(_productId: string, ref: string) { return ref.split("/").pop()!.replace(/\.(?:md|json)$/i, ""); },
-    async insertChange(row: MetaAdsChangeInsert) { changes.push(row); events.push(`insert ${row.object_id}`); return `change-${changes.length}`; },
+    async requireProduct() {
+      return { id: "p1", slug: "acme" } as ProductRow;
+    },
+    async adAccount() {
+      return opts?.account ?? "act_999";
+    },
+    async requirePlanDoc(_productId: string, ref: string) {
+      return ref
+        .split("/")
+        .pop()!
+        .replace(/\.(?:md|json)$/i, "");
+    },
+    async insertChange(row: MetaAdsChangeInsert) {
+      changes.push(row);
+      events.push(`insert ${row.object_id}`);
+      return `change-${changes.length}`;
+    },
     async updateChange() {},
     log() {},
   };
   const activateDeps: ActivateDeps = {
     ...base,
-    async setAdStatus(id, status) { adStatuses.push({ id, status }); },
-    async setAdsetStatus(id, status) { adsetStatuses.push({ id, status }); },
+    async setAdStatus(id, status) {
+      adStatuses.push({ id, status });
+    },
+    async setAdsetStatus(id, status) {
+      adsetStatuses.push({ id, status });
+    },
     async sleep() {},
   };
   return { client, deps: activateDeps, updateDeps: base as UpdateAdsetDeps, events, changes, activated, adStatuses, adsetStatuses, updates };
@@ -62,10 +79,7 @@ test("activate skips objects that are already ACTIVE", async () => {
 
 test("a foreign ad set aborts activation with no writes", async () => {
   const { client, deps, changes } = harness({ ...OBJECTS, s1: { name: "Set", account_id: "777", status: "PAUSED" } });
-  await assert.rejects(
-    activateObjects(client, "acme", { adIds: [], adsetIds: ["s1"], plan: "plan.md", dryRun: false }, deps),
-    /belongs to act_777/,
-  );
+  await assert.rejects(activateObjects(client, "acme", { adIds: [], adsetIds: ["s1"], plan: "plan.md", dryRun: false }, deps), /belongs to act_777/);
   assert.equal(changes.length, 0);
 });
 
@@ -81,10 +95,7 @@ test("activation journals before the write and mirrors statuses", async () => {
 
 test("updateAdset refuses a foreign account and journals before the write", async () => {
   const foreign = harness({ s1: { name: "Set", daily_min_spend_target: "1000", account_id: "777" } });
-  await assert.rejects(
-    updateAdset(foreign.client, "acme", { adsetId: "s1", name: "New", plan: "plan.md", dryRun: false }, foreign.updateDeps),
-    /belongs to act_777/,
-  );
+  await assert.rejects(updateAdset(foreign.client, "acme", { adsetId: "s1", name: "New", plan: "plan.md", dryRun: false }, foreign.updateDeps), /belongs to act_777/);
   const { client, updateDeps, events, changes, updates } = harness({ s1: { name: "Old name", daily_min_spend_target: "1000", account_id: "999" } });
   await updateAdset(client, "acme", { adsetId: "s1", name: "New", dailyMinSpendCents: 2500, plan: "plan.md", dryRun: false }, updateDeps);
   assert.ok(events.indexOf("insert s1") < events.indexOf("updateAdset"));

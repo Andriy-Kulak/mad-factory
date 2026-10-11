@@ -55,12 +55,7 @@ export const scrapeCreatorsInstagramCollector: SocialCollector = {
       const paging = record(body.paging_info);
       const moreAvailable = paging?.more_available === true;
       const nextCursor = text(paging?.max_id);
-      if (
-        postsSeen >= options.maxPosts ||
-        !moreAvailable ||
-        !nextCursor ||
-        seenCursors.has(nextCursor)
-      ) {
+      if (postsSeen >= options.maxPosts || !moreAvailable || !nextCursor || seenCursors.has(nextCursor)) {
         break;
       }
       seenCursors.add(nextCursor);

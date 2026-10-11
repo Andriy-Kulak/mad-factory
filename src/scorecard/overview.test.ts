@@ -17,7 +17,10 @@ function data(over: Partial<WindowData> = {}): WindowData {
       { ad_id: "a", spend: 40, installs: 5, trials: 4, currency: "USD" },
       { ad_id: "b", spend: 30, installs: 2, trials: 0, currency: "USD" },
     ],
-    metaAds: [{ id: "a", name: "Ad A", status: "ACTIVE" }, { id: "b", name: "Ad B", status: "PAUSED" }],
+    metaAds: [
+      { id: "a", name: "Ad A", status: "ACTIVE" },
+      { id: "b", name: "Ad B", status: "PAUSED" },
+    ],
     apple: [{ spend: 20, installs: 4, currency: "USD" }],
     revenuecat: [
       { campaign: "c1", trials: 2, paid: 1, proceeds: 10, currency: "USD" },
@@ -52,15 +55,36 @@ test("channels: Meta by its own attribution, Apple and the rest by RevenueCat, t
 
 test("Meta ads roll up per ad, sorted by spend; posts by views; stale sources flagged", () => {
   const o = buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW });
-  assert.deepEqual(o.ads.map((a) => [a.name, a.spend, a.trials, a.costPerTrial]), [["Ad A", 100, 10, 10], ["Ad B", 30, 0, null]]);
-  assert.deepEqual(o.organic.posts.map((p) => p.views), [500, 50]);
+  assert.deepEqual(
+    o.ads.map((a) => [a.name, a.spend, a.trials, a.costPerTrial]),
+    [
+      ["Ad A", 100, 10, 10],
+      ["Ad B", 30, 0, null],
+    ],
+  );
+  assert.deepEqual(
+    o.organic.posts.map((p) => p.views),
+    [500, 50],
+  );
   assert.equal(o.organic.views, 550);
-  assert.deepEqual(o.freshness.map((f) => [f.source, f.lastStatus, f.stale]), [["apple_ads", "error", true], ["meta_ads", "done", false]]);
+  assert.deepEqual(
+    o.freshness.map((f) => [f.source, f.lastStatus, f.stale]),
+    [
+      ["apple_ads", "error", true],
+      ["meta_ads", "done", false],
+    ],
+  );
 });
 
 test("status follows the projection; other currencies are left out with a warning", () => {
   assert.equal(buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW }).status, "not_profitable");
-  const earning = buildScorecard({ product: "p", month: "2026-10", through: "2026-10-05", goal: { target: 1000, currency: "USD", monthlyFixedCosts: 0 }, data: { ...emptyMonth, proceeds: [{ date: "2026-10-01", amount: 50, currency: "USD" }] } });
+  const earning = buildScorecard({
+    product: "p",
+    month: "2026-10",
+    through: "2026-10-05",
+    goal: { target: 1000, currency: "USD", monthlyFixedCosts: 0 },
+    data: { ...emptyMonth, proceeds: [{ date: "2026-10-01", amount: 50, currency: "USD" }] },
+  });
   assert.equal(buildOverview({ product: "p", window, scorecard: earning, data: data(), now: NOW }).status, "profitable");
   const eur = data({ apple: [{ spend: 99, installs: 1, currency: "EUR" }] });
   const o = buildOverview({ product: "p", window, scorecard: scorecard(), data: eur, now: NOW });

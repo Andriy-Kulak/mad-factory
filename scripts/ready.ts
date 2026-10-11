@@ -47,7 +47,7 @@ else {
           .split("\n")
           .slice(-25)
           .map((l) => `       ${l}`)
-          .join("\n")
+          .join("\n"),
       );
       if (hint) console.log(`       ${hint}`);
     }

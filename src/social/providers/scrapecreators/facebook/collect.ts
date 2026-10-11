@@ -10,10 +10,7 @@ function validateFacebookUrl(value: string): string {
   } catch {
     throw new Error("Facebook account value must be an HTTPS facebook.com profile URL");
   }
-  if (
-    url.protocol !== "https:" ||
-    (url.hostname !== "facebook.com" && url.hostname !== "www.facebook.com")
-  ) {
+  if (url.protocol !== "https:" || (url.hostname !== "facebook.com" && url.hostname !== "www.facebook.com")) {
     throw new Error("Facebook account value must be an HTTPS facebook.com profile URL");
   }
   return value;
@@ -74,14 +71,7 @@ export const scrapeCreatorsFacebookCollector: SocialCollector = {
       const cursorKey = next && nextCursor ? `${next}\u0000${nextCursor}` : null;
       // Pinned reels come first, so only the page's last reel says whether older pages are still in range.
       const pastSince = since !== null && lastPostedAt !== null && lastPostedAt < since;
-      if (
-        pastSince ||
-        postsSeen >= options.maxPosts ||
-        !next ||
-        !nextCursor ||
-        !cursorKey ||
-        seenCursors.has(cursorKey)
-      ) {
+      if (pastSince || postsSeen >= options.maxPosts || !next || !nextCursor || !cursorKey || seenCursors.has(cursorKey)) {
         break;
       }
       seenCursors.add(cursorKey);

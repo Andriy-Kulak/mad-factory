@@ -24,8 +24,25 @@ export async function getMetaAdsOverview(productId: string, { since, until }: { 
     ids.length ? fetchAll<MetaAdsAdsetRow>((a, b) => db.from("meta_ads_adsets").select("*").in("campaign_id", ids).order("id").range(a, b), "meta_ads_adsets") : Promise.resolve([]),
     ids.length ? fetchAll<MetaAdsAdRow>((a, b) => db.from("meta_ads_ads").select("*").in("campaign_id", ids).order("id").range(a, b), "meta_ads_ads") : Promise.resolve([]),
     fetchAll<MetaAdsCreativeRow>((a, b) => db.from("meta_ads_creatives").select("*").eq("product_id", productId).order("id").range(a, b), "meta_ads_creatives"),
-    fetchAll<MetaAdsAdDailyRow>((a, b) => db.from("meta_ads_ad_daily").select("*").eq("product_id", productId).gte("date", since).lte("date", until).order("date").order("ad_id").range(a, b), "meta_ads_ad_daily"),
-    fetchAll<MetaAdsAdDailyBreakdownRow>((a, b) => db.from("meta_ads_ad_daily_breakdowns").select("*").eq("product_id", productId).eq("breakdown", "country").gte("date", since).lte("date", until).order("date").order("ad_id").order("value").range(a, b), "meta_ads_ad_daily_breakdowns"),
+    fetchAll<MetaAdsAdDailyRow>(
+      (a, b) => db.from("meta_ads_ad_daily").select("*").eq("product_id", productId).gte("date", since).lte("date", until).order("date").order("ad_id").range(a, b),
+      "meta_ads_ad_daily",
+    ),
+    fetchAll<MetaAdsAdDailyBreakdownRow>(
+      (a, b) =>
+        db
+          .from("meta_ads_ad_daily_breakdowns")
+          .select("*")
+          .eq("product_id", productId)
+          .eq("breakdown", "country")
+          .gte("date", since)
+          .lte("date", until)
+          .order("date")
+          .order("ad_id")
+          .order("value")
+          .range(a, b),
+      "meta_ads_ad_daily_breakdowns",
+    ),
     db.from("scrape_runs").select("*").eq("product_id", productId).eq("source", "meta_ads").order("started_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (run.error) throw new Error(`scrape_runs: ${run.error.message}`);

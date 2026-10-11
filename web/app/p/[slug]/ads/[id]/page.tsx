@@ -19,8 +19,22 @@ export default async function AdPage({ params }: { params: Promise<{ slug: strin
 
   return (
     <Shell
-      title={<span className="flex items-center gap-2"><Link href={`/p/${slug}/ads`} className="text-fg-3 hover:text-fg">Competitor ads</Link><span className="text-fg-3">/</span><span>{ad.advertiser_name ?? "Unknown advertiser"}</span></span>}
-      action={libraryUrl && <a href={libraryUrl} target="_blank" rel="noreferrer" className="btn">Open in Ad Library</a>}
+      title={
+        <span className="flex items-center gap-2">
+          <Link href={`/p/${slug}/ads`} className="text-fg-3 hover:text-fg">
+            Competitor ads
+          </Link>
+          <span className="text-fg-3">/</span>
+          <span>{ad.advertiser_name ?? "Unknown advertiser"}</span>
+        </span>
+      }
+      action={
+        libraryUrl && (
+          <a href={libraryUrl} target="_blank" rel="noreferrer" className="btn">
+            Open in Ad Library
+          </a>
+        )
+      }
     >
       <div className="flex items-center gap-3 mb-5">
         <h2 className="text-xl font-semibold leading-tight">{hookOf({ title: ad.title, body: ad.body_text, advertiserName: ad.advertiser_name })}</h2>
@@ -35,15 +49,19 @@ export default async function AdPage({ params }: { params: Promise<{ slug: strin
             <Card key={c.sha256} className="overflow-hidden">
               <div className="bg-fg aspect-[4/5]">
                 {c.public_url ? (
-                  c.media_type === "image"
-                    ? <img src={c.public_url} alt="" className="w-full h-full object-contain" />
-                    : <video src={c.public_url} controls preload="metadata" className="w-full h-full object-contain" />
+                  c.media_type === "image" ? (
+                    <img src={c.public_url} alt="" className="w-full h-full object-contain" />
+                  ) : (
+                    <video src={c.public_url} controls preload="metadata" className="w-full h-full object-contain" />
+                  )
                 ) : (
                   <div className="h-full flex items-center justify-center text-fg-3 text-xs">stored locally: {c.storage_key}</div>
                 )}
               </div>
               <div className="num text-xs text-fg-3 flex justify-between px-3 py-2">
-                <span>{c.media_type} {i + 1} · {fmtBytes(Number(c.bytes))}</span>
+                <span>
+                  {c.media_type} {i + 1} · {fmtBytes(Number(c.bytes))}
+                </span>
                 <span>{c.sha256.slice(0, 12)}</span>
               </div>
             </Card>
@@ -58,7 +76,13 @@ export default async function AdPage({ params }: { params: Promise<{ slug: strin
           <Card className="p-5 grid sm:grid-cols-2 gap-x-8 gap-y-5">
             <Field label="Title">{ad.title}</Field>
             <Field label="CTA">{ad.cta_text}</Field>
-            <Field label="Link">{ad.link_url && <a href={ad.link_url} target="_blank" rel="noreferrer" className="break-all text-fg-2 hover:text-fg">{ad.link_url}</a>}</Field>
+            <Field label="Link">
+              {ad.link_url && (
+                <a href={ad.link_url} target="_blank" rel="noreferrer" className="break-all text-fg-2 hover:text-fg">
+                  {ad.link_url}
+                </a>
+              )}
+            </Field>
             <Field label="Platforms">{ad.platforms.join(", ")}</Field>
             <Field label="Started">{fmtDate(ad.start_date)}</Field>
             <Field label="Ended">{ad.end_date ? fmtDate(ad.end_date) : ad.is_active ? "still running" : null}</Field>
@@ -72,9 +96,16 @@ export default async function AdPage({ params }: { params: Promise<{ slug: strin
             <Field label="Last seen">{fmtDateTime(ad.last_seen_at)}</Field>
             <Field label="Ad id">{ad.external_id}</Field>
             <Field label="Also tracked by">
-              {ad.products.filter((p) => p.slug !== slug).map((p, i) => (
-                <span key={p.id}>{i > 0 && ", "}<Link href={`/p/${p.slug}`} className="hover:text-fg text-fg-2">{p.name}</Link></span>
-              ))}
+              {ad.products
+                .filter((p) => p.slug !== slug)
+                .map((p, i) => (
+                  <span key={p.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/p/${p.slug}`} className="hover:text-fg text-fg-2">
+                      {p.name}
+                    </Link>
+                  </span>
+                ))}
             </Field>
           </Card>
           <Card className="p-5">

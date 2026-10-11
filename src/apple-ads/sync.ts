@@ -113,7 +113,10 @@ export async function syncApp(client: AppleAdsClient, ts: TrackedSourceRow, opts
       const grouped = await reportRows<KeywordReportMeta>(client, cfg.adAccountId, "/reports/apps/keywords/query", (o, p) => reportBody(start, end, c.id, true, o, p));
       const daily = keywordDailyRows({ rows: grouped }, cfg.currency, syncedAt);
       await upsertAppleAdsKeywordDaily(daily);
-      spendByCampaign.set(c.id, daily.reduce((s, r) => s + (r.spend ?? 0), 0));
+      spendByCampaign.set(
+        c.id,
+        daily.reduce((s, r) => s + (r.spend ?? 0), 0),
+      );
 
       // Apple's suggested bid range is one value per row, not per day, and only comes back ungrouped.
       const ungrouped = await reportRows<KeywordReportMeta>(client, cfg.adAccountId, "/reports/apps/keywords/query", (o, p) => reportBody(start, end, c.id, false, o, p));
@@ -129,7 +132,9 @@ export async function syncApp(client: AppleAdsClient, ts: TrackedSourceRow, opts
       stats.negatives += negatives;
       stats.dailyRows += daily.length;
       stats.searchTermRows += terms;
-      opts.log(`${c.name} [${c.status}${c.displayStatus && c.displayStatus !== c.status ? `/${c.displayStatus}` : ""}]: keywords ${keywords}, negatives ${negatives}, daily rows ${daily.length}, search-term rows ${terms}`);
+      opts.log(
+        `${c.name} [${c.status}${c.displayStatus && c.displayStatus !== c.status ? `/${c.displayStatus}` : ""}]: keywords ${keywords}, negatives ${negatives}, daily rows ${daily.length}, search-term rows ${terms}`,
+      );
     }
 
     if (opts.popularity) {

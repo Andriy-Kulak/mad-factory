@@ -38,8 +38,7 @@ export const defaultDeps: UpdateAdTextDeps = {
   log: (message) => console.log(message),
 };
 
-const textOf = (entries: unknown): string[] =>
-  Array.isArray(entries) ? (entries as ApiObject[]).map((entry) => String(entry.text ?? entry.name ?? "")).filter(Boolean) : [];
+const textOf = (entries: unknown): string[] => (Array.isArray(entries) ? (entries as ApiObject[]).map((entry) => String(entry.text ?? entry.name ?? "")).filter(Boolean) : []);
 
 // Swaps an ad's headlines/primary text by POSTing a rebuilt inline creative
 // (Meta creates the creative itself). Account-checked before any write;

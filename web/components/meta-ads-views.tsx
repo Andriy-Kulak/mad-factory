@@ -20,9 +20,12 @@ export function NotSynced({ slug, missingTables }: { slug: string; missingTables
 export function SyncNote({ run }: { run: ScrapeRunRow | null }) {
   if (!run) return null;
   return (
-    <p className={`text-xs mb-6 ${run.status === "error" ? "text-danger" : "text-fg-3"}`}
-      title="Trials and purchases are Meta-reported (attributed by Meta, not RevenueCat). Recent days move as Meta and SKAdNetwork report late conversions; each sync re-pulls them.">
-      Synced {fmtDateTime(run.finished_at ?? run.started_at)}{run.status === "error" ? ` with an error${run.error ? `: ${run.error}` : ""}` : ""} · trials and purchases are Meta-attributed; the last few days still fill in.
+    <p
+      className={`text-xs mb-6 ${run.status === "error" ? "text-danger" : "text-fg-3"}`}
+      title="Trials and purchases are Meta-reported (attributed by Meta, not RevenueCat). Recent days move as Meta and SKAdNetwork report late conversions; each sync re-pulls them."
+    >
+      Synced {fmtDateTime(run.finished_at ?? run.started_at)}
+      {run.status === "error" ? ` with an error${run.error ? `: ${run.error}` : ""}` : ""} · trials and purchases are Meta-attributed; the last few days still fill in.
     </p>
   );
 }
@@ -30,11 +33,21 @@ export function SyncNote({ run }: { run: ScrapeRunRow | null }) {
 /** Creative attributes as small key:value chips; past `max`, the rest collapse into "+n" (all of them in the tooltip). */
 export function AttributeChips({ a, max = 3 }: { a: Attributes; max?: number }) {
   const entries = Object.entries(a);
-  if (!entries.length) return <span className="text-fg-3 text-[12px]" title="Tag with pnpm meta-ads tag <creative_id> angle=… hook=…">untagged</span>;
+  if (!entries.length)
+    return (
+      <span className="text-fg-3 text-[12px]" title="Tag with pnpm meta-ads tag <creative_id> angle=… hook=…">
+        untagged
+      </span>
+    );
   const chip = "num text-[10.5px] px-1 h-[18px] inline-flex items-center rounded-[2px] border border-line bg-bg-3 text-fg-2";
   return (
     <span className="inline-flex flex-wrap gap-0.5 max-w-[200px]" title={entries.map(([k, v]) => `${k}: ${v}`).join("\n")}>
-      {entries.slice(0, max).map(([k, v]) => <span key={k} className={chip}><span className="text-fg-3">{k}:</span>{String(v)}</span>)}
+      {entries.slice(0, max).map(([k, v]) => (
+        <span key={k} className={chip}>
+          <span className="text-fg-3">{k}:</span>
+          {String(v)}
+        </span>
+      ))}
       {entries.length > max && <span className={chip}>+{entries.length - max}</span>}
     </span>
   );
@@ -52,11 +65,22 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
   }
   const live = o.ads.filter((a) => a.status === "ACTIVE").length;
   const untagged = o.ads.filter((a) => a.totals.spend > 0 && !Object.keys(a.attributes).length).length;
-  const campaignM = metaMetrics(o.campaigns.map((c) => c.totals), cur);
-  const adsetM = metaMetrics(o.adsets.map((a) => a.totals), cur);
-  const adM = metaMetrics(o.ads.map((a) => a.totals), cur);
+  const campaignM = metaMetrics(
+    o.campaigns.map((c) => c.totals),
+    cur,
+  );
+  const adsetM = metaMetrics(
+    o.adsets.map((a) => a.totals),
+    cur,
+  );
+  const adM = metaMetrics(
+    o.ads.map((a) => a.totals),
+    cur,
+  );
   const countryM = metaMetrics(o.countries, cur);
-  const dailyBudget = o.campaigns.filter((c) => c.effective_status === "ACTIVE").reduce((s, c) => s + Number(c.daily_budget ?? 0), 0) + o.adsets.filter((a) => a.effective_status === "ACTIVE").reduce((s, a) => s + Number(a.daily_budget ?? 0), 0);
+  const dailyBudget =
+    o.campaigns.filter((c) => c.effective_status === "ACTIVE").reduce((s, c) => s + Number(c.daily_budget ?? 0), 0) +
+    o.adsets.filter((a) => a.effective_status === "ACTIVE").reduce((s, a) => s + Number(a.daily_budget ?? 0), 0);
 
   return (
     <>
@@ -72,7 +96,9 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
       <SyncNote run={o.lastRun} />
 
       <SectionHead>Campaigns</SectionHead>
-      <DataTable dense stickyFirst
+      <DataTable
+        dense
+        stickyFirst
         columns={[{ label: "Campaign" }, { label: "Budget / day", align: "right" }, { label: "Ad sets · ads", align: "right" }, ...campaignM.columns]}
         defaultSort={{ col: 3, dir: "desc" }}
         rows={o.campaigns.map((c) => {
@@ -80,7 +106,20 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
           return {
             id: c.id,
             cells: [
-              { node: <MetaName name={c.name} id={c.id} status={status} sub={c.objective?.replace(/^OUTCOME_/, "").toLowerCase().replace(/_/g, " ")} />, value: c.name },
+              {
+                node: (
+                  <MetaName
+                    name={c.name}
+                    id={c.id}
+                    status={status}
+                    sub={c.objective
+                      ?.replace(/^OUTCOME_/, "")
+                      .toLowerCase()
+                      .replace(/_/g, " ")}
+                  />
+                ),
+                value: c.name,
+              },
               { node: c.daily_budget == null ? "per ad set" : money(Number(c.daily_budget) / 100), value: c.daily_budget == null ? null : Number(c.daily_budget), dim: c.daily_budget == null },
               { node: `${c.adsets} · ${c.ads}`, value: c.ads },
               ...campaignM.cells(c.totals),
@@ -90,7 +129,9 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
       />
 
       <SectionHead>Ad sets</SectionHead>
-      <DataTable dense stickyFirst
+      <DataTable
+        dense
+        stickyFirst
         columns={[{ label: "Ad set" }, { label: "Budget / day", align: "right" }, ...adsetM.columns]}
         defaultSort={{ col: 2, dir: "desc" }}
         rows={o.adsets.map((a) => {
@@ -99,7 +140,18 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
           return {
             id: a.id,
             cells: [
-              { node: <MetaName name={a.name} id={a.id} status={status} note={learning && learning !== "SUCCESS" ? learning.toLowerCase() : null} sub={[a.campaignName, a.optimization_goal?.toLowerCase().replace(/_/g, " ")].filter(Boolean).join(" · ")} />, value: a.name },
+              {
+                node: (
+                  <MetaName
+                    name={a.name}
+                    id={a.id}
+                    status={status}
+                    note={learning && learning !== "SUCCESS" ? learning.toLowerCase() : null}
+                    sub={[a.campaignName, a.optimization_goal?.toLowerCase().replace(/_/g, " ")].filter(Boolean).join(" · ")}
+                  />
+                ),
+                value: a.name,
+              },
               { node: a.daily_budget == null ? "–" : money(Number(a.daily_budget) / 100), value: a.daily_budget == null ? null : Number(a.daily_budget), dim: a.daily_budget == null },
               ...adsetM.cells(a.totals),
             ],
@@ -107,9 +159,25 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
         })}
       />
 
-      <SectionHead right={<Link href={`/p/${slug}/meta-ads/creatives`} className="text-xs text-fg-2 underline">performance by creative attribute →</Link>}>Ads</SectionHead>
-      <DataTable dense stickyFirst searchLabel="Search ads, ad sets, headlines"
-        views={[{ key: "all", label: "All" }, { key: "active", label: "Active" }, { key: "spent", label: "With spend" }, { key: "untagged", label: "Untagged" }]}
+      <SectionHead
+        right={
+          <Link href={`/p/${slug}/meta-ads/creatives`} className="text-xs text-fg-2 underline">
+            performance by creative attribute →
+          </Link>
+        }
+      >
+        Ads
+      </SectionHead>
+      <DataTable
+        dense
+        stickyFirst
+        searchLabel="Search ads, ad sets, headlines"
+        views={[
+          { key: "all", label: "All" },
+          { key: "active", label: "Active" },
+          { key: "spent", label: "With spend" },
+          { key: "untagged", label: "Untagged" },
+        ]}
         columns={[{ label: "Ad" }, { label: "Attributes", sortable: false }, ...adM.columns]}
         defaultSort={{ col: 2, dir: "desc" }}
         rows={o.ads.map((a) => {
@@ -121,8 +189,20 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
             search: [a.name, a.adsetName, a.campaignName, headline, a.creative?.body, ...Object.values(a.attributes).map(String)].filter(Boolean).join(" "),
             cells: [
               {
-                node: <MetaName name={a.name} status={a.status} id={`${a.id}${a.creative ? ` · creative ${a.creative.id}` : ""}\n${a.adsetName} · ${a.campaignName}${a.creative?.body ? `\n\n${a.creative.body}` : ""}`} thumb={a.creative?.thumbnail_url ?? null}
-                  sub={<><span className="text-fg-2">{a.adsetName}</span>{headline ? <> · {headline}</> : null}</>} />,
+                node: (
+                  <MetaName
+                    name={a.name}
+                    status={a.status}
+                    id={`${a.id}${a.creative ? ` · creative ${a.creative.id}` : ""}\n${a.adsetName} · ${a.campaignName}${a.creative?.body ? `\n\n${a.creative.body}` : ""}`}
+                    thumb={a.creative?.thumbnail_url ?? null}
+                    sub={
+                      <>
+                        <span className="text-fg-2">{a.adsetName}</span>
+                        {headline ? <> · {headline}</> : null}
+                      </>
+                    }
+                  />
+                ),
                 value: a.name,
               },
               { node: <AttributeChips a={a.attributes} />, className: "whitespace-normal" },
@@ -143,7 +223,14 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
               <table className="num w-full mt-2">
                 <tbody>
                   {series.map((d) => (
-                    <tr key={d.date} className="border-t border-line"><td className="py-1 text-fg-3">{d.date}</td><td className="text-right">{money(d.spend)}</td><td className="text-right text-fg-3">{int(d.impressions)} impr</td><td className="text-right text-fg-3">{d.taps} clicks</td><td className="text-right text-fg-3">{d.installs} installs</td><td className="text-right text-fg-3">{d.trials} trials</td></tr>
+                    <tr key={d.date} className="border-t border-line">
+                      <td className="py-1 text-fg-3">{d.date}</td>
+                      <td className="text-right">{money(d.spend)}</td>
+                      <td className="text-right text-fg-3">{int(d.impressions)} impr</td>
+                      <td className="text-right text-fg-3">{d.taps} clicks</td>
+                      <td className="text-right text-fg-3">{d.installs} installs</td>
+                      <td className="text-right text-fg-3">{d.trials} trials</td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -152,7 +239,8 @@ export function MetaAdsOverviewBody({ o, slug, range }: { o: MetaAdsRollup & { s
         </div>
         <div className="min-w-0">
           <SectionHead>By country</SectionHead>
-          <DataTable dense
+          <DataTable
+            dense
             columns={[{ label: "Country" }, ...countryM.columns, { label: "Share", align: "right", title: "Share of spend" }]}
             defaultSort={{ col: 1, dir: "desc" }}
             empty="No country rows in range."
@@ -175,7 +263,10 @@ export function MetaCreativesBody({ o, slug, range, by, then }: { o: MetaAdsRoll
   const keys = attributeKeys(o.ads);
   const groups = groupByAttributes(o.ads, then ? [by, then] : [by]);
   const untagged = o.ads.filter((a) => !Object.keys(a.attributes).length && a.creative);
-  const groupM = metaMetrics(groups.map((g) => g.totals), o.currency);
+  const groupM = metaMetrics(
+    groups.map((g) => g.totals),
+    o.currency,
+  );
   const base = `/p/${slug}/meta-ads/creatives`;
   const rangeQs: Record<string, string> = range.custom ? { from: range.since, to: range.until } : { days: String(range.days) };
   const href = (p: Record<string, string>) => `${base}?${new URLSearchParams({ ...rangeQs, ...p })}`;
@@ -183,17 +274,27 @@ export function MetaCreativesBody({ o, slug, range, by, then }: { o: MetaAdsRoll
   return (
     <>
       <Card className="p-4 mb-6 flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2"><span className="label w-20">Group by</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="label w-20">Group by</span>
           <Segmented size="sm" wrap label="Group by" active={by} items={keys.map((k) => ({ key: k, label: k, href: href({ by: k, ...(then && then !== k ? { then } : {}) }) }))} />
         </div>
-        <div className="flex flex-wrap items-center gap-2"><span className="label w-20">Then by</span>
-          <Segmented size="sm" wrap label="Then by" active={then ?? "__none"} items={[{ key: "__none", label: "none", href: href({ by }) }, ...keys.filter((k) => k !== by).map((k) => ({ key: k, label: k, href: href({ by, then: k }) }))]} />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="label w-20">Then by</span>
+          <Segmented
+            size="sm"
+            wrap
+            label="Then by"
+            active={then ?? "__none"}
+            items={[{ key: "__none", label: "none", href: href({ by }) }, ...keys.filter((k) => k !== by).map((k) => ({ key: k, label: k, href: href({ by, then: k }) }))]}
+          />
         </div>
       </Card>
       <SyncNote run={o.lastRun} />
 
       <SectionHead right={<span className="text-xs text-fg-3">{range.label} · sorted by spend · cost per trial is the current decision metric</span>}>{then ? `${by} × ${then}` : by}</SectionHead>
-      <DataTable dense stickyFirst
+      <DataTable
+        dense
+        stickyFirst
         columns={[{ label: by }, ...(then ? [{ label: then }] : []), { label: "Ads", align: "right" as const }, ...groupM.columns]}
         defaultSort={{ col: then ? 3 : 2, dir: "desc" }}
         rows={groups.map((g) => ({
@@ -206,7 +307,15 @@ export function MetaCreativesBody({ o, slug, range, by, then }: { o: MetaAdsRoll
         }))}
       />
 
-      <SectionHead right={<span className="text-xs text-fg-3">tag with <code className="num">pnpm meta-ads tag &lt;creative_id&gt; angle=… hook=… format=… length_s=15 version=v1 avatar=…</code></span>}>Untagged creatives</SectionHead>
+      <SectionHead
+        right={
+          <span className="text-xs text-fg-3">
+            tag with <code className="num">pnpm meta-ads tag &lt;creative_id&gt; angle=… hook=… format=… length_s=15 version=v1 avatar=…</code>
+          </span>
+        }
+      >
+        Untagged creatives
+      </SectionHead>
       {untagged.length === 0 ? (
         <Card className="p-6 mb-6 text-fg-3 text-[13px]">Every synced creative has at least one attribute.</Card>
       ) : (

@@ -1,19 +1,6 @@
 /** Pure mapping from Apple Ads API payloads to table rows. No I/O, so it is unit-tested directly. */
-import type {
-  AppleAdsCampaignInsert,
-  AppleAdsKeywordDailyInsert,
-  AppleAdsKeywordInsert,
-  AppleAdsSearchTermDailyInsert,
-  Json,
-} from "../db/types.ts";
-import type {
-  ApiCampaign,
-  ApiGranularMetrics,
-  ApiKeyword,
-  ApiReportResult,
-  KeywordReportMeta,
-  SearchTermReportMeta,
-} from "./types.ts";
+import type { AppleAdsCampaignInsert, AppleAdsKeywordDailyInsert, AppleAdsKeywordInsert, AppleAdsSearchTermDailyInsert, Json } from "../db/types.ts";
+import type { ApiCampaign, ApiGranularMetrics, ApiKeyword, ApiReportResult, KeywordReportMeta, SearchTermReportMeta } from "./types.ts";
 
 /** Entity endpoints return UTC timestamps without an offset suffix. */
 export function utc(ts: string | undefined): string | null {

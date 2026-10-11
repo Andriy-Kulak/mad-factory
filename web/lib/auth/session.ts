@@ -27,7 +27,10 @@ export interface AuthConfig {
  */
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): { disabled: true } | { disabled: false; config: AuthConfig | null; missing: string[] } {
   if (env.AUTH_DISABLED === "true" && env.NODE_ENV !== "production") return { disabled: true };
-  const allowed = (env.AUTH_ALLOWED_GITHUB_USERS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const allowed = (env.AUTH_ALLOWED_GITHUB_USERS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
   const missing = [
     !env.AUTH_GITHUB_CLIENT_ID && "AUTH_GITHUB_CLIENT_ID",
     !env.AUTH_GITHUB_CLIENT_SECRET && "AUTH_GITHUB_CLIENT_SECRET",

@@ -37,7 +37,9 @@ export default async function EditProduct({ params }: { params: Promise<{ slug: 
           <Text name="customer_desires" label="Customer desires (one per line)" value={p.customer_desires.join("\n")} rows={5} />
           <Text name="pain_points" label="Pain points (one per line)" value={p.pain_points.join("\n")} rows={5} />
           <Text name="competitors" label="Competitors (one per line)" value={p.competitors.join("\n")} rows={4} />
-          <div><button className="btn btn-primary">Save</button></div>
+          <div>
+            <button className="btn btn-primary">Save</button>
+          </div>
         </form>
       </Card>
     </Shell>

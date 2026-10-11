@@ -11,11 +11,21 @@ export default function PageError({ error, reset }: { error: Error & { digest?: 
         <h1 className="text-[15px] font-semibold">This page could not load</h1>
         <p className="text-fg-2 text-[13px] mt-1.5 leading-relaxed">
           Usually a missing key or a database that is not reachable or migrated. The server log has the details
-          {error.digest && <> (look for <code className="num">{error.digest}</code>)</>}.
+          {error.digest && (
+            <>
+              {" "}
+              (look for <code className="num">{error.digest}</code>)
+            </>
+          )}
+          .
         </p>
         <div className="mt-5 flex gap-2">
-          <Button variant="primary" onClick={reset}>Try again</Button>
-          <Link href="/setup" className="btn">Check setup</Link>
+          <Button variant="primary" onClick={reset}>
+            Try again
+          </Button>
+          <Link href="/setup" className="btn">
+            Check setup
+          </Link>
         </div>
       </Card>
     </main>

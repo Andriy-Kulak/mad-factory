@@ -3,13 +3,7 @@ import { addMetaAdsChange, updateMetaAdsChange } from "../db/meta-ads.ts";
 import { getDb } from "../db/client.ts";
 import type { Json, MetaAdsChangeInsert, ProductRow } from "../db/types.ts";
 import type { MetaAdsClient } from "./client.ts";
-import {
-  defaultDeps as sharedDeps,
-  isThrottleError,
-  journaledWrite,
-  STATUS_WRITE_GAP_MS,
-  STATUS_WRITE_WAIT,
-} from "./pause.ts";
+import { defaultDeps as sharedDeps, isThrottleError, journaledWrite, STATUS_WRITE_GAP_MS, STATUS_WRITE_WAIT } from "./pause.ts";
 import { SOURCE } from "./sync.ts";
 
 // OWNER RULE — writes in this module set status=ACTIVE only. NEVER delete or
@@ -65,12 +59,7 @@ interface Target {
 // any write; journal-then-write order like pause.ts: the meta_ads_changes row is
 // inserted BEFORE the Meta call and updated with the HTTP status and response
 // afterwards. Stops on the first failure.
-export async function activateObjects(
-  client: Pick<MetaAdsClient, "get" | "activate">,
-  productSlug: string,
-  options: ActivateOptions,
-  deps: ActivateDeps = defaultDeps,
-): Promise<ActivateStats> {
+export async function activateObjects(client: Pick<MetaAdsClient, "get" | "activate">, productSlug: string, options: ActivateOptions, deps: ActivateDeps = defaultDeps): Promise<ActivateStats> {
   if (!options.adIds.length && !options.adsetIds.length) throw new Error("activate needs at least one --ad or --adset");
   const product = await deps.requireProduct(productSlug);
   const accountId = await deps.adAccount(product.id);
@@ -78,10 +67,7 @@ export async function activateObjects(
 
   const targets: Target[] = [];
   for (const [id, type] of [...options.adIds.map((id): [string, "ad" | "adset"] => [id, "ad"]), ...options.adsetIds.map((id): [string, "ad" | "adset"] => [id, "adset"])]) {
-    const object = await client.get<{ name?: string; status?: string; effective_status?: string; account_id?: string }>(
-      `/${id}`,
-      { fields: "name,status,effective_status,account_id" },
-    );
+    const object = await client.get<{ name?: string; status?: string; effective_status?: string; account_id?: string }>(`/${id}`, { fields: "name,status,effective_status,account_id" });
     const objectAccount = `act_${object.account_id ?? ""}`;
     if (objectAccount !== accountId) {
       throw new Error(`${type} ${id} (${object.name ?? "?"}) belongs to ${objectAccount}, not ${accountId}; refusing to write to another account`);

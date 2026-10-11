@@ -7,10 +7,7 @@ import { scrapeCreatorsFacebookCollector } from "./collect.ts";
 const profileBody = profile as Record<string, unknown>;
 const reelItems = (reels as { reels: Array<Record<string, unknown>> }).reels;
 
-async function withStubbedFetch(
-  responses: Array<{ body: Record<string, unknown>; status?: number }>,
-  run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>,
-): Promise<void> {
+async function withStubbedFetch(responses: Array<{ body: Record<string, unknown>; status?: number }>, run: (requests: Array<{ url: URL; apiKey: string | null }>) => Promise<void>): Promise<void> {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.SCRAPECREATORS_API_KEY;
   const requests: Array<{ url: URL; apiKey: string | null }> = [];
@@ -48,39 +45,33 @@ test("passes both Facebook reel pagination values on later pages", async () => {
     credits_remaining: 56,
   };
 
-  await withStubbedFetch(
-    [{ body: profileBody }, { body: firstPage }, { body: secondPage }],
-    async (requests) => {
-      const ids: string[] = [];
-      const result = await scrapeCreatorsFacebookCollector.collect(
-        "https://www.facebook.com/samplepage",
-        {
-          maxPosts: 3,
-          maxCredits: 5,
-          onPosts: (posts) => {
-            ids.push(...posts.map((post) => post.externalId));
-          },
-        },
-      );
+  await withStubbedFetch([{ body: profileBody }, { body: firstPage }, { body: secondPage }], async (requests) => {
+    const ids: string[] = [];
+    const result = await scrapeCreatorsFacebookCollector.collect("https://www.facebook.com/samplepage", {
+      maxPosts: 3,
+      maxCredits: 5,
+      onPosts: (posts) => {
+        ids.push(...posts.map((post) => post.externalId));
+      },
+    });
 
-      assert.equal(result.postsSeen, 3);
-      assert.equal(result.creditsUsed, 3);
-      assert.deepEqual(ids, ["2000001", "2000002", "2000003"]);
-      assert.deepEqual(requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`), [
+    assert.equal(result.postsSeen, 3);
+    assert.equal(result.creditsUsed, 3);
+    assert.deepEqual(ids, ["2000001", "2000002", "2000003"]);
+    assert.deepEqual(
+      requests.map(({ url }) => `${url.pathname}?${url.searchParams.toString()}`),
+      [
         "/v1/facebook/profile?url=https%3A%2F%2Fwww.facebook.com%2Fsamplepage",
         "/v1/facebook/profile/reels?url=https%3A%2F%2Fwww.facebook.com%2Fsamplepage",
         "/v1/facebook/profile/reels?url=https%3A%2F%2Fwww.facebook.com%2Fsamplepage&next_page_id=next-page-2&cursor=cursor-2",
-      ]);
-      assert.ok(requests.every(({ apiKey }) => apiKey === "test-key"));
-    },
-  );
+      ],
+    );
+    assert.ok(requests.every(({ apiKey }) => apiKey === "test-key"));
+  });
 });
 
 test("validates Facebook profile URLs as HTTPS facebook.com links", () => {
-  assert.equal(
-    scrapeCreatorsFacebookCollector.validateValue("https://www.facebook.com/profile.php?id=1000001"),
-    "https://www.facebook.com/profile.php?id=1000001",
-  );
+  assert.equal(scrapeCreatorsFacebookCollector.validateValue("https://www.facebook.com/profile.php?id=1000001"), "https://www.facebook.com/profile.php?id=1000001");
   assert.throws(() => scrapeCreatorsFacebookCollector.validateValue("http://facebook.com/samplepage"));
   assert.throws(() => scrapeCreatorsFacebookCollector.validateValue("https://example.com/profile"));
 });
@@ -100,21 +91,18 @@ test("since skips older reels and stops paging once a page ends before it", asyn
     credits_charged: 1,
   };
 
-  await withStubbedFetch(
-    [{ body: profileBody }, { body: firstPage }, { body: secondPage }],
-    async (requests) => {
-      const ids: string[] = [];
-      const result = await scrapeCreatorsFacebookCollector.collect("https://www.facebook.com/samplepage", {
-        maxPosts: 100,
-        maxCredits: 10,
-        since: "2025-10-01",
-        onPosts: (posts) => {
-          ids.push(...posts.map((post) => post.externalId));
-        },
-      });
-      assert.deepEqual(ids, ["new", "mid", "in-range"]);
-      assert.equal(result.postsSeen, 3);
-      assert.equal(requests.length, 3);
-    },
-  );
+  await withStubbedFetch([{ body: profileBody }, { body: firstPage }, { body: secondPage }], async (requests) => {
+    const ids: string[] = [];
+    const result = await scrapeCreatorsFacebookCollector.collect("https://www.facebook.com/samplepage", {
+      maxPosts: 100,
+      maxCredits: 10,
+      since: "2025-10-01",
+      onPosts: (posts) => {
+        ids.push(...posts.map((post) => post.externalId));
+      },
+    });
+    assert.deepEqual(ids, ["new", "mid", "in-range"]);
+    assert.equal(result.postsSeen, 3);
+    assert.equal(requests.length, 3);
+  });
 });

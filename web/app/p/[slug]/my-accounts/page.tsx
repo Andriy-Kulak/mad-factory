@@ -57,8 +57,18 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
     favoriteIds(product.id, "post"),
   ]);
   const panel = (
-    <TrackedSourcesPanel productId={product.id} slug={slug} title="Your accounts" items={tracked} open={tracked.length === 0}
-      form={<SourceForm action={addSocialAccount.bind(null, product.id, slug)} submitLabel="Add account"><SocialAccountFields relations={[{ value: "own", label: "Own" }]} labels={[...new Set(tracked.flatMap((t) => (t.label ? [t.label] : [])))]} /></SourceForm>} />
+    <TrackedSourcesPanel
+      productId={product.id}
+      slug={slug}
+      title="Your accounts"
+      items={tracked}
+      open={tracked.length === 0}
+      form={
+        <SourceForm action={addSocialAccount.bind(null, product.id, slug)} submitLabel="Add account">
+          <SocialAccountFields relations={[{ value: "own", label: "Own" }]} labels={[...new Set(tracked.flatMap((t) => (t.label ? [t.label] : [])))]} />
+        </SourceForm>
+      }
+    />
   );
 
   return (
@@ -66,7 +76,9 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
       {accounts.length === 0 ? (
         <>
           {panel}
-          <Empty>No synced accounts yet. Add your Instagram, TikTok or Facebook accounts above; they are fetched on the next <code>pnpm social --product {slug}</code> run.</Empty>
+          <Empty>
+            No synced accounts yet. Add your Instagram, TikTok or Facebook accounts above; they are fetched on the next <code>pnpm social --product {slug}</code> run.
+          </Empty>
         </>
       ) : (
         <>
@@ -75,7 +87,19 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
             <Stat label="Reels & videos" value={posts.length} />
             <Stat label="Followers" value={fmtCount(sumKnown(accounts.map((a) => a.followers)))} />
             <Stat label="Median views" value={fmtCount(median(posts.flatMap((p) => (p.views == null ? [] : [p.views]))))} />
-            <Stat label="Last synced" value={<span className="text-[18px]">{fmtDate(accounts.map((a) => a.lastSyncedAt ?? "").sort().at(-1) || null)}</span>} />
+            <Stat
+              label="Last synced"
+              value={
+                <span className="text-[18px]">
+                  {fmtDate(
+                    accounts
+                      .map((a) => a.lastSyncedAt ?? "")
+                      .sort()
+                      .at(-1) || null,
+                  )}
+                </span>
+              }
+            />
           </div>
 
           <SectionHead right={<span className="text-fg-3 text-xs">views are each post&apos;s current total, counted on the day it was posted (ET)</span>}>Posts and views by day</SectionHead>

@@ -105,7 +105,10 @@ test("vocabFromDocs prefers the angle-library doc and sets library", () => {
     { name: "angle-library", body_md: LIBRARY_MD },
   ]);
   assert.equal(vocab.library, true);
-  assert.deepEqual(vocab.angles.map((angle) => angle.slug), ["shine-on-stage", "never-stall"]);
+  assert.deepEqual(
+    vocab.angles.map((angle) => angle.slug),
+    ["shine-on-stage", "never-stall"],
+  );
   assert.deepEqual(vocab.angles[0]!.audiences, ["the-widget-less-worker", "hobbyists-in-a-hurry"]);
   assert.deepEqual(vocab.desires, ["control", "status"]);
 });

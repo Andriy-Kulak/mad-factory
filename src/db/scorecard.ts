@@ -57,10 +57,7 @@ export async function loadScorecardData(productId: string, from: string, to: str
 
   const campaignIds = unwrap(await db.from("apple_ads_campaigns").select("id").eq("product_id", productId), "scorecard apple campaigns").map((c) => c.id);
   const apple = campaignIds.length
-    ? await all(
-        (a, b) => db.from("apple_ads_keyword_daily").select("date,spend,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b),
-        "scorecard apple keywords",
-      )
+    ? await all((a, b) => db.from("apple_ads_keyword_daily").select("date,spend,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b), "scorecard apple keywords")
     : [];
   // Search Match spend has no keyword row; it only shows up in the search-term report under keyword_id 0.
   const appleAuto = campaignIds.length
@@ -74,10 +71,7 @@ export async function loadScorecardData(productId: string, from: string, to: str
     : null;
 
   const metaLatest = await latestDate("meta_ads_ad_daily", productId);
-  const meta = await all(
-    (a, b) => db.from("meta_ads_ad_daily").select("date,spend,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b),
-    "scorecard meta",
-  );
+  const meta = await all((a, b) => db.from("meta_ads_ad_daily").select("date,spend,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b), "scorecard meta");
 
   const running = unwrap(await db.from("experiments").select("slug,channel,name").eq("product_id", productId).eq("status", "running").order("channel"), "scorecard experiments");
   const money = (rows: { date: string; currency: string }[], key: "proceeds" | "spend") =>
@@ -130,7 +124,10 @@ export async function loadWindowData(productId: string, from: string, to: string
   const campaignIds = appleCampaigns.map((campaign) => campaign.id);
   const runningExperimentIds = unwrap(await db.from("experiments").select("id").eq("product_id", productId).eq("status", "running"), "overview apple coverage experiments").map((e) => e.id);
   const campaignLinks = runningExperimentIds.length
-    ? unwrap(await db.from("experiment_campaigns").select("external_campaign_id,role,geo").eq("channel", "apple_ads").in("experiment_id", runningExperimentIds), "overview apple coverage campaign links")
+    ? unwrap(
+        await db.from("experiment_campaigns").select("external_campaign_id,role,geo").eq("channel", "apple_ads").in("experiment_id", runningExperimentIds),
+        "overview apple coverage campaign links",
+      )
     : [];
   const linksByCampaign = new Map(campaignLinks.map((link) => [link.external_campaign_id, link]));
   const coverageCampaigns = appleCampaigns.map((campaign) => {
@@ -138,15 +135,18 @@ export async function loadWindowData(productId: string, from: string, to: string
     return { id: campaign.id, name: campaign.name, role: link?.role ?? null, geo: link?.geo ?? null };
   });
   const appleCoverageKeywords = campaignIds.length
-    ? await all(
-        (a, b) => db.from("apple_ads_keywords").select("campaign_id,text,match_type,is_negative,deleted").in("campaign_id", campaignIds).range(a, b),
-        "overview apple coverage keywords",
-      )
+    ? await all((a, b) => db.from("apple_ads_keywords").select("campaign_id,text,match_type,is_negative,deleted").in("campaign_id", campaignIds).range(a, b), "overview apple coverage keywords")
     : [];
   const apple = campaignIds.length
     ? [
-        ...(await all((a, b) => db.from("apple_ads_keyword_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b), "overview apple")),
-        ...(await all((a, b) => db.from("apple_ads_search_terms_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).eq("keyword_id", 0).gte("date", from).lte("date", to).range(a, b), "overview apple search match")),
+        ...(await all(
+          (a, b) => db.from("apple_ads_keyword_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b),
+          "overview apple",
+        )),
+        ...(await all(
+          (a, b) => db.from("apple_ads_search_terms_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).eq("keyword_id", 0).gte("date", from).lte("date", to).range(a, b),
+          "overview apple search match",
+        )),
       ]
     : [];
 
@@ -156,14 +156,43 @@ export async function loadWindowData(productId: string, from: string, to: string
   );
 
   // Own accounts: tracked_sources rows with config.relation = own, matched like the web's organic loader.
-  const sources = unwrap(await db.from("tracked_sources").select("source,value,config").eq("product_id", productId).eq("kind", "account").eq("enabled", true).in("source", SOCIAL), "overview own sources")
-    .filter((s) => (s.config as Record<string, unknown> | null)?.relation === "own");
+  const sources = unwrap(
+    await db.from("tracked_sources").select("source,value,config").eq("product_id", productId).eq("kind", "account").eq("enabled", true).in("source", SOCIAL),
+    "overview own sources",
+  ).filter((s) => (s.config as Record<string, unknown> | null)?.relation === "own");
   const handles = [...new Set(sources.map((s) => s.value))];
-  const accounts = handles.length ? unwrap(await db.from("social_accounts").select("id,platform,handle").in("handle", handles), "overview own accounts").filter((a) => sources.some((s) => s.source === a.platform && s.value === a.handle)) : [];
-  const posts = accounts.length
-    ? unwrap(await db.from("social_posts").select("id,account_id,platform,url,posted_at").in("account_id", accounts.map((a) => a.id)).in("kind", ["reel", "video"]).gte("posted_at", from).lte("posted_at", `${to}T23:59:59Z`), "overview own posts")
+  const accounts = handles.length
+    ? unwrap(await db.from("social_accounts").select("id,platform,handle").in("handle", handles), "overview own accounts").filter((a) =>
+        sources.some((s) => s.source === a.platform && s.value === a.handle),
+      )
     : [];
-  const snaps = posts.length ? unwrap(await db.from("social_post_snapshots").select("post_id,captured_on,views").in("post_id", posts.map((p) => p.id)), "overview post snapshots") : [];
+  const posts = accounts.length
+    ? unwrap(
+        await db
+          .from("social_posts")
+          .select("id,account_id,platform,url,posted_at")
+          .in(
+            "account_id",
+            accounts.map((a) => a.id),
+          )
+          .in("kind", ["reel", "video"])
+          .gte("posted_at", from)
+          .lte("posted_at", `${to}T23:59:59Z`),
+        "overview own posts",
+      )
+    : [];
+  const snaps = posts.length
+    ? unwrap(
+        await db
+          .from("social_post_snapshots")
+          .select("post_id,captured_on,views")
+          .in(
+            "post_id",
+            posts.map((p) => p.id),
+          ),
+        "overview post snapshots",
+      )
+    : [];
   const latestViews = new Map<string, { on: string; views: number | null }>();
   for (const s of snaps) {
     const cur = latestViews.get(s.post_id);
@@ -176,7 +205,19 @@ export async function loadWindowData(productId: string, from: string, to: string
   const experiments = unwrap(await db.from("experiments").select("id,slug,channel").eq("product_id", productId), "overview experiments");
   const expName = new Map(experiments.map((e) => [e.id, `${e.channel}/${e.slug}`]));
   const followUps = experiments.length
-    ? unwrap(await db.from("experiment_log").select("id,experiment_id,due_on,body").in("experiment_id", experiments.map((e) => e.id)).not("due_on", "is", null).is("resolved_at", null).order("due_on"), "overview follow-ups")
+    ? unwrap(
+        await db
+          .from("experiment_log")
+          .select("id,experiment_id,due_on,body")
+          .in(
+            "experiment_id",
+            experiments.map((e) => e.id),
+          )
+          .not("due_on", "is", null)
+          .is("resolved_at", null)
+          .order("due_on"),
+        "overview follow-ups",
+      )
     : [];
 
   return {

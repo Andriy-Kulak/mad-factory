@@ -86,7 +86,10 @@ export function List({ items }: { items: string[] }) {
   return (
     <ul className="flex flex-col gap-1">
       {items.map((i, n) => (
-        <li key={n} className="flex gap-2"><span className="text-fg-3">–</span><span>{i}</span></li>
+        <li key={n} className="flex gap-2">
+          <span className="text-fg-3">–</span>
+          <span>{i}</span>
+        </li>
       ))}
     </ul>
   );
@@ -108,15 +111,33 @@ export function Button({ variant, size, className, ...props }: ButtonHTMLAttribu
 }
 
 export function ButtonLink({ href, children, primary = false, variant, size }: { href: string; children: ReactNode; primary?: boolean; variant?: ButtonVariant; size?: "md" | "sm" }) {
-  return <Link href={href} className={buttonClass(variant ?? (primary ? "primary" : "secondary"), size)}>{children}</Link>;
+  return (
+    <Link href={href} className={buttonClass(variant ?? (primary ? "primary" : "secondary"), size)}>
+      {children}
+    </Link>
+  );
 }
 
 /** Link-based segmented control (filters, ranges, sorts). The active item carries aria-current. */
-export function Segmented<T extends string>({ items, active, size = "md", wrap = false, label }: { items: { key: T; label: ReactNode; href: string }[]; active: T | null; size?: "md" | "sm"; wrap?: boolean; label?: string }) {
+export function Segmented<T extends string>({
+  items,
+  active,
+  size = "md",
+  wrap = false,
+  label,
+}: {
+  items: { key: T; label: ReactNode; href: string }[];
+  active: T | null;
+  size?: "md" | "sm";
+  wrap?: boolean;
+  label?: string;
+}) {
   return (
     <nav aria-label={label} className={`segmented ${size === "sm" ? "segmented-sm" : ""} ${wrap ? "flex-wrap" : ""}`}>
       {items.map((it) => (
-        <Link key={it.key} href={it.href} aria-current={it.key === active ? "page" : undefined}>{it.label}</Link>
+        <Link key={it.key} href={it.href} aria-current={it.key === active ? "page" : undefined}>
+          {it.label}
+        </Link>
       ))}
     </nav>
   );
@@ -127,8 +148,12 @@ export function Tabs({ items, active, label = "Views" }: { items: { key: string;
   return (
     <nav aria-label={label} className="flex gap-5 border-b border-line overflow-x-auto">
       {items.map((it) => (
-        <Link key={it.key} href={it.href} aria-current={it.key === active ? "page" : undefined}
-          className={`relative h-9 inline-flex items-center whitespace-nowrap text-[13.5px] transition-colors duration-150 ${it.key === active ? "text-fg font-semibold" : "text-fg-2 hover:text-fg"}`}>
+        <Link
+          key={it.key}
+          href={it.href}
+          aria-current={it.key === active ? "page" : undefined}
+          className={`relative h-9 inline-flex items-center whitespace-nowrap text-[13.5px] transition-colors duration-150 ${it.key === active ? "text-fg font-semibold" : "text-fg-2 hover:text-fg"}`}
+        >
           {it.label}
           <span className={`absolute left-0 right-0 -bottom-px h-0.5 transition-colors duration-200 ${it.key === active ? "bg-fg" : "bg-transparent"}`} />
         </Link>

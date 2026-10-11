@@ -20,7 +20,19 @@ test("parseLaunchSpec rejects bad shapes with named fields", () => {
   assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [] })), /ads/);
   assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [{ name: "x" }] })), /exactly one/);
   assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [{ name: "x", file: "f.mp4", video_id: "v" }] })), /exactly one/);
-  assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [{ name: "x", video_id: "v" }, { name: "x", image_hash: "h" }] })), /duplicate/);
+  assert.throws(
+    () =>
+      parseLaunchSpec(
+        JSON.stringify({
+          ...base,
+          ads: [
+            { name: "x", video_id: "v" },
+            { name: "x", image_hash: "h" },
+          ],
+        }),
+      ),
+    /duplicate/,
+  );
   assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [{ name: "x", video_id: "v", titles: ["t"] }] })), /together/);
   assert.throws(() => parseLaunchSpec(JSON.stringify({ ...base, ads: [{ name: "x", video_id: "v", titles: [""], bodies: ["b"] }] })), /non-empty/);
 });
@@ -44,19 +56,42 @@ function harness(opts?: { failCreateAt?: number; failActivate?: boolean }) {
       if (!object) throw new Error(`unknown ${path}`);
       return object as T;
     },
-    async activate() { return { status: 200, body: {} }; },
-    async createAd() { return { status: 200, body: { id: "x" } }; },
-    async uploadVideo() { return { videoId: "v", thumbnailUrl: null }; },
-    async uploadImage() { return { hash: "h" }; },
-    async videoThumbnail() { return null; },
+    async activate() {
+      return { status: 200, body: {} };
+    },
+    async createAd() {
+      return { status: 200, body: { id: "x" } };
+    },
+    async uploadVideo() {
+      return { videoId: "v", thumbnailUrl: null };
+    },
+    async uploadImage() {
+      return { hash: "h" };
+    },
+    async videoThumbnail() {
+      return null;
+    },
   };
   const upserted: { creatives: number; ads: number } = { creatives: 0, ads: 0 };
   const deps: LaunchDeps = {
-    async requireProduct() { return { id: "p1", slug: "acme" } as ProductRow; },
-    async adAccount() { return "act_999"; },
-    async requirePlanDoc(_productId, ref) { return ref.split("/").pop()!.replace(/\.(?:md|json)$/i, ""); },
-    async pathExists() { return true; },
-    async readFile() { return VALID; },
+    async requireProduct() {
+      return { id: "p1", slug: "acme" } as ProductRow;
+    },
+    async adAccount() {
+      return "act_999";
+    },
+    async requirePlanDoc(_productId, ref) {
+      return ref
+        .split("/")
+        .pop()!
+        .replace(/\.(?:md|json)$/i, "");
+    },
+    async pathExists() {
+      return true;
+    },
+    async readFile() {
+      return VALID;
+    },
     async createAd() {
       createCount++;
       events.push(`create ${createCount}`);
@@ -68,8 +103,16 @@ function harness(opts?: { failCreateAt?: number; failActivate?: boolean }) {
       if (opts?.failActivate) throw new Error("activate failed");
       return { activated: activateOpts.adIds.length, skipped: 0 };
     },
-    async upsertCreatives(rows) { upserted.creatives = rows.length; events.push("upsertCreatives"); return rows.length; },
-    async upsertAds(rows) { upserted.ads = rows.length; events.push("upsertAds"); return rows.length; },
+    async upsertCreatives(rows) {
+      upserted.creatives = rows.length;
+      events.push("upsertCreatives");
+      return rows.length;
+    },
+    async upsertAds(rows) {
+      upserted.ads = rows.length;
+      events.push("upsertAds");
+      return rows.length;
+    },
     async importMedia() {},
     log() {},
   };
@@ -79,7 +122,10 @@ function harness(opts?: { failCreateAt?: number; failActivate?: boolean }) {
 test("launch creates all, activates once, then GET+upsert per ad", async () => {
   const { client, deps, events, gets, upserted } = harness();
   const results = await launch(client, "acme", { specPath: "spec.json", validateOnly: false }, deps);
-  assert.deepEqual(results.map((r) => r.status), ["ACTIVE", "ACTIVE"]);
+  assert.deepEqual(
+    results.map((r) => r.status),
+    ["ACTIVE", "ACTIVE"],
+  );
   assert.ok(events.indexOf("create 1") < events.indexOf("activate ad-1,ad-2"));
   assert.ok(events.indexOf("activate ad-1,ad-2") < events.indexOf("upsertCreatives"));
   assert.ok(events.indexOf("upsertCreatives") < events.indexOf("upsertAds"));
@@ -105,7 +151,10 @@ test("activate failure → no DB upsert", async () => {
 test("--validate-only creates but never activates or writes the DB", async () => {
   const { client, deps, events, upserted } = harness();
   const results = await launch(client, "acme", { specPath: "s.json", validateOnly: true }, deps);
-  assert.deepEqual(results.map((r) => r.status), ["validated", "validated"]);
+  assert.deepEqual(
+    results.map((r) => r.status),
+    ["validated", "validated"],
+  );
   assert.ok(!events.some((e) => e.startsWith("activate")));
   assert.equal(upserted.ads, 0);
 });

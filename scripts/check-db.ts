@@ -2,9 +2,22 @@
 import { getDb } from "../src/db/client.ts";
 
 // A HEAD count request succeeds even for unknown tables, so select a real column.
-const tables = ["products", "tracked_sources", "ads", "creatives", "ad_creatives", "product_ads", "scrape_runs",
-  "experiments", "experiment_campaigns", "apple_ads_campaigns", "apple_ads_keywords", "apple_ads_keyword_daily",
-  "apple_ads_search_terms_daily", "apple_ads_changes"] as const;
+const tables = [
+  "products",
+  "tracked_sources",
+  "ads",
+  "creatives",
+  "ad_creatives",
+  "product_ads",
+  "scrape_runs",
+  "experiments",
+  "experiment_campaigns",
+  "apple_ads_campaigns",
+  "apple_ads_keywords",
+  "apple_ads_keyword_daily",
+  "apple_ads_search_terms_daily",
+  "apple_ads_changes",
+] as const;
 const db = getDb();
 let ok = true;
 for (const t of tables) {

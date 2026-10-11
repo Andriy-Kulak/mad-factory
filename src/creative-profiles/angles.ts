@@ -7,13 +7,7 @@ import type { ProductVocab } from "./prompt.ts";
 import { buildAnglePrompt } from "./prompt.ts";
 import { angleProblem, loadProductVocab } from "./vocab.ts";
 import { parseCreativeProfile } from "./schema.ts";
-import {
-  defaultDeps as profileDefaultDeps,
-  selectCandidates,
-  stripFences,
-  type Candidate,
-  type ProfileDeps,
-} from "./profile.ts";
+import { defaultDeps as profileDefaultDeps, selectCandidates, stripFences, type Candidate, type ProfileDeps } from "./profile.ts";
 
 /** Re-tag strategy.angle on stored profiles from a fixed angle library. */
 
@@ -91,11 +85,7 @@ function tokenCount(usage: unknown): number {
   return typeof total === "number" ? total : 0;
 }
 
-async function selectProfiles(
-  deps: AnglesDeps,
-  productId: string,
-  options: Pick<AnglesOptions, "source" | "limit">,
-): Promise<(Candidate & { row: CreativeProfileRow })[]> {
+async function selectProfiles(deps: AnglesDeps, productId: string, options: Pick<AnglesOptions, "source" | "limit">): Promise<(Candidate & { row: CreativeProfileRow })[]> {
   const candidates = await selectCandidates(deps as unknown as ProfileDeps, productId, { source: options.source });
   const out: (Candidate & { row: CreativeProfileRow })[] = [];
   for (const candidate of options.limit ? candidates.slice(0, options.limit) : candidates) {
@@ -114,11 +104,7 @@ async function selectProfiles(
   return out;
 }
 
-export async function tagAngles(
-  productSlug: string,
-  options: AnglesOptions & { out: string },
-  deps: AnglesDeps = defaultDeps,
-): Promise<AngleEntry[]> {
+export async function tagAngles(productSlug: string, options: AnglesOptions & { out: string }, deps: AnglesDeps = defaultDeps): Promise<AngleEntry[]> {
   const product = await deps.requireProduct(productSlug);
   const vocab = await deps.loadVocab(product.id);
   if (!vocab.library) throw new Error(`no angle-library doc for product "${product.slug}" (pnpm product docs import)`);
@@ -191,9 +177,7 @@ export async function tagAngles(
       }
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.max(1, Math.min(options.concurrency, items.length)) }, worker),
-  );
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(options.concurrency, items.length)) }, worker));
 
   results.sort((a, b) => items.findIndex((item) => item.sha256 === a.sha256) - items.findIndex((item) => item.sha256 === b.sha256));
   await deps.writeFile(options.out, JSON.stringify(results, null, 2) + "\n");
@@ -212,11 +196,7 @@ export async function tagAngles(
   return results;
 }
 
-export async function applyAngles(
-  productSlug: string,
-  options: { file: string },
-  deps: AnglesDeps = defaultDeps,
-): Promise<number> {
+export async function applyAngles(productSlug: string, options: { file: string }, deps: AnglesDeps = defaultDeps): Promise<number> {
   const product = await deps.requireProduct(productSlug);
   const vocab = await deps.loadVocab(product.id);
   if (!vocab.library) throw new Error(`no angle-library doc for product "${product.slug}" (pnpm product docs import)`);

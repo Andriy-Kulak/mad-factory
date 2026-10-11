@@ -19,11 +19,7 @@ export interface Completion {
   usage: unknown;
 }
 
-export async function complete(
-  messages: ChatMessage[],
-  options: { model: string },
-  fetchFn: typeof fetch = fetch,
-): Promise<Completion> {
+export async function complete(messages: ChatMessage[], options: { model: string }, fetchFn: typeof fetch = fetch): Promise<Completion> {
   const response = await fetchFn(ENDPOINT, {
     method: "POST",
     headers: {

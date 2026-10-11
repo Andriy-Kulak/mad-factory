@@ -6,7 +6,10 @@ import { envHint, getIntegration, INTEGRATIONS, integrationStatus, MissingConfig
 const allVars = INTEGRATIONS.flatMap((it) => [...it.env.flat(), ...(it.optional ?? [])]);
 
 test("only Supabase is required", () => {
-  assert.deepEqual(INTEGRATIONS.filter((it) => it.required).map((it) => it.key), ["supabase"]);
+  assert.deepEqual(
+    INTEGRATIONS.filter((it) => it.required).map((it) => it.key),
+    ["supabase"],
+  );
 });
 
 test(".env.example and the README list every integration variable", () => {
@@ -21,7 +24,10 @@ test(".env.example and the README list every integration variable", () => {
 test(".env.example has no variable the registry does not know", () => {
   const example = readFileSync(new URL("../../.env.example", import.meta.url), "utf8");
   const names = [...example.matchAll(/^#? ?([A-Z][A-Z0-9_]+)=/gm)].map((m) => m[1]!);
-  assert.deepEqual(names.filter((n) => !allVars.includes(n)), []);
+  assert.deepEqual(
+    names.filter((n) => !allVars.includes(n)),
+    [],
+  );
 });
 
 test("a group counts only when complete; the closest group names what is missing", () => {
@@ -33,13 +39,16 @@ test("a group counts only when complete; the closest group names what is missing
 
 test("requireIntegration throws a readable MissingConfigError", () => {
   assert.doesNotThrow(() => requireIntegration("gemini", { GEMINI_API_KEY: "k" }));
-  assert.throws(() => requireIntegration("gemini", {}), (e: unknown) => {
-    assert.ok(e instanceof MissingConfigError);
-    assert.match(e.message, /Google Gemini is not configured/);
-    assert.match(e.message, /GEMINI_API_KEY/);
-    assert.match(e.message, /pnpm doctor/);
-    return true;
-  });
+  assert.throws(
+    () => requireIntegration("gemini", {}),
+    (e: unknown) => {
+      assert.ok(e instanceof MissingConfigError);
+      assert.match(e.message, /Google Gemini is not configured/);
+      assert.match(e.message, /GEMINI_API_KEY/);
+      assert.match(e.message, /pnpm doctor/);
+      return true;
+    },
+  );
 });
 
 test("envHint reads naturally", () => {

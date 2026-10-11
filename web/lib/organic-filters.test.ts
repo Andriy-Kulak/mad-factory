@@ -11,8 +11,21 @@ function post(over: Partial<OrganicPost> & { accountId?: string; platform?: stri
   return {
     id: Math.random().toString(36).slice(2),
     account: { id: accountId, handle: accountId, displayName: null, label: null, platform, relation: "inspiration" },
-    url: null, kind: "reel", caption: null, postedAt: daysAgo(1), durationS: null, thumbnailUrl: null, videoUrl: null,
-    views: 1000, viewsPrev: null, likes: null, comments: null, shares: null, saves: null, engagement: 0.02, outlier: 1,
+    url: null,
+    kind: "reel",
+    caption: null,
+    postedAt: daysAgo(1),
+    durationS: null,
+    thumbnailUrl: null,
+    videoUrl: null,
+    views: 1000,
+    viewsPrev: null,
+    likes: null,
+    comments: null,
+    shares: null,
+    saves: null,
+    engagement: 0.02,
+    outlier: 1,
     ...rest,
   };
 }
@@ -55,7 +68,10 @@ test("applyOrganicFilters narrows by channel, platform, keyword, ranges and age"
   assert.deepEqual(run({ emin: "5" }), ["a1"]);
   assert.deepEqual(run({ age: "1", unit: "weeks" }), ["a1"]);
   assert.deepEqual(run({ age: "2", unit: "months" }), ["a1", "a2"]);
-  assert.deepEqual(applyOrganicFilters(posts, parseOrganicFilters({ fav: "1" }), NOW, new Set([posts[1]!.id])).map((p) => p.account.id), ["a2"]);
+  assert.deepEqual(
+    applyOrganicFilters(posts, parseOrganicFilters({ fav: "1" }), NOW, new Set([posts[1]!.id])).map((p) => p.account.id),
+    ["a2"],
+  );
 });
 
 test("organicHref round-trips and omits defaults", () => {

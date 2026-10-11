@@ -155,9 +155,7 @@ function parseInputUrl(input: string, label: string): URL | null {
 
 function assertSocialHost(platform: SocialPlatform, url: URL): void {
   const host = url.hostname.toLowerCase();
-  const actualPlatform = (Object.keys(SOCIAL_HOSTS) as SocialPlatform[]).find((candidate) =>
-    SOCIAL_HOSTS[candidate].includes(host)
-  );
+  const actualPlatform = (Object.keys(SOCIAL_HOSTS) as SocialPlatform[]).find((candidate) => SOCIAL_HOSTS[candidate].includes(host));
   if (actualPlatform !== platform) {
     const expectedArticle = platform === "instagram" ? "an" : "a";
     const actualArticle = actualPlatform === "instagram" ? "an" : "a";

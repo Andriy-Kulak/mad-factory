@@ -88,13 +88,7 @@ interface Expected {
 // Reads objects in chunks of CHUNK through the account's /<type>s edge — the
 // graph root `?ids=` multi-get is deprecated in v26, so the grouped read is an
 // IN filter on the edge instead (still one GET per chunk).
-async function readBatch(
-  client: Pick<MetaAdsClient, "get">,
-  accountId: string,
-  edge: "ads" | "adsets",
-  ids: string[],
-  fields: string,
-): Promise<Map<string, ApiObject>> {
+async function readBatch(client: Pick<MetaAdsClient, "get">, accountId: string, edge: "ads" | "adsets", ids: string[], fields: string): Promise<Map<string, ApiObject>> {
   const field = edge === "ads" ? "ad.id" : "adset.id";
   const out = new Map<string, ApiObject>();
   for (let i = 0; i < ids.length; i += CHUNK) {
@@ -114,12 +108,7 @@ async function readBatch(
   return out;
 }
 
-export async function verifyPlan(
-  client: Pick<MetaAdsClient, "get">,
-  productSlug: string,
-  options: VerifyOptions,
-  deps: VerifyDeps = defaultDeps,
-): Promise<VerifyReport> {
+export async function verifyPlan(client: Pick<MetaAdsClient, "get">, productSlug: string, options: VerifyOptions, deps: VerifyDeps = defaultDeps): Promise<VerifyReport> {
   const product = await deps.requireProduct(productSlug);
   const accountId = await deps.adAccount(product.id);
   const plan = docName(options.plan.replace(/^\.\//, ""));
@@ -247,10 +236,7 @@ export function formatVerifyTable(report: VerifyReport): string[] {
   const lines: string[] = [];
   const checks = report.checks;
   if (checks.length) {
-    const rows = [
-      ["object", "id", "name", "field", "expected", "actual", "ok"],
-      ...checks.map((c) => [c.type, c.id, c.name, c.field, c.expected, c.actual, c.ok ? "yes" : "NO"]),
-    ];
+    const rows = [["object", "id", "name", "field", "expected", "actual", "ok"], ...checks.map((c) => [c.type, c.id, c.name, c.field, c.expected, c.actual, c.ok ? "yes" : "NO"])];
     const widths = rows[0]!.map((_, i) => Math.max(...rows.map((r) => (r[i] ?? "").length)));
     const render = (r: string[]) => `| ${r.map((cell, i) => cell.padEnd(widths[i]!)).join(" | ")} |`;
     lines.push(render(rows[0]!));

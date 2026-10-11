@@ -1,13 +1,5 @@
 /** Pulls trials, conversions and revenue per Apple Ads campaign and keyword for one RevenueCat project. Read-only. */
-import {
-  appleAdsNames,
-  finishScrapeRun,
-  markSourceScraped,
-  startScrapeRun,
-  upsertRevenueCatKeywordDaily,
-  type RevenueCatKeywordDailyInsert,
-  type TrackedSourceRow,
-} from "../db/index.ts";
+import { appleAdsNames, finishScrapeRun, markSourceScraped, startScrapeRun, upsertRevenueCatKeywordDaily, type RevenueCatKeywordDailyInsert, type TrackedSourceRow } from "../db/index.ts";
 import { UNATTRIBUTED, filterValues, measure, segmentPoints, type ChartOptions, type ChartResponse } from "./charts.ts";
 import type { RevenueCatClient } from "./client.ts";
 

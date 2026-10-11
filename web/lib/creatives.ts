@@ -33,15 +33,33 @@ const CHUNK = 100;
 /** Just the profile fields the grid and breakdown table use; transcripts and the rest load on demand. */
 const SLIM_PROFILE = [
   "sha256",
-  "hook_spoken:profile->hook->>spoken", "hook_onscreen:profile->hook->>onscreen_text", "hook_visual:profile->hook->>visual",
-  "hook_type:profile->hook->>type", "angle:profile->strategy->>angle", "angle_suggestion:profile->strategy->>angle_suggestion",
-  "audience:profile->strategy->>audience", "awareness:profile->strategy->>awareness", "response:profile->strategy->>strategic_response",
-  "format:profile->production->>format", "style:profile->production->>visual_style", "structure:profile->script->>structure",
+  "hook_spoken:profile->hook->>spoken",
+  "hook_onscreen:profile->hook->>onscreen_text",
+  "hook_visual:profile->hook->>visual",
+  "hook_type:profile->hook->>type",
+  "angle:profile->strategy->>angle",
+  "angle_suggestion:profile->strategy->>angle_suggestion",
+  "audience:profile->strategy->>audience",
+  "awareness:profile->strategy->>awareness",
+  "response:profile->strategy->>strategic_response",
+  "format:profile->production->>format",
+  "style:profile->production->>visual_style",
+  "structure:profile->script->>structure",
 ].join(",");
 type SlimProfile = CreativeFields & { sha256: string; hook_spoken: string | null; hook_onscreen: string | null; hook_visual: string | null };
 const slim = (p: SlimProfile): Pick<CreativeItem, "hook" | "fields"> => ({
   hook: { spoken: p.hook_spoken, onscreen: p.hook_onscreen, visual: p.hook_visual },
-  fields: { angle: p.angle, angle_suggestion: p.angle_suggestion, audience: p.audience, hook_type: p.hook_type, awareness: p.awareness, response: p.response, format: p.format, style: p.style, structure: p.structure },
+  fields: {
+    angle: p.angle,
+    angle_suggestion: p.angle_suggestion,
+    audience: p.audience,
+    hook_type: p.hook_type,
+    awareness: p.awareness,
+    response: p.response,
+    format: p.format,
+    style: p.style,
+    structure: p.structure,
+  },
 });
 
 /** A media file's hook lines and groupable profile fields, as the Creatives grid and the Insights tables use them. */
@@ -76,9 +94,15 @@ function bucketOf(days: number | null, active: boolean | null): RunBucket | null
 /** Every profiled media file for a product: own Meta creatives first, then Ad Library media by run length. */
 export async function listCreativeItems(productId: string): Promise<CreativeItem[]> {
   const db = getDb();
-  type LibraryRow = { tracked_source_id: string | null; ads: { advertiser_name: string | null; start_date: string | null; end_date: string | null; is_active: boolean | null; ad_creatives: { sha256: string }[] } };
+  type LibraryRow = {
+    tracked_source_id: string | null;
+    ads: { advertiser_name: string | null; start_date: string | null; end_date: string | null; is_active: boolean | null; ad_creatives: { sha256: string }[] };
+  };
   const [ownCreatives, library, relations] = await Promise.all([
-    fetchAll<{ id: string; sha256: string | null }>((a, b) => db.from("meta_ads_creatives").select("id, sha256").eq("product_id", productId).not("sha256", "is", null).order("id").range(a, b), "meta_ads_creatives"),
+    fetchAll<{ id: string; sha256: string | null }>(
+      (a, b) => db.from("meta_ads_creatives").select("id, sha256").eq("product_id", productId).not("sha256", "is", null).order("id").range(a, b),
+      "meta_ads_creatives",
+    ),
     fetchAll<LibraryRow>(
       (a, b) =>
         db
@@ -116,7 +140,12 @@ export async function listCreativeItems(productId: string): Promise<CreativeItem
       if (ownNames.has(sha256)) continue;
       const prev = comp.get(sha256);
       if (!prev || (days ?? -1) > (prev.days ?? -1)) {
-        comp.set(sha256, { source: ad.advertiser_name ?? "Unknown advertiser", days, active: ad.is_active || prev?.active === true, relation: prev ? mergeAdRelations(prev.relation, relation) : relation });
+        comp.set(sha256, {
+          source: ad.advertiser_name ?? "Unknown advertiser",
+          days,
+          active: ad.is_active || prev?.active === true,
+          relation: prev ? mergeAdRelations(prev.relation, relation) : relation,
+        });
       } else {
         if (ad.is_active) prev.active = true;
         prev.relation = mergeAdRelations(prev.relation, relation);
@@ -139,13 +168,33 @@ export async function listCreativeItems(productId: string): Promise<CreativeItem
   for (const [sha256, names] of ownNames) {
     const profile = profiles.get(sha256);
     if (!profile) continue;
-    items.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: "own", source: [...names].sort().join(", ") || "Own creative", days: null, active: null, bucket: null, ...profile });
+    items.push({
+      sha256,
+      mediaType: media.get(sha256)?.media_type ?? "video",
+      url: media.get(sha256)?.public_url ?? null,
+      owner: "own",
+      source: [...names].sort().join(", ") || "Own creative",
+      days: null,
+      active: null,
+      bucket: null,
+      ...profile,
+    });
   }
   const competitors: CreativeItem[] = [];
   for (const [sha256, c] of comp) {
     const profile = profiles.get(sha256);
     if (!profile) continue;
-    competitors.push({ sha256, mediaType: media.get(sha256)?.media_type ?? "video", url: media.get(sha256)?.public_url ?? null, owner: c.relation, source: c.source, days: c.days, active: c.active, bucket: bucketOf(c.days, c.active), ...profile });
+    competitors.push({
+      sha256,
+      mediaType: media.get(sha256)?.media_type ?? "video",
+      url: media.get(sha256)?.public_url ?? null,
+      owner: c.relation,
+      source: c.source,
+      days: c.days,
+      active: c.active,
+      bucket: bucketOf(c.days, c.active),
+      ...profile,
+    });
   }
   competitors.sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
   return [...items, ...competitors];

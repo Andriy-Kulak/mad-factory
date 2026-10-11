@@ -25,8 +25,25 @@ export default async function OrganicPage({ params, searchParams }: { params: Pr
     favoriteIds(product.id, "post"),
   ]);
   const panel = (
-    <TrackedSourcesPanel productId={product.id} slug={slug} title="Tracked accounts" items={tracked} showRelation open={tracked.length === 0}
-      form={<SourceForm action={addSocialAccount.bind(null, product.id, slug)} submitLabel="Add account"><SocialAccountFields relations={[{ value: "inspiration", label: "Inspiration" }, { value: "competitor", label: "Competitor" }]} labels={[...new Set(tracked.flatMap((t) => (t.label ? [t.label] : [])))]} /></SourceForm>} />
+    <TrackedSourcesPanel
+      productId={product.id}
+      slug={slug}
+      title="Tracked accounts"
+      items={tracked}
+      showRelation
+      open={tracked.length === 0}
+      form={
+        <SourceForm action={addSocialAccount.bind(null, product.id, slug)} submitLabel="Add account">
+          <SocialAccountFields
+            relations={[
+              { value: "inspiration", label: "Inspiration" },
+              { value: "competitor", label: "Competitor" },
+            ]}
+            labels={[...new Set(tracked.flatMap((t) => (t.label ? [t.label] : [])))]}
+          />
+        </SourceForm>
+      }
+    />
   );
   const outliers = posts.filter((p) => (p.outlier ?? 0) >= OUTLIER_MIN).length;
 
@@ -35,7 +52,9 @@ export default async function OrganicPage({ params, searchParams }: { params: Pr
       {accounts.length === 0 ? (
         <>
           {panel}
-          <Empty>No synced accounts yet. Add Instagram, TikTok or Facebook accounts above; they are fetched on the next <code>pnpm social --product {slug}</code> run.</Empty>
+          <Empty>
+            No synced accounts yet. Add Instagram, TikTok or Facebook accounts above; they are fetched on the next <code>pnpm social --product {slug}</code> run.
+          </Empty>
         </>
       ) : (
         <>
@@ -43,7 +62,19 @@ export default async function OrganicPage({ params, searchParams }: { params: Pr
             <Stat label="Accounts" value={accounts.length} />
             <Stat label="Posts tracked" value={posts.length} />
             <Stat label={`Outliers (${OUTLIER_MIN}×+)`} value={outliers} />
-            <Stat label="Last synced" value={<span className="text-[18px]">{fmtDate(accounts.map((a) => a.lastSyncedAt ?? "").sort().at(-1) || null)}</span>} />
+            <Stat
+              label="Last synced"
+              value={
+                <span className="text-[18px]">
+                  {fmtDate(
+                    accounts
+                      .map((a) => a.lastSyncedAt ?? "")
+                      .sort()
+                      .at(-1) || null,
+                  )}
+                </span>
+              }
+            />
           </div>
           {panel}
           <OrganicBrowser posts={posts} accounts={accounts} productId={product.id} favoriteIds={favorites} initial={parseOrganicFilters(sp)} now={Date.now()} />

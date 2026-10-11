@@ -9,9 +9,19 @@ export function SourceForm({ action, submitLabel, children }: { action: (prev: S
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
       {children}
-      <button className="btn btn-primary" disabled={pending}>{pending ? "Adding…" : submitLabel}</button>
-      {state?.error && <span role="alert" className="text-danger text-[13px] w-full">{state.error}</span>}
-      {state?.ok && <span role="status" className="text-good text-[13px] w-full">{state.ok}</span>}
+      <button className="btn btn-primary" disabled={pending}>
+        {pending ? "Adding…" : submitLabel}
+      </button>
+      {state?.error && (
+        <span role="alert" className="text-danger text-[13px] w-full">
+          {state.error}
+        </span>
+      )}
+      {state?.ok && (
+        <span role="status" className="text-good text-[13px] w-full">
+          {state.ok}
+        </span>
+      )}
     </form>
   );
 }

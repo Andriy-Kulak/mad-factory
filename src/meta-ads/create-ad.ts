@@ -20,18 +20,13 @@ export interface AdText {
 
 interface TemplateCreative extends ApiObject {}
 
-export type MediaRef =
-  | { kind: "video"; videoId: string; thumbnailUrl: string | null }
-  | { kind: "image"; imageHash: string };
+export type MediaRef = { kind: "video"; videoId: string; thumbnailUrl: string | null } | { kind: "image"; imageHash: string };
 
 // Builds the creative spec for a new ad from a template ad's creative.
 // Feed mode keeps the template's asset_feed_spec (body/title variants); single
 // mode collapses to the first body + title onto the media. The template's
 // image_hash/image_url are dropped — the new thumbnail URL is used instead.
-export function buildCreativeFromTemplate(
-  template: TemplateCreative,
-  options: { media: MediaRef; textMode: TextMode; text?: AdText },
-): Record<string, unknown> {
+export function buildCreativeFromTemplate(template: TemplateCreative, options: { media: MediaRef; textMode: TextMode; text?: AdText }): Record<string, unknown> {
   const spec = (template.object_story_spec ?? {}) as ApiObject;
   const videoData = (spec.video_data ?? {}) as ApiObject;
   const linkData = (spec.link_data ?? {}) as ApiObject;
@@ -86,9 +81,7 @@ export function buildCreativeFromTemplate(
     // Meta rejects new creatives that carry standard_enhancements (subcode
     // 3858504, deprecated); deep-copy and strip it, keeping every other
     // individual feature's OPT_IN/OPT_OUT choice. Never mutate the template.
-    ...(template.degrees_of_freedom_spec !== undefined
-      ? { degrees_of_freedom_spec: stripStandardEnhancements(template.degrees_of_freedom_spec as ApiObject) }
-      : {}),
+    ...(template.degrees_of_freedom_spec !== undefined ? { degrees_of_freedom_spec: stripStandardEnhancements(template.degrees_of_freedom_spec as ApiObject) } : {}),
   };
   if (options.textMode === "feed" && (bodies.length || titles.length)) {
     creative.asset_feed_spec = {
@@ -167,13 +160,15 @@ export async function createAdFromTemplate(
   const accountId = await deps.adAccount(product.id);
   const planName = await deps.requirePlanDoc(product.id, options.plan);
 
-  const adset = options.fetched?.adset ?? await client.get<ApiObject>(`/${options.adsetId}`, { fields: "name,account_id" });
+  const adset = options.fetched?.adset ?? (await client.get<ApiObject>(`/${options.adsetId}`, { fields: "name,account_id" }));
   if (`act_${adset.account_id ?? ""}` !== accountId) {
     throw new Error(`ad set ${options.adsetId} belongs to act_${adset.account_id}, not ${accountId}; refusing to write to another account`);
   }
-  const templateAd = options.fetched?.templateAd ?? await client.get<ApiObject>(`/${options.templateAdId}`, {
-    fields: "name,account_id,creative{object_story_spec,asset_feed_spec,degrees_of_freedom_spec}",
-  });
+  const templateAd =
+    options.fetched?.templateAd ??
+    (await client.get<ApiObject>(`/${options.templateAdId}`, {
+      fields: "name,account_id,creative{object_story_spec,asset_feed_spec,degrees_of_freedom_spec}",
+    }));
   if (`act_${templateAd.account_id ?? ""}` !== accountId) {
     throw new Error(`template ad ${options.templateAdId} belongs to act_${templateAd.account_id}, not ${accountId}; refusing to write to another account`);
   }
