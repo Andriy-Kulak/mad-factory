@@ -39,7 +39,8 @@ Several agents (Claude, Codex/GPT, Devin) work in this repo at once. They share 
   yes in chat. Merging a PR never changes an ad account. Separately, `pnpm ready` demands owner sign-off
   for dangerous diffs: destructive SQL in a migration, a `.delete()` in code, editing a committed
   migration, or the ad-account write guards (`src/meta-ads/client.ts`, `src/apple-ads/client.ts`). Locally
-  rerun with `--owner-approved`; in CI the owner adds the `owner-approved` label. Everything else: go ahead.
+  rerun with `--owner-approved`; in CI the owner adds the `owner-approved` label. CI only counts the label when the
+  owner added it after the latest push, and every push removes it, so re-add it after new commits. Everything else: go ahead.
 - **Small and boring wins.** Reuse an existing module before writing a new one; one way to do each thing; no
   abstraction with a single caller; no new dependency without a reason in the PR.
 - **Corrections become checks.** When the owner corrects an agent, prefer, in order: making the mistake impossible in

@@ -2,4 +2,9 @@
 /src/apple-ads/client.ts @Andriy-Kulak
 /supabase/migrations/ @Andriy-Kulak
 /scripts/pr-review.ts @Andriy-Kulak
+/scripts/ready.ts @Andriy-Kulak
+/scripts/privacy.ts @Andriy-Kulak
+/scripts/privacy-check.ts @Andriy-Kulak
+/package.json @Andriy-Kulak
+/.githooks/ @Andriy-Kulak
 /.github/ @Andriy-Kulak
