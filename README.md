@@ -23,34 +23,63 @@ Self-hosted. You approve every change.
   competitor ads and reels, and puts one number on top: monthly profit against your goal. Google Ads and SEO are next.
 - **Built to iterate fast without getting banned.** Data from ad platforms is fetched **once a day** by read-only
   syncs, and every analysis reads the database, never the platform API. No polling, no scraping on every question.
-- **Changes go through experiments and playbooks.** Every campaign that spends money belongs to an experiment with
-  rules; an agent applies the playbook, drafts a plan, you approve it in chat, and only then is the ad account
-  changed. Every write is journaled; nothing is ever deleted.
+- **Experiments find what works.** Each one tests a marketing strategy (a hook, an angle, keywords, an audience)
+  against rules that say when to scale it and when to pause it. Agents follow playbooks to judge them daily and
+  draft changes; you approve in chat before any ad account changes.
 
 <div align="center">
 <img src="web/public/home/factory-simple.webp" alt="A paper-cut factory with two striped smokestacks and a lime flag on a hill above the sea" width="420">
 </div>
 
-## Experiments, playbooks and how campaigns change
+## How it works
 
-```
-ad platform ──(daily sync, read-only)──► Postgres ──► agent reads pnpm brief ──► plan ──► you approve ──► write
-     ▲                                                                                                    │
-     └──────────────────────────── journaled change + dated line in the experiment log ◄─────────────────┘
+```mermaid
+flowchart LR
+  platforms["<b>Ad platforms and sources</b><br/>Meta Ads · Apple Ads · RevenueCat<br/>Ad Library · Instagram · TikTok"]
+  db[("<b>Postgres</b><br/>spend, revenue, ads,<br/>posts, experiments")]
+  read["<b>pnpm brief · web app · MCP</b><br/>profit vs goal, last 7 days"]
+  agent["<b>AI agent</b><br/>follows the playbooks"]
+  you["<b>You</b><br/>approve in chat"]
+  platforms -- "once a day, read-only" --> db
+  db --> read --> agent
+  agent -- "plan" --> you
+  you -- "write command, journaled" --> platforms
 ```
 
-- **Experiments** are the unit of memory. Each one says what is being tested, its budget and dates, the rules that
-  decide it (for example "pause an ad that spent 3× what a trial is worth without getting one") and, when it ends,
-  what was learned.
-  Every decision, observation and follow-up is a dated line in its log, so "where are we?" has an answer any day.
+Syncs pull each platform once a day into Postgres. Everything else (the brief, the web app, agents) reads the
+database, so nobody calls an ad API to answer a question. The only way back to an ad account is a plan you approved,
+run from your machine. The web app holds no ad-account keys and can never change a campaign.
+
+## Experiments: test strategies, keep what works
+
+Marketing here is a series of experiments. Each one tests one strategy (a new hook or angle, a set of keywords, an
+audience, a country) with its own campaigns, budget, dates and the rules that decide it, then ends with a verdict
+that shapes the next one.
+
+```mermaid
+flowchart LR
+  idea["<b>Strategy to test</b><br/>hook, angle, keywords,<br/>audience, country"]
+  exp["<b>Experiment</b><br/>campaigns, budget,<br/>win and cut rules"]
+  run["<b>Runs for days</b><br/>daily sync collects<br/>spend, trials, revenue"]
+  judge{"<b>Judge vs rules</b><br/>cost per trial vs<br/>what a trial is worth"}
+  scale["Scale it"]
+  cut["Pause it"]
+  learn["<b>Verdict</b><br/>what we learned"]
+  idea --> exp --> run --> judge
+  judge -- "works" --> scale --> learn
+  judge -- "doesn't" --> cut --> learn
+  learn --> idea
+```
+
+- **Experiments** keep the memory: what is being tested, the rules, and a dated log of every observation,
+  decision and follow-up, so "what are we testing and how is it going?" has an answer any day.
   `pnpm experiment list --product <slug>`.
-- **Playbooks** ([playbooks/](playbooks)) are the generic operating method agents follow:
-  [daily-review.md](playbooks/daily-review.md) (the once-a-day routine: read the brief, apply each experiment's
-  rules, log, draft plans), plus [meta-ads.md](playbooks/meta-ads.md) and [apple-ads.md](playbooks/apple-ads.md)
-  for channel structure and defaults.
-- **Plans** are documents in the database. An agent writes one with one reason per change, you say yes in chat,
-  then a write command (`pnpm meta-ads pause|activate|launch|...`) applies it from your machine. Pacing is part of
-  the rules: at most a 20% budget or bid change, once per ad set or keyword per 24 hours.
+- **Playbooks** ([playbooks/](playbooks)) are the method agents follow: [daily-review.md](playbooks/daily-review.md)
+  (once a day: read the brief, judge each running experiment by its rules, log, draft plans), plus
+  [meta-ads.md](playbooks/meta-ads.md) and [apple-ads.md](playbooks/apple-ads.md) for how campaigns are structured.
+- **Plans** turn a verdict into a change: one reason per item, you say yes in chat, then a write command
+  (`pnpm meta-ads pause|activate|launch|...`) applies it. Changes are paced: at most 20% on a budget or bid, once
+  per ad set or keyword per 24 hours. Nothing is ever deleted.
 
 The full model is in [docs/marketing-loop.md](docs/marketing-loop.md).
 
@@ -71,24 +100,6 @@ The full model is in [docs/marketing-loop.md](docs/marketing-loop.md).
 schedule is a Devin automation (see [What Devin does here today](#what-devin-does-here-today)) and isn't part of
 this repository. Every step is a plain `pnpm` command, so cron, GitHub Actions or any agent that can run a shell
 works too.
-
-## How it works
-
-```mermaid
-flowchart LR
-  cli["<b>CLI syncs</b><br/>scrape · social · meta-ads<br/>apple-ads · revenuecat<br/>creatives profile"]
-  db[("<b>Supabase Postgres</b><br/>products, ads, posts,<br/>metrics, experiments")]
-  r2[("Cloudflare R2<br/>media")]
-  web["<b>Web app</b><br/>overview, research,<br/>channels, setup"]
-  mcp["<b>/api/mcp</b><br/>read-only, for agents"]
-  cli --> db
-  cli --> r2
-  db --> web
-  db --> mcp
-```
-
-The commands hold the API keys and write to the database. The web app only reads it, so a hosted web server never
-needs your ad-account keys.
 
 ## Quick start
 
