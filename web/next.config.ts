@@ -12,7 +12,8 @@ const DOCS = ["../playbooks/**/*", "../docs/**/*"];
 const nextConfig: NextConfig = {
   typedRoutes: false,
   experimental: {
-    // Keep this aligned with CLIENT_CACHE_SECONDS in components/refresh-on-revisit.tsx.
+    // Reuse a visited page for 5 minutes instead of showing its skeleton again. Data changes on the daily sync;
+    // server actions call revalidatePath, which drops this cache, and a browser reload always fetches fresh.
     staleTimes: { dynamic: 300 },
   },
   outputFileTracingIncludes: { "/api/mcp": DOCS },

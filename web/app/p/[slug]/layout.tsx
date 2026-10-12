@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
-import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getTrackedSources, listProductNames } from "@/lib/queries";
 import { channelSetup, navNeedingSetup } from "@/lib/setup";
 import { AppFrame } from "@/components/app-frame";
-import { RefreshOnRevisit } from "@/components/refresh-on-revisit";
 import { currentUser } from "@/lib/auth/server";
 import { SIDEBAR_COOKIE } from "@/components/nav";
 
@@ -17,9 +15,6 @@ export default async function ProductLayout({ children, params }: { children: Re
   const needsSetup = navNeedingSetup(channelSetup(product.slug, await getTrackedSources(product.id)));
   return (
     <AppFrame products={products} current={{ slug: product.slug, name: product.name }} defaultCollapsed={jar.get(SIDEBAR_COOKIE)?.value === "1"} user={user} needsSetup={needsSetup}>
-      <Suspense fallback={null}>
-        <RefreshOnRevisit />
-      </Suspense>
       {children}
     </AppFrame>
   );
