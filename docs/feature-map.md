@@ -24,7 +24,8 @@ journaled to `meta_ads_changes` and requiring a `--plan` document name.
 | `pnpm meta-ads media` | Download each creative's video/image, or import a file | DB write + media storage | `creatives`, `meta_ads_creatives`, `meta_ads_changes` (journal) | varies (one per creative; --creative/--file = 0) |
 | `pnpm meta-ads pause` | Pause ads | Ad account write | `meta_ads_changes` (journal), `meta_ads_ads` | 1 read + 1 write per ad |
 | `pnpm meta-ads activate` | Activate ads / ad sets | Ad account write | `meta_ads_changes` (journal), `meta_ads_ads`, `meta_ads_adsets` | 1 read + 1 write per object |
-| `pnpm meta-ads adset-update` | Update an ad set's name / daily_min_spend_target | Ad account write | `meta_ads_changes` (journal) | 1 read + 1 write |
+| `pnpm meta-ads adset-update` | Update an ad set's name / daily_min_spend_target / daily_budget | Ad account write | `meta_ads_changes` (journal) | 1 read + 1 write |
+| `pnpm meta-ads adset-copy` | Copy an ad set into its campaign without its ads (PAUSED), then name it and set its daily budget | Ad account write | `meta_ads_changes` (journal) | 2 reads + 2 writes |
 | `pnpm meta-ads create-ad` | Upload media and create a PAUSED ad from a template | Ad account write | `meta_ads_changes` (journal) | varies (upload polls; see --help) |
 | `pnpm meta-ads ad-text` | Swap an ad's headlines/primary text via a rebuilt creative | Ad account write | `meta_ads_changes` (journal) | ~3 calls |
 | `pnpm meta-ads launch` | Batch create PAUSED → activate → DB mirror from a spec | Ad account write | `meta_ads_changes` (journal), `meta_ads_ads`, `meta_ads_creatives`, `creatives` | varies (per spec ad; see --help) |

@@ -165,3 +165,17 @@ test("(i) no journaled writes for the plan is an error", async () => {
   const { client, deps } = harness([], {});
   await assert.rejects(verifyPlan(client, "acme", { plan: "plan.md" }, deps), /no journaled writes/);
 });
+
+test("(j) adset-copy then rename/budget expects the new ad set PAUSED with its name and budget", async () => {
+  const rows = [
+    writeRow({ object_type: "adset", object_id: "s1", path: "/s1/copies", request: { deep_copy: false, status_option: "PAUSED" }, response: { copied_adset_id: "s9" } }),
+    writeRow({ object_type: "adset", object_id: "s9", path: "/s9", request: { name: "New set", daily_budget: 6000 } }),
+  ];
+  const { client, deps, calls } = harness(rows, { s9: ADSET("PAUSED", { name: "New set", daily_budget: "6000" }) });
+  const report = await verifyPlan(client, "acme", { plan: "plan.md" }, deps);
+  const fields = new Map(report.checks.map((c) => [c.field, c]));
+  assert.deepEqual([...fields.keys()].sort(), ["daily_budget", "name", "status"]);
+  assert.equal(fields.get("status")!.expected, "PAUSED");
+  assert.ok(report.checks.every((c) => c.ok && c.id === "s9"));
+  assert.ok(!calls.some((c) => c.ids.includes("s1")));
+});

@@ -6,7 +6,7 @@ import { defaultDeps, downloadMedia, importMediaFile } from "../meta-ads/media.t
 import { defaultDeps as pauseDeps, pauseAds } from "../meta-ads/pause.ts";
 import { activateObjects, defaultDeps as activateDeps } from "../meta-ads/activate.ts";
 import { createAdFromTemplate, defaultDeps as createAdDeps, type TextMode } from "../meta-ads/create-ad.ts";
-import { defaultDeps as updateAdsetDeps, updateAdset } from "../meta-ads/update-adset.ts";
+import { copyAdset, defaultDeps as updateAdsetDeps, updateAdset } from "../meta-ads/update-adset.ts";
 import { defaultDeps as adTextDeps, updateAdText } from "../meta-ads/update-ad-text.ts";
 import { defaultDeps as launchDeps, launch } from "../meta-ads/launch.ts";
 import { defaultDeps as verifyDeps, formatVerifyTable, verifyPlan } from "../meta-ads/verify.ts";
@@ -35,8 +35,12 @@ Commands:
                                        Pause ads in the product's ad account (journals each write to meta_ads_changes).
   activate --product <id|slug> (--ad <id> | --adset <id>)... --plan <name> [--dry-run]
                                        Activate ads / ad sets (journals each write to meta_ads_changes).
-  adset-update --product <id|slug> --adset <id> [--name <n>] [--min-spend <usd>] --plan <name> [--dry-run]
-                                       Update an ad set's name and/or daily_min_spend_target (usd → cents).
+  adset-update --product <id|slug> --adset <id> [--name <n>] [--min-spend <usd>] [--daily-budget <usd>]
+            --plan <name> [--dry-run]
+                                       Update an ad set's name, daily_min_spend_target and/or daily_budget (usd → cents).
+  adset-copy --product <id|slug> --adset <source id> --name <n> [--daily-budget <usd>] --plan <name> [--dry-run]
+                                       Copy an ad set into its campaign WITHOUT its ads, PAUSED, then name it (and set
+                                       its daily budget). Activate it with \`activate --adset\` once it has ads.
   create-ad --product <id|slug> --adset <id> --template-ad <id> (--file <mp4> | --video-id <id>)
             --name <ad name> --plan <name> [--validate-only] [--text-mode feed|single]
             [--title <t> ...] [--body <b> ...] [--image-hash <hash>]
@@ -76,6 +80,7 @@ const { values, positionals } = parseArgs({
     plan: { type: "string" },
     name: { type: "string" },
     "min-spend": { type: "string" },
+    "daily-budget": { type: "string" },
     "template-ad": { type: "string" },
     "video-id": { type: "string" },
     "image-hash": { type: "string" },
@@ -386,17 +391,21 @@ async function activateCommand(): Promise<void> {
   console.log(`   ${stats.activated} object(s) activated, ${stats.skipped} already active${values["dry-run"] ? " (dry-run, nothing written)" : ""}`);
 }
 
+function usdToCents(flag: "min-spend" | "daily-budget", min: number): number | undefined {
+  const raw = values[flag];
+  if (raw === undefined) return undefined;
+  const usd = Number(raw);
+  if (!Number.isFinite(usd) || usd < min) throw new Error(`--${flag} must be a number of USD, at least ${min}`);
+  return Math.round(usd * 100);
+}
+
 async function adsetUpdateCommand(): Promise<void> {
   if (!values.product) throw new Error("adset-update needs --product <id|slug>");
   const adsetId = (values.adset ?? [])[0];
   if (!adsetId) throw new Error("adset-update needs --adset <id>");
   if (!values.plan) throw new Error("adset-update needs --plan <name> (a reviewed plan document)");
-  let dailyMinSpendCents: number | undefined;
-  if (values["min-spend"] !== undefined) {
-    const usd = Number(values["min-spend"]);
-    if (!Number.isFinite(usd) || usd < 0) throw new Error("--min-spend must be a non-negative number of USD");
-    dailyMinSpendCents = Math.round(usd * 100);
-  }
+  const dailyMinSpendCents = usdToCents("min-spend", 0);
+  const dailyBudgetCents = usdToCents("daily-budget", 1);
   const client = metaClient();
   await updateAdset(
     client,
@@ -405,11 +414,27 @@ async function adsetUpdateCommand(): Promise<void> {
       adsetId,
       name: values.name,
       dailyMinSpendCents,
+      dailyBudgetCents,
       plan: values.plan,
       dryRun: values["dry-run"],
     },
     { ...updateAdsetDeps, log: (line) => console.log(line) },
   );
+}
+
+async function adsetCopyCommand(): Promise<void> {
+  if (!values.product) throw new Error("adset-copy needs --product <id|slug>");
+  const fromAdsetId = (values.adset ?? [])[0];
+  if (!fromAdsetId) throw new Error("adset-copy needs --adset <source ad set id>");
+  if (!values.name) throw new Error("adset-copy needs --name <new ad set name>");
+  if (!values.plan) throw new Error("adset-copy needs --plan <name> (a reviewed plan document)");
+  const newId = await copyAdset(
+    metaClient(),
+    values.product,
+    { fromAdsetId, name: values.name, dailyBudgetCents: usdToCents("daily-budget", 1), plan: values.plan, dryRun: values["dry-run"] },
+    { ...updateAdsetDeps, log: (line) => console.log(line) },
+  );
+  if (newId) console.log(`   new ad set ${newId} is PAUSED with no ads; launch into it, then \`activate --adset ${newId}\``);
 }
 
 async function createAdCommand(): Promise<void> {
@@ -539,6 +564,9 @@ switch (command) {
     break;
   case "adset-update":
     await adsetUpdateCommand();
+    break;
+  case "adset-copy":
+    await adsetCopyCommand();
     break;
   case "create-ad":
     await createAdCommand();

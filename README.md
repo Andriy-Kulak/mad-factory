@@ -178,10 +178,10 @@ reads and writes and what each run costs in API calls.
 
 ### Changing an ad account
 
-Most commands only read. The Meta write commands (`pause`, `activate`, `adset-update`, `create-ad`, `ad-text`,
-`launch`) each need a reviewed plan document in `product_docs`, and every request is journaled before it is sent. Read one with
+Most commands only read. The Meta write commands (`pause`, `activate`, `adset-update`, `adset-copy`, `create-ad`,
+`ad-text`, `launch`) each need a reviewed plan document in `product_docs`, and every request is journaled before it is sent. Read one with
 `pnpm product docs show <slug> <name>`; add or update one with `pnpm product docs add <slug> --kind plan --file <path>`.
-New ads are always
+New ads and copied ad sets are always
 created paused. Nothing in the code can delete or archive a campaign, ad set, ad or creative. The web app and the
 MCP server cannot change an ad account at all.
 

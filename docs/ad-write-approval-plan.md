@@ -29,7 +29,7 @@ macOS prompt (later: a fingerprint). Losing a cloud secret then exposes numbers,
 | --- | --- | --- | --- |
 | Read key, Meta: system-user token with only `ads_read` | read | `META_ADS_TOKEN` in `.env` and Devin's secrets | `meta-ads sync/status/media/verify`, the daily review |
 | Read key, Apple: API user with role **API Account Read Only** | read | `APPLE_ADS_DIR` / `APPLE_ADS_*` in `.env` and Devin's secrets | `apple-ads sync/research`, the daily review |
-| Write key, Meta: the current `ads_management` token | read + write | macOS Keychain on the owner's Mac only | `meta-ads pause/activate/adset-update/create-ad/ad-text/launch` |
+| Write key, Meta: the current `ads_management` token | read + write | macOS Keychain on the owner's Mac only | `meta-ads pause/activate/adset-update/adset-copy/create-ad/ad-text/launch` |
 | Write key, Apple: the current API user's key | read + write | macOS Keychain on the owner's Mac only | future Apple write commands (none exist in this repo yet) |
 
 `META_ADS_TOKEN` keeps its name and becomes the read token, so Devin's secret only changes value. No write key is

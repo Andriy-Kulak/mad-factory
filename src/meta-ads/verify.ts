@@ -15,7 +15,7 @@ type ApiObject = Record<string, unknown>;
 
 const CHUNK = 50;
 export const AD_FIELDS = "name,status,effective_status,adset_id,account_id,updated_time";
-export const ADSET_FIELDS = "name,status,effective_status,daily_min_spend_target,account_id,campaign_id";
+export const ADSET_FIELDS = "name,status,effective_status,daily_min_spend_target,daily_budget,account_id,campaign_id";
 
 export interface VerifyCheck {
   type: "ad" | "adset";
@@ -156,15 +156,26 @@ export async function verifyPlan(client: Pick<MetaAdsClient, "get">, productSlug
       if (!entry.fields.has("status")) entry.fields.set("status", "PAUSED");
       continue;
     }
+    if (/^\/[^/]+\/copies$/.test(row.path)) {
+      const id = typeof response.copied_adset_id === "string" ? response.copied_adset_id : null;
+      if (!id) {
+        report.failed.push({ id: null, path: row.path, status: row.status, note: "copy response has no copied_adset_id" });
+        continue;
+      }
+      const entry = expect("adset", id);
+      if (!entry.fields.has("status")) entry.fields.set("status", "PAUSED");
+      continue;
+    }
     const singleObject = row.path.match(/^\/([^/]+)$/);
     if (singleObject && typeof request.status === "string") {
       expect(objType(row), singleObject[1]!).fields.set("status", request.status);
       continue;
     }
-    if (singleObject && objType(row) === "adset" && (request.name !== undefined || request.daily_min_spend_target !== undefined)) {
+    if (singleObject && objType(row) === "adset" && (request.name !== undefined || request.daily_min_spend_target !== undefined || request.daily_budget !== undefined)) {
       const entry = expect("adset", singleObject[1]!);
-      if (request.name !== undefined) entry.fields.set("name", String(request.name));
-      if (request.daily_min_spend_target !== undefined) entry.fields.set("daily_min_spend_target", String(request.daily_min_spend_target));
+      for (const field of ["name", "daily_min_spend_target", "daily_budget"]) {
+        if (request[field] !== undefined) entry.fields.set(field, String(request[field]));
+      }
       continue;
     }
     if (singleObject && request.creative !== undefined) {
