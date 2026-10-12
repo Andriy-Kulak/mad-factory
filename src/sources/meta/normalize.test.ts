@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findAdNodes, normalize, parseGraphqlBody } from "./normalize.ts";
+import { findAdNodes, normalize, normalizeAdDetail, parseAdIdInput, parseGraphqlBody } from "./normalize.ts";
 
 const node = {
   ad_archive_id: "1",
@@ -72,4 +72,33 @@ test("parseGraphqlBody handles multi-document bodies", () => {
   const docs = parseGraphqlBody('for (;;);{"a":1}\n{"b":2}\ngarbage\n{"broken":');
   // Only lines that start with "{" and parse cleanly survive.
   assert.deepEqual(docs, [{ b: 2 }]);
+});
+
+test("normalizeAdDetail maps the camelCase single-ad shape", () => {
+  const ad = normalizeAdDetail({
+    adArchiveID: "123456",
+    pageID: "9",
+    pageName: "Brand",
+    startDate: 1_790_000_000,
+    isActive: true,
+    publisherPlatform: ["facebook", "instagram"],
+    collationID: "c1",
+    collationCount: 2,
+    snapshot: { body: { text: "Hello" }, title: "T", videos: [{ video_hd_url: "https://cdn.example/hd.mp4", video_sd_url: "https://cdn.example/sd.mp4" }], images: [], cards: [] },
+  });
+  assert.equal(ad.externalId, "123456");
+  assert.equal(ad.advertiserName, "Brand");
+  assert.equal(ad.bodyText, "Hello");
+  assert.equal(ad.collationCount, 2);
+  assert.deepEqual(ad.platforms, ["facebook", "instagram"]);
+  assert.equal(ad.media[0]?.kind, "video");
+  assert.throws(() => normalizeAdDetail({ success: true }), /no ad/);
+});
+
+test("parseAdIdInput takes an ad id or an Ad Library ad link only", () => {
+  assert.equal(parseAdIdInput(" 28600000000000000 "), "28600000000000000");
+  assert.equal(parseAdIdInput("https://www.facebook.com/ads/library/?id=123456"), "123456");
+  for (const bad of ["12", "https://www.facebook.com/ads/library/?view_all_page_id=123456", "https://example.com/ads/library/?id=123456", "nope"]) {
+    assert.throws(() => parseAdIdInput(bad), /ad id/, bad);
+  }
 });

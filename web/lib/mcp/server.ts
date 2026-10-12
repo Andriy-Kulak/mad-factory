@@ -16,7 +16,8 @@ import { applyOrganicFilters, NO_FILTERS, sortPosts } from "../organic-filters";
 import { competitorAds } from "../queries";
 import { organicOverview, SOCIAL_PLATFORMS, type OrganicPost } from "../social";
 import { listTrackedSourceItems, trackedSourceUrl } from "../tracked-sources";
-import { insertTrackedSource, writeFavorites } from "../research-writes";
+import { insertTrackedSource, recordSave, SAVE_CREDITS_PER_DAY, saveCreditsUsedToday, writeFavorites } from "../research-writes";
+import { saveAd, savePost } from "../../../src/research/save-item.ts";
 import { isAdRelation, parseAdLibraryInput, parseSocialAccountInput } from "../../../src/lib/tracked-source-input.ts";
 import type { McpKeyScope } from "../../../src/lib/mcp-key.ts";
 
@@ -25,7 +26,8 @@ so propose changes as text with the number each should move. Judge on complete d
 arrive a day or two late, so the most recent days undercount.`;
 const RESEARCH_RULES = `Rules: this key may also write research data: track_ad_library and track_social_account follow a competitor or adjacent-niche
 (inspiration) page or account (fetched on the next daily sync), and favorite stars or unstars single ads and posts without following
-their account. Nothing else is writable: no deletes, no own accounts. Changes to ad accounts are made by the owner's own agents after the owner approves a written plan,
+their account, and save_url saves one ad or post from a link (it costs ScrapeCreators credits, capped per day) and stars it.
+Nothing else is writable: no deletes, no own accounts. Changes to ad accounts are made by the owner's own agents after the owner approves a written plan,
 so propose changes as text with the number each should move. Judge on complete days (yesterday and before); store revenue and trials
 arrive a day or two late, so the most recent days undercount.`;
 
@@ -146,7 +148,9 @@ function postView(p: OrganicPost, starred: ReadonlySet<string>) {
   };
 }
 
-export function buildMcpServer(scope: McpKeyScope = "read"): McpServer {
+/** `key.name` labels the key's save_url spend in scrape_runs and its daily credit cap. */
+export function buildMcpServer(key: { scope: McpKeyScope; name: string } = { scope: "read", name: "" }): McpServer {
+  const { scope } = key;
   const instructions = mcpInstructions(scope);
   const server = new McpServer({ name: "mad-factory", version: "1.0.0" }, { instructions });
 
@@ -531,12 +535,12 @@ export function buildMcpServer(scope: McpKeyScope = "read"): McpServer {
     async (args) => text(await readDoc(args.path)),
   );
 
-  if (scope === "research") registerResearchWrites(server);
+  if (scope === "research") registerResearchWrites(server, key.name);
   return server;
 }
 
 /** Only for research-scoped keys: follow competitor/inspiration sources and star single items. Never own accounts, never deletes. */
-function registerResearchWrites(server: McpServer) {
+function registerResearchWrites(server: McpServer, keyName: string) {
   server.registerTool(
     "track_ad_library",
     {
@@ -633,6 +637,50 @@ function registerResearchWrites(server: McpServer) {
       if (wanted.size) throw new Error(`Not a ${args.kind} of ${p.slug}: ${[...wanted].join(", ")}. Use ids from ${args.kind === "ad" ? "competitor_ads" : "organic_posts"}.`);
       await writeFavorites(p.id, args.kind, targets, on);
       return json({ product: p.slug, kind: args.kind, favorited: on, ids: targets });
+    },
+  );
+
+  server.registerTool(
+    "save_url",
+    {
+      title: "Save one ad or post by link",
+      description: `Fetch one Meta Ad Library ad (ad id or facebook.com/ads/library/?id= link) or one Instagram, TikTok or Facebook post, store it and star it, without following its page or account. Use it for something not in competitor_ads or organic_posts yet; it costs about 1 ScrapeCreators credit (free when it is already stored), up to ${SAVE_CREDITS_PER_DAY} a day per key. Saved ads show in competitor_ads and saved posts in organic_posts as competitor items.`,
+      inputSchema: {
+        product,
+        url: z.string().min(1).max(500).describe("Ad Library ad id or link, or a post/reel/video link"),
+      },
+      annotations: { ...researchWrite, openWorldHint: true },
+    },
+    async (args) => {
+      const p = await resolveProduct(args.product);
+      if (!process.env.SCRAPECREATORS_API_KEY)
+        return { ...text("save_url is not set up on this server (no ScrapeCreators key). Ask the owner, or star an item that is already stored."), isError: true };
+      const used = await saveCreditsUsedToday(keyName);
+      if (used >= SAVE_CREDITS_PER_DAY) return { ...text(`This key used its ${SAVE_CREDITS_PER_DAY} save_url credits for today (UTC). Try again tomorrow.`), isError: true };
+      const input = args.url.trim();
+      const isAd = /^\d+$/.test(input) || /facebook\.com\/ads\/library/i.test(input);
+      let saved;
+      try {
+        saved = isAd ? await saveAd(p.id, input) : await savePost(input);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (!/^Give |^That is an Ad Library/.test(message)) await recordSave(p.id, keyName, 0, message.slice(0, 500));
+        return { ...text(message), isError: true };
+      }
+      if (saved.credits) await recordSave(p.id, keyName, saved.credits);
+      let target = saved.id;
+      if (saved.kind === "ad") target = (await competitorAds(p.id)).find((c) => c.id === saved.id || c.memberIds.includes(saved.id))?.id ?? saved.id;
+      await writeFavorites(p.id, saved.kind, [target], true);
+      return json({
+        product: p.slug,
+        kind: saved.kind,
+        id: target,
+        favorited: true,
+        already_stored: saved.alreadyStored,
+        media_stored: saved.mediaStored,
+        credits_used: saved.credits,
+        credits_left_today: Math.max(0, SAVE_CREDITS_PER_DAY - used - saved.credits),
+      });
     },
   );
 }

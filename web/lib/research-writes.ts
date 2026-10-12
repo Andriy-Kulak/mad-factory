@@ -30,3 +30,36 @@ export async function writeFavorites(productId: string, kind: FavoriteKind, ids:
     );
   if (res.error) throw new Error(`favorites: ${res.error.message}`);
 }
+
+/** ScrapeCreators credits one MCP key may spend per UTC day on save_url. */
+export const SAVE_CREDITS_PER_DAY = 20;
+const SAVE_SOURCE = "mcp_save";
+
+export async function saveCreditsUsedToday(keyName: string): Promise<number> {
+  const since = `${new Date().toISOString().slice(0, 10)}T00:00:00Z`;
+  const res = await getDb()
+    .from("scrape_runs")
+    .select("credits_used")
+    .match({ source: SAVE_SOURCE, collector: `mcp:${keyName}` })
+    .gte("started_at", since);
+  if (res.error) throw new Error(`scrape_runs: ${res.error.message}`);
+  return (res.data ?? []).reduce((sum, r) => sum + (r.credits_used ?? 0), 0);
+}
+
+/** One scrape_runs row per save, so the spend shows next to the daily syncs and counts toward the key's cap. */
+export async function recordSave(productId: string, keyName: string, credits: number, error?: string): Promise<void> {
+  const now = new Date().toISOString();
+  const res = await getDb()
+    .from("scrape_runs")
+    .insert({
+      product_id: productId,
+      source: SAVE_SOURCE,
+      collector: `mcp:${keyName}`,
+      status: error ? "error" : "done",
+      started_at: now,
+      finished_at: now,
+      credits_used: credits,
+      error: error ?? null,
+    });
+  if (res.error) throw new Error(`scrape_runs: ${res.error.message}`);
+}

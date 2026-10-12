@@ -119,3 +119,42 @@ export function parseGraphqlBody(text: string): unknown[] {
   }
   return docs;
 }
+
+/** The single-ad endpoint (ScrapeCreators /v1/facebook/adLibrary/ad) answers in camelCase; map it to the list node shape. */
+export function normalizeAdDetail(body: Record<string, unknown>): CollectedAd {
+  const id = str(body.adArchiveID);
+  if (!id || !body.snapshot || typeof body.snapshot !== "object") throw new Error("Ad Library response has no ad");
+  return normalize({
+    ad_archive_id: id,
+    page_id: body.pageID,
+    page_name: body.pageName,
+    start_date: body.startDate,
+    end_date: body.endDate,
+    is_active: body.isActive,
+    publisher_platform: body.publisherPlatform,
+    collation_id: body.collationID,
+    collation_count: body.collationCount,
+    reach_estimate: body.reachEstimate,
+    spend: body.spend,
+    currency: body.currency,
+    total_active_time: body.totalActiveTime,
+    snapshot: body.snapshot,
+  });
+}
+
+/** A numeric Ad Library ad id, or a facebook.com/ads/library URL with ?id=<ad id>. Throws a short user-readable Error. */
+export function parseAdIdInput(input: string): string {
+  const trimmed = input.trim();
+  if (/^\d{5,25}$/.test(trimmed)) return trimmed;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new Error("Give an Ad Library ad id or a facebook.com/ads/library/?id=... link");
+  }
+  const id = url.searchParams.get("id");
+  if (!/(^|\.)facebook\.com$/.test(url.hostname) || url.pathname.replace(/\/+$/, "") !== "/ads/library" || !id || !/^\d{5,25}$/.test(id)) {
+    throw new Error("Give an Ad Library ad id or a facebook.com/ads/library/?id=... link");
+  }
+  return id;
+}

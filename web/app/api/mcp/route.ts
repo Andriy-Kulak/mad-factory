@@ -14,7 +14,7 @@ async function handle(req: Request): Promise<Response> {
       { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="mad-factory"' } },
     );
   }
-  const server = buildMcpServer(row.scope === "research" ? "research" : "read");
+  const server = buildMcpServer({ scope: row.scope === "research" ? "research" : "read", name: row.name });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   return transport.handleRequest(req);
