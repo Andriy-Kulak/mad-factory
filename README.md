@@ -28,7 +28,7 @@ Self-hosted. You approve every change.
   draft changes; you approve in chat before any ad account changes.
 
 <div align="center">
-<img src="web/public/home/factory-simple.webp" alt="A paper-cut factory with two striped smokestacks and a lime flag on a hill above the sea" width="420">
+<img src="web/public/home/factory-animated.webp" alt="A paper-cut factory on a hill with smoke rising from its two striped chimneys" width="480">
 </div>
 
 ## How it works
