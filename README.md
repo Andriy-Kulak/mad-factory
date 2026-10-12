@@ -28,7 +28,8 @@ Self-hosted. You approve every change.
   draft changes; you approve in chat before any ad account changes.
 
 <div align="center">
-<img src="web/public/home/factory-animated.webp" alt="A paper-cut factory on a hill with smoke rising from its two striped chimneys" width="480">
+<a href="docs/demo/demo.mp4"><img src="docs/demo/demo.webp" alt="A walk through the web app: the profit overview, competitor ads, insights, organic posts, creatives, Meta ads, Apple ads and Apple keywords, with a fictional product" width="880"></a>
+<br><sub>The web app with a fictional product, at 3× speed. <a href="docs/demo/demo.mp4">Watch the full 40-second demo</a>.</sub>
 </div>
 
 ## How it works
