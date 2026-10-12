@@ -11,6 +11,10 @@ const DOCS = ["../playbooks/**/*", "../docs/**/*"];
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
+  experimental: {
+    // Keep this aligned with CLIENT_CACHE_SECONDS in components/refresh-on-revisit.tsx.
+    staleTimes: { dynamic: 300 },
+  },
   outputFileTracingIncludes: { "/api/mcp": DOCS },
 };
 
