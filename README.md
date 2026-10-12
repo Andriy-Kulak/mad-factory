@@ -15,50 +15,44 @@ Self-hosted. You approve every change.
 
 [Quick start](#quick-start) · [How it works](#how-it-works) · [Integrations](#keys-and-integrations) · [Agents](#working-with-ai-agents) · [Feature map](docs/feature-map.md)
 
-<br>
-
-<img src="web/public/home/factory-simple.webp" alt="A paper-cut factory with two striped smokestacks and a lime flag on a hill above the sea" width="900">
-
 </div>
 
-<br>
+## TL;DR
 
-Mad Factory collects what your competitors run, what your own ads and posts do, and what you earn. It keeps all of
-it in one Postgres database and puts one number on top: your monthly profit against your goal. AI agents (Claude,
-Codex, Devin or any MCP client) read the same data and follow the same playbooks.
+- **Automates Meta Ads and Apple Ads** for apps: syncs your campaigns, spend and revenue (RevenueCat), tracks
+  competitor ads and reels, and puts one number on top: monthly profit against your goal. Google Ads and SEO are next.
+- **Built to iterate fast without getting banned.** Data from ad platforms is fetched **once a day** by read-only
+  syncs, and every analysis reads the database, never the platform API. No polling, no scraping on every question.
+- **Changes go through experiments and playbooks.** Every campaign that spends money belongs to an experiment with
+  rules; an agent applies the playbook, drafts a plan, you approve it in chat, and only then is the ad account
+  changed. Every write is journaled; nothing is ever deleted.
 
-<table>
-<tr>
-<td width="50%" valign="top">
-<img src="web/public/home/blimp.webp" alt="" height="44"><br>
-<b>Competitor research</b><br>
-Ads from the Meta Ad Library, plus Instagram, TikTok and Facebook reels from accounts you follow. Videos are
-downloaded and ranked over time.
-</td>
-<td width="50%" valign="top">
-<img src="web/public/home/gears.webp" alt="" height="44"><br>
-<b>Your channels</b><br>
-Your Meta ad account and Apple Ads campaigns (spend, installs, trials, keywords, search terms), your own posts'
-views, and RevenueCat revenue for attribution and profit.
-</td>
-</tr>
-<tr>
-<td valign="top">
-<img src="web/public/home/megaphone.webp" alt="" height="44"><br>
-<b>Creative analysis</b><br>
-Gemini breaks each video or image into its hook, script, angle and production style, so you can see what works.
-</td>
-<td valign="top">
-<img src="web/public/home/conveyor.webp" alt="" height="44"><br>
-<b>Experiments and agents</b><br>
-A record per test with a dated log and follow-ups. On top: a web app, a read-only MCP server and
-<code>pnpm brief</code>, which tells an agent where things stand.
-</td>
-</tr>
-</table>
+<div align="center">
+<img src="web/public/home/factory-simple.webp" alt="A paper-cut factory with two striped smokestacks and a lime flag on a hill above the sea" width="420">
+</div>
 
-Everything specific to a product (competitors, keywords, accounts, goals) lives in the database, so the code
-stays generic. Every integration except the database is optional: turn on only what you use.
+## Experiments, playbooks and how campaigns change
+
+```
+ad platform ──(daily sync, read-only)──► Postgres ──► agent reads pnpm brief ──► plan ──► you approve ──► write
+     ▲                                                                                                    │
+     └──────────────────────────── journaled change + dated line in the experiment log ◄─────────────────┘
+```
+
+- **Experiments** are the unit of memory. Each one says what is being tested, its budget and dates, the rules that
+  decide it (for example "pause an ad that spent 3× what a trial is worth without getting one") and, when it ends,
+  what was learned.
+  Every decision, observation and follow-up is a dated line in its log, so "where are we?" has an answer any day.
+  `pnpm experiment list --product <slug>`.
+- **Playbooks** ([playbooks/](playbooks)) are the generic operating method agents follow:
+  [daily-review.md](playbooks/daily-review.md) (the once-a-day routine: read the brief, apply each experiment's
+  rules, log, draft plans), plus [meta-ads.md](playbooks/meta-ads.md) and [apple-ads.md](playbooks/apple-ads.md)
+  for channel structure and defaults.
+- **Plans** are documents in the database. An agent writes one with one reason per change, you say yes in chat,
+  then a write command (`pnpm meta-ads pause|activate|launch|...`) applies it from your machine. Pacing is part of
+  the rules: at most a 20% budget or bid change, once per ad set or keyword per 24 hours.
+
+The full model is in [docs/marketing-loop.md](docs/marketing-loop.md).
 
 ## What's built and what's next
 
