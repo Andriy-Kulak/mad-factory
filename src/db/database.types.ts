@@ -664,6 +664,7 @@ export type Database = {
           created_at: string;
           last_used_at: string | null;
           revoked_at: string | null;
+          scope: string;
         };
         Insert: {
           id?: string;
@@ -672,6 +673,7 @@ export type Database = {
           created_at?: string;
           last_used_at?: string | null;
           revoked_at?: string | null;
+          scope?: string;
         };
         Update: {
           id?: string;
@@ -680,6 +682,7 @@ export type Database = {
           created_at?: string;
           last_used_at?: string | null;
           revoked_at?: string | null;
+          scope?: string;
         };
         Relationships: [];
       };

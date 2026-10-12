@@ -211,17 +211,21 @@ Hosted, it signs in with GitHub and lets in only the numeric GitHub user IDs in 
 
 ### MCP for agents
 
-`/api/mcp` is a read-only [MCP](https://modelcontextprotocol.io) server (Streamable HTTP). Each agent gets its own
+`/api/mcp` is an [MCP](https://modelcontextprotocol.io) server (Streamable HTTP). Each agent gets its own
 key and sends `Authorization: Bearer <key>`:
 
 ```bash
-pnpm mcp-key create --name my-agent   # prints the key once; only its SHA-256 is stored
+pnpm mcp-key create --name my-agent                    # read-only; prints the key once, only its SHA-256 is stored
+pnpm mcp-key create --name research-bot --scope research
 pnpm mcp-key list
 pnpm mcp-key revoke --name my-agent
 ```
 
-The tools are `start_here`, `brief`, `recent_activity`, `experiments`, `experiment`, `apple_ads`, `meta_ads`,
-`list_docs` and `read_doc`.
+Every key gets the read tools: `start_here`, `brief`, `recent_activity`, `experiments`, `experiment`, `apple_ads`,
+`meta_ads`, `competitor_ads`, `organic_posts`, `creative_profile`, `tracked_sources`, `product_docs`, `list_docs` and
+`read_doc`. A `research` key also gets `track_ad_library` and `track_social_account` (follow a competitor or
+adjacent-niche page or account; fetched on the next daily sync) and `favorite` (star or unstar one ad or post without
+following its account). No key can delete anything, touch the product's own accounts or change an ad account.
 
 ## Working with AI agents
 

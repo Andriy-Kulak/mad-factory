@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOwner } from "./auth/server";
 import { getDb } from "./db";
+import { insertTrackedSource, type TrackedSourceInsert } from "./research-writes";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "./social";
 import { isAdRelation, parseAdLibraryInput, parseSocialAccountInput, type AdRelation } from "../../src/lib/tracked-source-input.ts";
 
@@ -15,20 +16,10 @@ const MANAGED_SOURCES = ["meta", ...SOCIAL_PLATFORMS];
 const field = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-async function insertSource(
-  slug: string,
-  row: { product_id: string; source: string; kind: string; value: string; country: string; label: string | null; config: Record<string, string> },
-  what: string,
-): Promise<SourceFormState> {
-  const db = getDb();
-  const res = await db.from("tracked_sources").insert(row).select("id").single();
-  if (res.error?.code === "23505") {
-    const existing = await db.from("tracked_sources").select("enabled").match({ product_id: row.product_id, source: row.source, kind: row.kind, value: row.value, country: row.country }).maybeSingle();
-    return { error: existing.data?.enabled === false ? `${what} is already tracked but paused. Resume it below.` : `${what} is already tracked.` };
-  }
-  if (res.error) return { error: res.error.message };
-  revalidatePath(`/p/${slug}`, "layout");
-  return { ok: `Added ${what}. It will be fetched on the next sync.` };
+async function insertSource(slug: string, row: TrackedSourceInsert, what: string): Promise<SourceFormState> {
+  const result = await insertTrackedSource(row, what);
+  if (result.ok) revalidatePath(`/p/${slug}`, "layout");
+  return result;
 }
 
 export async function addSocialAccount(productId: string, slug: string, _prev: SourceFormState, form: FormData): Promise<SourceFormState> {
