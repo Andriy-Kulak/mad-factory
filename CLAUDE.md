@@ -34,7 +34,7 @@ Several agents (Claude, Codex/GPT, Devin) work in this repo at once. They share 
   yourself (squash). CI (`.github/workflows/ci.yml`) runs the same `pnpm ready` on every PR and push to `main`.
   A PR that changes anything visual includes before/after screenshots in its description.
 - **The owner approves ad-account changes in chat, not by merging.** An ad account changes only when an
-  agent runs a write command (`pnpm meta-ads pause|activate|adset-update|create-ad|ad-text|launch`, with a
+  agent runs a write command (`pnpm meta-ads pause|activate|adset-update|adset-copy|create-ad|ad-text|launch`, with a
   reviewed plan document in `product_docs` (`pnpm product docs add <slug> --kind plan --file <path>`), journaled to `meta_ads_changes`) after the owner says
   yes in chat. Merging a PR never changes an ad account. Separately, `pnpm ready` demands owner sign-off
   for dangerous diffs: destructive SQL in a migration, a `.delete()` in code, editing a committed
@@ -180,8 +180,9 @@ their existing post so likes and comments carry over.
 **NEVER delete or archive Meta ads, ad sets, campaigns or creatives — not even if the owner asks.
 Pausing is reversible; deleting is not.** The client's write surface is a small allowlist
 (`assertNotDestructive` guards every request): `meta-ads pause --ad <id>`, `meta-ads activate --ad|--adset <id>`,
-`meta-ads adset-update --adset <id> [--name|--min-spend]`, `meta-ads create-ad --adset <id> --template-ad <id>
-(--file|--video-id)` which uploads a video and creates a PAUSED ad from a template creative (ads are always
+`meta-ads adset-update --adset <id> [--name|--min-spend|--daily-budget]`,
+`meta-ads adset-copy --adset <id> --name <n> [--daily-budget <usd>]` which copies an ad set into its campaign
+without its ads, PAUSED, `meta-ads create-ad --adset <id> --template-ad <id> (--file|--video-id)` which uploads a video and creates a PAUSED ad from a template creative (ads are always
 created PAUSED), `meta-ads ad-text --ad <id> --title|--body ...` which swaps an ad's text via a rebuilt
 inline creative, and `meta-ads launch --spec local/<file>.json` which batches create PAUSED → activate → DB
 mirror from a local spec (see "Launching new ads" in playbooks/meta-ads.md). Uploads are

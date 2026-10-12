@@ -142,12 +142,29 @@ test("updateAdset sends only allowed keys and throws when empty", async () =>
       return response({ success: true });
     }) as typeof fetch);
     await assert.rejects(client.updateAdset("55", {}), /needs name/);
-    await client.updateAdset("55", { name: "New name", dailyMinSpendCents: 1500 });
+    await client.updateAdset("55", { name: "New name", dailyMinSpendCents: 1500, dailyBudgetCents: 6000 });
     assert.equal(calls.length, 1);
     const params = new URLSearchParams(String(calls[0]!.body));
     assert.equal(params.get("name"), "New name");
     assert.equal(params.get("daily_min_spend_target"), "1500");
-    assert.deepEqual([...params.keys()].sort(), ["daily_min_spend_target", "name"]);
+    assert.equal(params.get("daily_budget"), "6000");
+    assert.deepEqual([...params.keys()].sort(), ["daily_budget", "daily_min_spend_target", "name"]);
+  }));
+
+test("copyAdset POSTs /copies without ads and always PAUSED", async () =>
+  withEnv({ META_ADS_TOKEN: "secret" }, async () => {
+    const calls: { url: string; body?: unknown }[] = [];
+    const client = new MetaAdsClient({}, (async (url, init) => {
+      calls.push({ url: String(url), body: init?.body });
+      return response({ copied_adset_id: "77" });
+    }) as typeof fetch);
+    await assert.rejects(client.copyAdset("55/copies"), /bare ad set id/);
+    const result = await client.copyAdset("55");
+    assert.deepEqual(result.body, { copied_adset_id: "77" });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "https://graph.facebook.com/v26.0/55/copies");
+    const params = new URLSearchParams(String(calls[0]!.body));
+    assert.deepEqual(Object.fromEntries(params), { deep_copy: "false", status_option: "PAUSED" });
   }));
 
 test("createAd always sends status=PAUSED, plus validate_only when requested", async () =>

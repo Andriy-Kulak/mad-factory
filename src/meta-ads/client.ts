@@ -4,13 +4,14 @@ import type { ApiPage, MetaAdsCallJournalEntry } from "./types.ts";
 
 // OWNER RULE — read this before touching anything in this file:
 // This client is read-only plus a small explicit allowlist of writes: `pause`,
-// `activate`, `updateAdset`, `uploadVideo`, `uploadImage`, `createAd` and
-// `updateAdCreative`. Nothing else, and there
+// `activate`, `updateAdset`, `copyAdset`, `uploadVideo`, `uploadImage`, `createAd`
+// and `updateAdCreative`. Nothing else, and there
 // is deliberately no public generic post/request method — new writes are added by
 // name here, never improvised. NEVER delete or archive a Meta ad, ad set, campaign
 // or creative — not even if the owner asks. `assertNotDestructive` guards every
 // request and throws on DELETE or DELETED/ARCHIVED values. Pausing is reversible;
-// deleting is not. Ads created by `createAd` are always created PAUSED.
+// deleting is not. Ads created by `createAd` and ad sets created by `copyAdset`
+// are always created PAUSED.
 
 // Defence in depth for the owner rule above: writes may pause/activate/create, never delete or archive.
 export function assertNotDestructive(method: string, params: Record<string, unknown>): void {
@@ -165,15 +166,25 @@ export class MetaAdsClient {
     return this.post(`/${objectId}`, { status: "ACTIVE" });
   }
 
-  // Allowlisted write: update an ad set's name and/or daily_min_spend_target. Only
-  // these two keys are ever sent; throws when both are empty.
-  async updateAdset(adsetId: string, options: { name?: string; dailyMinSpendCents?: number }): Promise<unknown> {
+  // Allowlisted write: update an ad set's name, daily_min_spend_target and/or
+  // daily_budget (cents). Only these three keys are ever sent; throws when all are empty.
+  async updateAdset(adsetId: string, options: { name?: string; dailyMinSpendCents?: number; dailyBudgetCents?: number }): Promise<unknown> {
     if (!/^[^/?#]+$/.test(adsetId)) throw new Error("updateAdset expects a bare ad set id");
     const fields: Record<string, string> = {};
     if (options.name !== undefined) fields.name = options.name;
     if (options.dailyMinSpendCents !== undefined) fields.daily_min_spend_target = String(options.dailyMinSpendCents);
-    if (!Object.keys(fields).length) throw new Error("updateAdset needs name and/or dailyMinSpendCents");
+    if (options.dailyBudgetCents !== undefined) fields.daily_budget = String(options.dailyBudgetCents);
+    if (!Object.keys(fields).length) throw new Error("updateAdset needs name, dailyMinSpendCents and/or dailyBudgetCents");
     return this.post(`/${adsetId}`, fields);
+  }
+
+  // Allowlisted write: copy an ad set into its own campaign WITHOUT its ads
+  // (deep_copy=false). The copy is always PAUSED — there is no parameter to change
+  // it. Meta ignores validate_only on /copies, so there is no dry run against Meta.
+  // Resolves to `{ status, body }`; body.copied_adset_id is the new ad set.
+  async copyAdset(adsetId: string): Promise<{ status: number; body: unknown }> {
+    if (!/^[^/?#]+$/.test(adsetId)) throw new Error("copyAdset expects a bare ad set id");
+    return this.post(`/${adsetId}/copies`, { deep_copy: "false", status_option: "PAUSED" });
   }
 
   // Allowlisted write: upload a video to /act_<id>/advideos, poll until it is

@@ -17,7 +17,7 @@ Built so far (reads + the allowlisted writes below):
 | --- | --- |
 | Tables `meta_ads_campaigns`, `_adsets`, `_creatives`, `_ads`, `_ad_daily`, `_ad_daily_breakdowns` (country), `_changes` (journal); RLS on, no policies | `supabase/migrations/20261002000000_meta_ads.sql` |
 | Read-only + allowlisted-write Graph client (bearer token, call ceiling, stop at 90% usage, every call journaled; `assertNotDestructive` refuses deletes/archives) | `src/meta-ads/client.ts` |
-| Pause / activate / adset-update / create-ad / ad-text writes, account-checked, `--plan`-gated, journaled to `meta_ads_changes` before each write | `src/meta-ads/pause.ts`, `activate.ts`, `update-adset.ts`, `create-ad.ts`, `update-ad-text.ts`; `pnpm meta-ads pause|activate|adset-update|create-ad|ad-text` |
+| Pause / activate / adset-update / adset-copy / create-ad / ad-text writes, account-checked, `--plan`-gated, journaled to `meta_ads_changes` before each write | `src/meta-ads/pause.ts`, `activate.ts`, `update-adset.ts`, `create-ad.ts`, `update-ad-text.ts`; `pnpm meta-ads pause|activate|adset-update|adset-copy|create-ad|ad-text` |
 | Sync: account → campaigns → ad sets → ads + creatives → daily ad insights + country, auto window 7–28 days | `src/meta-ads/sync.ts`, `pnpm meta-ads sync --product <slug> [--days n\|auto] [--dry-run]` |
 | Manual creative tags in `meta_ads_creatives.attributes`: `angle`, `hook`, `format`, `length_s`, `version`, `avatar` (other keys allowed, with a warning) | `pnpm meta-ads tag <creative_id> hook=pain-first avatar=… [--remove key]` |
 | DB-only status | `pnpm meta-ads status --product <slug>` |
@@ -25,8 +25,9 @@ Built so far (reads + the allowlisted writes below):
 
 Not built yet: name parsing / `name_attributes` and the attribute view (naming deferred), `apply` and any write
 outside the allowlist, the automation step, the playbook. **Writes are a small allowlist by owner rule: pause,
-activate, updateAdset (name / daily_min_spend_target), uploadVideo, createAd, updateAdCreative — and NEVER delete
-or archive Meta ads, ad sets, campaigns or creatives, not even if the owner asks. Ads are always created PAUSED.**
+activate, updateAdset (name / daily_min_spend_target / daily_budget), copyAdset (without ads), uploadVideo, createAd,
+updateAdCreative — and NEVER delete or archive Meta ads, ad sets, campaigns or creatives, not even if the owner asks.
+Ads and copied ad sets are always created PAUSED.**
 Template-created ads should get per-ad headlines/primary text matched to the video's hook (reuse the template
 text verbatim only when the hook is the same) — `meta-ads ad-text` swaps text on an existing ad.
 

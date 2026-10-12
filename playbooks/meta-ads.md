@@ -52,12 +52,14 @@ Do not flip a campaign between ABO and CBO to change its role; create the other 
 ## Testing a batch
 
 1. Keep the control (the current best ad) running alone in its own ad set in the test campaign.
-2. Put a batch of variants in a new ad set in the same campaign. In app campaigns, copy the control's ad set
-   (Meta requires the same attribution settings within a campaign), then rename it.
+2. Put a batch of variants in a new ad set in the same campaign. In app campaigns, copy an existing ad set
+   (Meta requires the same attribution settings within a campaign): `meta-ads adset-copy --adset <id> --name <n>
+   --daily-budget <usd>` copies it without its ads, PAUSED, names it and sets its budget. Activate it with
+   `meta-ads activate --adset <id>` once its ads are launched.
 3. Create each ad paused from the control's creative (`meta-ads create-ad --template-ad`), with headlines and
    primary text rewritten for that video's hook. Owner turns them on.
-4. Set each ad set's daily budget for the split the owner wants, and check the total against the intended
-   account spend.
+4. Set each ad set's daily budget for the split the owner wants (`meta-ads adset-update --daily-budget`), and
+   check the total against the intended account spend.
 5. Record the batch as an experiment with its goal (beat the control's cost per trial) and log decisions.
 
 Expect Meta to put most of an ad set's spend on one or two ads. A batch answers "does any variant beat the
@@ -92,6 +94,5 @@ Use a new creative from the same `video_id` only when the text needs to change; 
 
 - Creating a campaign from code (`meta-ads` cannot yet).
 - Creating an ad on an existing post (`create-ad` builds a new creative today; a `--post <id>` option is planned).
-- Setting an ad set's daily budget from code (`adset-update` only sets name and minimum spend).
 - Unverified: whether a post from an ad that rotates several headlines and primary texts can be reused as is.
   Check with a validate-only call before relying on it.

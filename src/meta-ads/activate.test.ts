@@ -100,5 +100,5 @@ test("updateAdset refuses a foreign account and journals before the write", asyn
   await updateAdset(client, "acme", { adsetId: "s1", name: "New", dailyMinSpendCents: 2500, plan: "plan.md", dryRun: false }, updateDeps);
   assert.ok(events.indexOf("insert s1") < events.indexOf("updateAdset"));
   assert.match(changes[0]!.note ?? "", /Old name/);
-  assert.deepEqual(updates, [{ name: "New", dailyMinSpendCents: 2500 }]);
+  assert.deepEqual(updates, [{ name: "New", dailyMinSpendCents: 2500, dailyBudgetCents: undefined }]);
 });
