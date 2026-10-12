@@ -192,6 +192,12 @@ New ads and copied ad sets are always
 created paused. Nothing in the code can delete or archive a campaign, ad set, ad or creative. The web app and the
 MCP server cannot change an ad account at all.
 
+**Work in progress: separate read and write keys.** Today each ad platform has one key that can both read and
+write, so any agent session that holds it could change an ad account. The plan for the coming weeks: a separate
+small service holds the write keys and applies only changes the owner approved, and mad-factory itself (syncs,
+the daily review, agents, the web app) gets read-only keys, so an LLM can't change an ad account by mistake.
+It isn't done yet because some platforms make keeping two keys per account awkward.
+
 ## Web app
 
 `pnpm web` starts it at http://localhost:3000. It has:
