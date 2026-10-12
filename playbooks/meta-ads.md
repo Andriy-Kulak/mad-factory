@@ -11,21 +11,21 @@ trying out from 2026-10-05; revise it as results come in.
 - **Never delete or archive** an ad, ad set, campaign or creative, not even if the owner asks. Pause instead;
   pausing is reversible. The client enforces this (`assertNotDestructive`).
 - Ads are always created **paused**. They go live only after the owner says go.
-- Every write goes through `pnpm meta-ads ...` with a `--plan` document name and is journaled in `meta_ads_changes`.
+- Every write follows `playbooks/ad-changes.md` (plan → owner approval → apply → read-back → log): the
+  `pnpm meta-ads ...` write commands take `--plan <name>` and journal to `meta_ads_changes`.
 - Keep API use small. A handful of calls per task is fine; anything bulk or repeated (loops, retries, probing
   settings to see what Meta accepts) needs the owner's explicit OK first. Status changes are spaced 31s apart.
 - Read numbers from the database (`pnpm meta-ads sync`), not by browsing the API.
-- After a batch of approved writes, run `pnpm meta-ads verify --product <slug> --plan <name>`
+- The read-back step of `playbooks/ad-changes.md` is `pnpm meta-ads verify --product <slug> --plan <name>`
   once for the plan — it re-reads only the affected objects in two grouped GETs and prints a
-  pass/fail table. Paste the table into the plan document under a "## Result" section. Do not
-  re-read after each write.
+  pass/fail table. Do not re-read after each write.
 
 ## Launching new ads
 
 1. The owner gives creatives + intent.
 2. The agent writes the launch spec JSON under `local/`, adds a plan document to `product_docs` with the reasoning,
    and sends the owner a one-line-per-ad summary: name, ad set, headlines, text.
-3. On approval, `pnpm meta-ads launch --product <slug> --spec local/<file>.json` creates every ad PAUSED,
+3. On approval (per `playbooks/ad-changes.md`), `pnpm meta-ads launch --product <slug> --spec local/<file>.json` creates every ad PAUSED,
    activates them and mirrors them into the DB after Meta returns success. The morning sync re-reads
    everything.
 

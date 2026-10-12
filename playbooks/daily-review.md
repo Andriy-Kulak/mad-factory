@@ -41,7 +41,7 @@ that the owner changes in Ads Manager.
    - *Too early*: everything else. Say so instead of acting.
 7. **Write the plan.** At most one plan per channel per day: add a plan document to `product_docs` with a table of
    changes and one line of reason each, quoting the brief's numbers (`pnpm product docs add <slug> --kind plan --file <path>`).
-   The owner approves it before anything is applied. Discovery-mirror gaps listed by the brief go into that day's
+   The owner approves it before anything is applied; approved changes are applied per `playbooks/ad-changes.md`. Discovery-mirror gaps listed by the brief go into that day's
    Apple plan as the missing BROAD/negative keywords. After a batch of approved writes runs, verify it once with
    `pnpm meta-ads verify --product <slug> --plan <name>` and paste the table into the plan document under "## Result"
    — never re-read after each write.

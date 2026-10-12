@@ -77,7 +77,8 @@ flowchart LR
   `pnpm experiment list --product <slug>`.
 - **Playbooks** ([playbooks/](playbooks)) are the method agents follow: [daily-review.md](playbooks/daily-review.md)
   (once a day: read the brief, judge each running experiment by its rules, log, draft plans), plus
-  [meta-ads.md](playbooks/meta-ads.md) and [apple-ads.md](playbooks/apple-ads.md) for how campaigns are structured.
+  [meta-ads.md](playbooks/meta-ads.md) and [apple-ads.md](playbooks/apple-ads.md) for how campaigns are structured, and
+  [ad-changes.md](playbooks/ad-changes.md) for the one procedure that changes an ad account.
 - **Plans** turn a verdict into a change: one reason per item, you say yes in chat, then a write command
   (`pnpm meta-ads pause|activate|launch|...`) applies it. Changes are paced: at most 20% on a budget or bid, once
   per ad set or keyword per 24 hours. Nothing is ever deleted.
@@ -184,7 +185,7 @@ reads and writes and what each run costs in API calls.
 
 ### Changing an ad account
 
-Most commands only read. The Meta write commands (`pause`, `activate`, `adset-update`, `adset-copy`, `create-ad`,
+Most commands only read. Every ad-account change follows [playbooks/ad-changes.md](playbooks/ad-changes.md). The Meta write commands (`pause`, `activate`, `adset-update`, `adset-copy`, `create-ad`,
 `ad-text`, `launch`) each need a reviewed plan document in `product_docs`, and every request is journaled before it is sent. Read one with
 `pnpm product docs show <slug> <name>`; add or update one with `pnpm product docs add <slug> --kind plan --file <path>`.
 New ads and copied ad sets are always
@@ -221,7 +222,7 @@ The tools are `start_here`, `brief`, `recent_activity`, `experiments`, `experime
 The repository is set up for coding and marketing agents working side by side:
 
 - [CLAUDE.md](CLAUDE.md) (also `AGENTS.md`) holds the rules every agent follows.
-- [playbooks/](playbooks) holds the operating method: a daily review, plus Meta Ads and Apple Ads playbooks.
+- [playbooks/](playbooks) holds the operating method: a daily review, ad-changes.md for ad-account changes, plus Meta Ads and Apple Ads playbooks.
 - `pnpm ready` runs every gate before a change merges: typecheck, tests, database types, and the repository's
   review rules.
 

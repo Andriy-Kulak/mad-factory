@@ -33,7 +33,7 @@ Several agents (Claude, Codex/GPT, Devin) work in this repo at once. They share 
   the PR description (`.github/pull_request_template.md`). When it passes and nothing needs the owner, merge it
   yourself (squash). CI (`.github/workflows/ci.yml`) runs the same `pnpm ready` on every PR and push to `main`.
   A PR that changes anything visual includes before/after screenshots in its description.
-- **The owner approves ad-account changes in chat, not by merging.** An ad account changes only when an
+- **The owner approves ad-account changes in chat, not by merging.** The procedure is `playbooks/ad-changes.md`. An ad account changes only when an
   agent runs a write command (`pnpm meta-ads pause|activate|adset-update|adset-copy|create-ad|ad-text|launch`, with a
   reviewed plan document in `product_docs` (`pnpm product docs add <slug> --kind plan --file <path>`), journaled to `meta_ads_changes`) after the owner says
   yes in chat. Merging a PR never changes an ad account. Separately, `pnpm ready` demands owner sign-off
@@ -89,7 +89,8 @@ scripts/               migrate.ts, migrate-local.ts (PGlite), gen-types.ts, chec
 examples/              fictional example product profile
 product_docs           brand, research, plan and write-up documents in the database; use `pnpm product docs`
                        or MCP `product_docs` to list, read, import and export them
-playbooks/             generic operating method: daily-review.md (the unattended daily routine); per channel read
+playbooks/             generic operating method: daily-review.md (the unattended daily routine); ad-changes.md
+                       (the one procedure for changing an ad account); per channel read
                        playbooks/apple-ads.md or playbooks/meta-ads.md first
 docs/                  design documents (docs/apple-ads-plan.md: schema, CLI and build order for Apple Ads + experiments)
 web/                   Next.js 16 app (App Router, Tailwind v4): browse products, sources, runs, Meta ads, Apple Ads.
