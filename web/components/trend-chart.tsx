@@ -12,7 +12,7 @@ export function TrendChart({ weeks, channelLabels }: { weeks: WeekLine[]; channe
   if (!weeks.length) return null;
   const channelOrder = (channel: string) => (channel === "meta_ads" ? 0 : channel === "apple_ads" ? 1 : 2);
   const channels = Object.keys(weeks[0]!.spendByChannel).sort((a, b) => channelOrder(a) - channelOrder(b) || a.localeCompare(b));
-  const channelFill = (channel: string) => (channel === "meta_ads" ? "var(--pop-1)" : channel === "apple_ads" ? "var(--pop-3)" : "var(--fg-3)");
+  const channelFill = (channel: string) => (channel === "meta_ads" ? "var(--fg-2)" : channel === "apple_ads" ? "var(--warn)" : "var(--fg-3)");
   const max = Math.max(1, ...weeks.flatMap((w) => [w.spend, w.proceeds]));
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
@@ -58,7 +58,7 @@ export function TrendChart({ weeks, channelLabels }: { weeks: WeekLine[]; channe
                         y={top + height / 2 + 4}
                         textAnchor={height >= 16 ? "middle" : "end"}
                         fontSize={11}
-                        fill="var(--fg)"
+                        fill={height >= 16 ? "#fff" : "var(--fg)"}
                         fontFamily="var(--font-mono)"
                       >
                         {dollars(amount)}
