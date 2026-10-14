@@ -9,7 +9,7 @@ const HELP = `Usage: pnpm creatives <command> [options]
 
 Commands:
   profile --product <slug>           Have an LLM break down each stored media file into a creative profile.
-    --source own|library|all         Which creatives to profile (default all).
+    --source own|library|all|favorites  Which creatives to profile (default all; favorites = starred ads and posts).
     --limit <n>                      Profile at most n creatives (counted after skipping already-profiled ones).
     --min-days <n>                   Ad Library media only: skip files whose longest-running ad ran under n days.
     --model <id>                     Bare Gemini id for the direct API, or google/<id> for the AI Gateway
@@ -54,8 +54,8 @@ if (values.help || !command) {
 
 async function profileCommand(): Promise<void> {
   if (!values.product) throw new Error("profile needs --product <slug>");
-  if (values.source !== "own" && values.source !== "library" && values.source !== "all") {
-    throw new Error("--source must be own, library or all");
+  if (values.source !== "own" && values.source !== "library" && values.source !== "all" && values.source !== "favorites") {
+    throw new Error("--source must be own, library, all or favorites");
   }
   const limit = values.limit === undefined ? undefined : Number(values.limit);
   if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {

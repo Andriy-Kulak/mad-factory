@@ -39,6 +39,13 @@ export function useUrlState(query: string) {
 /** Starred ids, updated instantly; `save` persists a change and a failed save is rolled back. */
 export function useFavoriteSet(initial: string[], save: (ids: string[], on: boolean) => Promise<void>) {
   const [favs, setFavs] = useState(() => new Set(initial));
+  // A server refresh (e.g. after saving by link) brings new starred ids; take them over.
+  const key = initial.join(",");
+  const [seen, setSeen] = useState(key);
+  if (seen !== key) {
+    setSeen(key);
+    setFavs(new Set(initial));
+  }
   const apply = (ids: string[], on: boolean) =>
     setFavs((cur) => {
       const next = new Set(cur);

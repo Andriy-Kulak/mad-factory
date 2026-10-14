@@ -25,7 +25,9 @@ that the owner changes in Ads Manager.
    breaks down each new Ad Library video or image whose ad has run 7+ days (one Gemini Flash call per file; files
    already profiled and one-day tests are skipped, so a quiet day costs nothing). This is how a newly added
    advertiser, competitor or adjacent niche, reaches Creatives and Insights without anyone asking. No
-   `GEMINI_API_KEY` in this environment: skip it and list it under "Stale or broken".
+   `GEMINI_API_KEY` in this environment: skip it and list it under "Stale or broken". Then
+   `pnpm creatives profile --product <slug> --source favorites` covers every starred ad and post, whatever its age (the
+   web app already profiles a file when it is starred; this catches the ones that failed).
 4. **Check follow-ups.** The brief's "Follow-ups due" lists promises whose day has come. Act on each now (usually
    a line in today's plan), then run `pnpm experiment resolve --product <slug> --id <id> "<what was done>"`. If it
    is still too early, resolve it and log a new one with a later `--due`.
