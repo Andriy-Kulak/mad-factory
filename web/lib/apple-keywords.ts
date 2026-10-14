@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import type { AppleAdsCampaignRow, AppleAdsKeywordDailyRow, AppleAdsKeywordRow, AppleAdsTermPopularityRow } from "@db/types";
 
@@ -55,3 +56,5 @@ export async function getAppleKeywords(productId: string, days: number): Promise
   const lastPulledAt = rows.reduce<string | null>((m, r) => (m == null || r.pulled_at > m ? r.pulled_at : m), null);
   return { rows, lastPulledAt, since, unavailable: null };
 }
+
+export const getAppleKeywordsCached = cachedByProduct("appleKeywords", getAppleKeywords);

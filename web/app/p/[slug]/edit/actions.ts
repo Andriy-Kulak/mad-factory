@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireOwner } from "@/lib/auth/server";
+import { productTag } from "@/lib/cache";
 import { getDb } from "@/lib/db";
 
 const lines = (v: FormDataEntryValue | null) =>
@@ -31,6 +32,7 @@ export async function updateProduct(id: string, slug: string, form: FormData): P
     })
     .eq("id", id);
   if (res.error) throw new Error(res.error.message);
+  updateTag(productTag(id));
   revalidatePath(`/p/${slug}`);
   redirect(`/p/${slug}/brand?doc=profile`);
 }

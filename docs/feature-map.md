@@ -46,6 +46,8 @@ journaled to `meta_ads_changes` and requiring a `--plan` document name.
 
 ## Web pages (`web/app`, server components; Supabase service-role reads unless noted)
 
+Heavy per-product server data is cached for 5 minutes with stale-while-revalidate; server-action writes invalidate the product tag.
+
 | Route | What it shows | Reads/writes | Tables touched | External API cost per run |
 |---|---|---|---|---|
 | `/` | Product list | DB read | `products` | 0 |

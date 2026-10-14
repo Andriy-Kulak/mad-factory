@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getTrackedSources } from "@/lib/queries";
 import { channelSetup, type ChannelSetup } from "@/lib/setup";
-import { DEFAULT_WINDOW_DAYS, formatBrief, overviewFor, type Overview } from "@/lib/overview";
+import { DEFAULT_WINDOW_DAYS, formatBrief, overviewForCached, type Overview } from "@/lib/overview";
 import { fmtAgo, fmtDate, fmtDateTime, fmtInt, fmtMoney } from "@/lib/format";
 import { Shell } from "@/components/shell";
 import { TrendChart } from "@/components/trend-chart";
@@ -18,7 +18,7 @@ export default async function ProductOverview({ params, searchParams }: { params
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const days = WINDOWS.includes(Number(sp.days)) ? Number(sp.days) : DEFAULT_WINDOW_DAYS;
-  const [o, sources] = await Promise.all([overviewFor(product, { days }), getTrackedSources(product.id)]);
+  const [o, sources] = await Promise.all([overviewForCached(product.id, product, { days }), getTrackedSources(product.id)]);
   const channels = channelSetup(slug, sources);
   // Presenter mode: the trend and channel numbers only, without the goal, internal notes and agent sections.
   const present = sp.present === "1";

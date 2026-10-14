@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { competitorAds, getProductBySlug } from "@/lib/queries";
+import { competitorAdsCached, getProductBySlug } from "@/lib/queries";
 import { favoriteIds } from "@/lib/favorites";
 import { parseInsightFilters, type SearchParams } from "@/lib/insights";
 import { Shell } from "@/components/shell";
@@ -12,7 +12,7 @@ export default async function InsightsPage({ params, searchParams }: { params: P
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [cards, favorites] = await Promise.all([competitorAds(product.id), favoriteIds(product.id, "ad")]);
+  const [cards, favorites] = await Promise.all([competitorAdsCached(product.id), favoriteIds(product.id, "ad")]);
   return (
     <Shell title="Insights" subtitle="What competitors keep paying for: angles, personas, hooks, formats and landing pages of the ads that keep running">
       {cards.length === 0 ? (
