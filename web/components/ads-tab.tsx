@@ -10,8 +10,6 @@ import { AdBrowser } from "@/components/ad-browser";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 
-export const dynamic = "force-dynamic";
-
 export function AdsTab({ product, initial, panel }: { product: { id: string; slug: string }; initial: ReturnType<typeof parseAdFilters>; panel: ReactNode }) {
   const { data, isPending, isError, refetch } = useTab(product, "ads");
   if (isPending) return <PageSkeleton title="Competitor ads" stats={5} body="cards" sidebar />;

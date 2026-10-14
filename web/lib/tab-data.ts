@@ -11,44 +11,14 @@ import { getMetaAdsOverviewCached } from "./meta-ads";
 import { listCreativeItemsCached } from "./creatives";
 import { channelSetup } from "./setup";
 import { DEFAULT_WINDOW_DAYS, formatBrief, overviewForCached } from "./overview";
-
-const APPLE_ADS_RANGES = [2, 7, 14, 28, 90];
-const META_ADS_RANGES = [7, 14, 28, 90];
-
-function isoDay(value: string | null): string | null {
-  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) ? value : null;
-}
-
-function appleAdsRange(sp: URLSearchParams) {
-  const today = new Date().toISOString().slice(0, 10);
-  const from = isoDay(sp.get("from"));
-  const to = isoDay(sp.get("to")) ?? today;
-  const custom = from != null && from <= to;
-  const requested = Number(sp.get("days"));
-  const days = APPLE_ADS_RANGES.includes(requested) ? requested : 28;
-  return {
-    since: custom ? from : new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10),
-    until: custom ? to : today,
-  };
-}
-
-function metaAdsRange(sp: URLSearchParams) {
-  const today = new Date().toISOString().slice(0, 10);
-  const from = isoDay(sp.get("from"));
-  const to = isoDay(sp.get("to")) ?? today;
-  const custom = from != null && from <= to;
-  const requested = Number(sp.get("days"));
-  const days = META_ADS_RANGES.includes(requested) ? requested : 28;
-  return {
-    since: custom ? from : new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10),
-    until: custom ? to : today,
-  };
-}
+import { parseRange } from "@/components/meta-ads";
+import { parseAppleRange } from "./apple-ads-math";
+import { APPLE_KEYWORD_RANGES, OVERVIEW_WINDOWS, SHORT_FORM_KINDS } from "./tab-constants";
 
 export const tabLoaders = {
   overview: async (product: ProductRow, sp: URLSearchParams) => {
     const requested = Number(sp.get("days"));
-    const days = [7, 14, 28].includes(requested) ? requested : DEFAULT_WINDOW_DAYS;
+    const days = OVERVIEW_WINDOWS.includes(requested) ? requested : DEFAULT_WINDOW_DAYS;
     const [overview, sources] = await Promise.all([overviewForCached(product.id, product, { days }), getTrackedSources(product.id)]);
     return {
       overview,
@@ -78,11 +48,12 @@ export const tabLoaders = {
     return { accounts, posts, favorites };
   },
   "my-accounts": async (product: ProductRow) => {
-    const [{ accounts, posts }, favorites] = await Promise.all([organicOverviewCached(product.id, { relations: ["own"], kinds: ["reel", "video"] }), favoriteIds(product.id, "post")]);
+    const [{ accounts, posts }, favorites] = await Promise.all([organicOverviewCached(product.id, { relations: ["own"], kinds: SHORT_FORM_KINDS }), favoriteIds(product.id, "post")]);
     return { accounts, posts, favorites };
   },
   "apple-ads": async (product: ProductRow, sp: URLSearchParams) => {
-    const [overview, experiments] = await Promise.all([getAppleAdsOverviewCached(product.id, appleAdsRange(sp)), getAppleAdsExperimentsCached(product.id)]);
+    const range = parseAppleRange(Object.fromEntries(sp));
+    const [overview, experiments] = await Promise.all([getAppleAdsOverviewCached(product.id, { since: range.since, until: range.until }), getAppleAdsExperimentsCached(product.id)]);
     return {
       overview,
       experiments: experiments.map((entry) => ({
@@ -101,10 +72,13 @@ export const tabLoaders = {
   },
   "apple-keywords": async (product: ProductRow, sp: URLSearchParams) => {
     const requested = Number(sp.get("days"));
-    const days = [7, 14, 28, 90].includes(requested) ? requested : 28;
+    const days = APPLE_KEYWORD_RANGES.includes(requested) ? requested : 28;
     return getAppleKeywordsCached(product.id, days);
   },
-  "meta-ads": async (product: ProductRow, sp: URLSearchParams) => getMetaAdsOverviewCached(product.id, metaAdsRange(sp)),
+  "meta-ads": async (product: ProductRow, sp: URLSearchParams) => {
+    const range = parseRange(Object.fromEntries(sp));
+    return getMetaAdsOverviewCached(product.id, { since: range.since, until: range.until });
+  },
   creatives: async (product: ProductRow) => listCreativeItemsCached(product.id),
 };
 

@@ -7,8 +7,7 @@ import { Badge, Card, Empty, Meter, Segmented, Stat } from "@/components/ui";
 import { DataTable } from "@/components/data-table";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
-
-const RANGES = [7, 14, 28, 90];
+import { APPLE_KEYWORD_RANGES } from "@/lib/tab-constants";
 const FLOOR = 5;
 
 function Popularity({ v }: { v: number | null }) {
@@ -27,7 +26,7 @@ export function AppleKeywordsTab({ product, days }: { product: { id: string; slu
   if (isError || !k) return <TabLoadError title="Apple keywords" retry={() => void refetch()} />;
   const { slug } = product;
 
-  const ranges = <Segmented label="Range" active={String(days)} items={RANGES.map((d) => ({ key: String(d), label: `${d}D`, href: `/p/${slug}/apple-keywords?days=${d}` }))} />;
+  const ranges = <Segmented label="Range" active={String(days)} items={APPLE_KEYWORD_RANGES.map((d) => ({ key: String(d), label: `${d}D`, href: `/p/${slug}/apple-keywords?days=${d}` }))} />;
   const refresh = <code className="num">pnpm apple-ads research --product {slug} --terms "a, b, c"</code>;
 
   if (k.unavailable || !k.rows.length) {

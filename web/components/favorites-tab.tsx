@@ -7,8 +7,6 @@ import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 import { FavoritesView } from "@/components/favorites-view";
 
-export const dynamic = "force-dynamic";
-
 /** Every starred competitor ad and organic post in one place, plus saving one more by link. */
 export function FavoritesTab({ product, panel }: { product: { id: string; slug: string }; panel: ReactNode }) {
   const { data, isPending, isError, refetch } = useTab(product, "favorites");

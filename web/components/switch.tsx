@@ -22,7 +22,7 @@ export function ActionSwitch({ checked, action, label, children }: { checked: bo
         start(async () => {
           setOn(!on);
           await action();
-          await queryClient.invalidateQueries();
+          void queryClient.invalidateQueries();
         })
       }
       aria-busy={pending}

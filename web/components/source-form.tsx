@@ -10,7 +10,7 @@ export function SourceForm({ action, submitLabel, children }: { action: (prev: S
   const actionWithInvalidation = useCallback(
     async (prev: SourceFormState, form: FormData) => {
       const result = await action(prev, form);
-      await queryClient.invalidateQueries();
+      void queryClient.invalidateQueries();
       return result;
     },
     [action, queryClient],

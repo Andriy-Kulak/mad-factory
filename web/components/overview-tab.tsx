@@ -11,8 +11,7 @@ import { DataTable } from "@/components/data-table";
 import { Badge, Card, Empty, Meter, SectionHead, Segmented, Stat, StatusDot } from "@/components/ui";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
-
-const WINDOWS = [7, 14, 28];
+import { OVERVIEW_WINDOWS } from "@/lib/tab-constants";
 
 export function OverviewTab({ product, days, present }: { product: { id: string; slug: string }; days: number; present: boolean }) {
   const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days) });
@@ -24,7 +23,7 @@ export function OverviewTab({ product, days, present }: { product: { id: string;
 
   const action = (
     <div className="flex items-center gap-2">
-      <Segmented label="Window" active={String(days)} items={WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: href(d, present) }))} />
+      <Segmented label="Window" active={String(days)} items={OVERVIEW_WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: href(d, present) }))} />
       <Link href={href(days, !present)} className="btn" title="Show only the trend and channel numbers, for a demo">
         {present ? "Exit presenting" : "Present"}
       </Link>

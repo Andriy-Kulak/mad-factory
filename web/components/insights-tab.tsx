@@ -8,8 +8,6 @@ import { InsightsView } from "@/components/insights-view";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 
-export const dynamic = "force-dynamic";
-
 export function InsightsTab({ product, initial }: { product: { id: string; slug: string }; initial: ReturnType<typeof parseInsightFilters> }) {
   const { data, isPending, isError, refetch } = useTab(product, "insights");
   if (isPending) return <PageSkeleton title="Insights" stats={4} body="table" />;

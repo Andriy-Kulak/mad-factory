@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
 import { AppleKeywordsTab } from "@/components/apple-keywords-tab";
+import { APPLE_KEYWORD_RANGES } from "@/lib/tab-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,6 @@ export default async function AppleKeywordsPage({ params, searchParams }: { para
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const requested = Number(sp.days);
-  const days = [7, 14, 28, 90].includes(requested) ? requested : 28;
+  const days = APPLE_KEYWORD_RANGES.includes(requested) ? requested : 28;
   return <AppleKeywordsTab product={{ id: product.id, slug }} days={days} />;
 }

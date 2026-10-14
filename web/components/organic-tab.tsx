@@ -11,8 +11,6 @@ import { Empty, Stat } from "@/components/ui";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 
-export const dynamic = "force-dynamic";
-
 export function OrganicTab({ product, initial, panel }: { product: { id: string; slug: string }; initial: ReturnType<typeof parseOrganicFilters>; panel: ReactNode }) {
   const { data, isPending, isError, refetch } = useTab(product, "organic");
   if (isPending) return <PageSkeleton title="Organic" stats={4} body="grid" sidebar />;

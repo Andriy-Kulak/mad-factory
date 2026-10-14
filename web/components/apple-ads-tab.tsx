@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTab } from "@/lib/use-tab";
-import { sumInto, summarizeBids, zero, type BidSummary, type Totals } from "@/lib/apple-ads-math";
+import { APPLE_ADS_RANGES, parseAppleRange, sumInto, summarizeBids, zero, type BidSummary, type Totals } from "@/lib/apple-ads-math";
 import type { Blocker, ExperimentSummary, NegativeSummary, RevenueCatStatus } from "@/lib/apple-ads";
 import { fmtDateTime } from "@/lib/format";
 import { Shell } from "@/components/shell";
@@ -13,14 +13,12 @@ import { SpendChart, type DayPoint } from "@/components/spend-chart";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 
-const RANGES = [2, 7, 14, 28, 90];
 const TERMS_PER_KEYWORD = 5;
 const money = (n: number) => `$${n.toFixed(2)}`;
 const int = (n: number) => n.toLocaleString("en-US");
 const pct = (a: number, b: number) => (b ? `${((100 * a) / b).toFixed(1)}%` : "–");
 const per = (spend: number, n: number) => (n ? money(spend / n) : "–");
 const bidRange = (b: BidSummary | null) => (b == null ? "–" : b.min === b.max ? money(b.min) : `${money(b.min)}–${money(b.max)}`);
-const isoDay = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)) ? s : null);
 const shortDay = (ts: string) => new Date(`${ts.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 /** Marks a search term that a negative keyword blocks now. */
@@ -286,14 +284,9 @@ export function AppleAdsTab({ product, params, view: requestedView }: { product:
   if (isPending) return <PageSkeleton title="Apple ads" stats={0} body="table" />;
   if (isError || !data) return <TabLoadError title="Apple ads" retry={() => void refetch()} />;
   const { slug } = product;
-  const sp = params;
   const today = new Date().toISOString().slice(0, 10);
-  const from = isoDay(sp.from);
-  const to = isoDay(sp.to) ?? today;
-  const custom = from != null && from <= to;
-  const requested = Number(sp.days);
-  const days = RANGES.includes(requested) ? requested : 28;
-  const range = custom ? { since: from, until: to } : { since: new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10), until: today };
+  const range = parseAppleRange(params);
+  const { days, custom } = range;
   const view: View = requestedView === "experiments" || requestedView === "keywords" ? requestedView : "overview";
   const rangeQs = custom ? `from=${range.since}&to=${range.until}` : days !== 28 ? `days=${days}` : "";
   const viewHref = (v: View) => {
@@ -307,7 +300,7 @@ export function AppleAdsTab({ product, params, view: requestedView }: { product:
   const ranges = (
     <div className="flex flex-wrap items-center gap-2 shrink-0">
       <nav aria-label="Range" className="segmented">
-        {RANGES.map((d) => (
+        {APPLE_ADS_RANGES.map((d) => (
           <Link key={d} href={`/p/${slug}/apple-ads?${view !== "overview" ? `view=${view}&` : ""}days=${d}`} aria-current={!custom && d === days ? "page" : undefined}>
             {d}D
           </Link>
