@@ -247,14 +247,14 @@ function Trend({ o }: { o: Overview }) {
       >
         Last {weeks.length} weeks
       </SectionHead>
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
-        <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
+        <div className="grid grid-cols-3 xl:grid-cols-1 gap-3">
           <Stat label="Proceeds, last 7 days" value={fmtMoney(last.proceeds, c)} hint={prev ? `${fmtMoney(prev.proceeds, c)} the week before` : undefined} />
           <Stat label="Paying users, last 7 days" value={fmtInt(last.paid)} hint={prev ? `${fmtInt(prev.paid)} the week before` : undefined} />
           <Stat label="Trial to paid" value={trials ? `${Math.round((paid / trials) * 100)}%` : "–"} hint={`${fmtInt(paid)} paid of ${fmtInt(trials)} trials in ${weeks.length} weeks`} />
         </div>
         <Card className="px-4 py-3.5 min-w-0">
-          <TrendChart weeks={weeks} />
+          <TrendChart weeks={weeks} channelLabels={Object.fromEntries(o.channels.map((channel) => [channel.key, channel.label]))} />
         </Card>
       </div>
     </section>

@@ -173,14 +173,17 @@ test("weekly trend: 7-day blocks ending on the window end, all channels' spend, 
   };
   const o = buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), trendData, now: NOW });
   assert.deepEqual(
-    o.trend.map((w) => [w.from, w.to, w.spend, w.proceeds, w.profit, w.trials, w.paid]),
+    o.trend.map((w) => [w.from, w.to, w.spend, w.spendByChannel, w.proceeds, w.profit, w.trials, w.paid]),
     [
-      ["2026-09-08", "2026-09-14", 0, 109, 109, 0, 0],
-      ["2026-09-15", "2026-09-21", 0, 0, 0, 4, 1],
-      ["2026-09-22", "2026-09-28", 0, 0, 0, 0, 0],
-      ["2026-09-29", "2026-10-05", 25, 30, 5, 6, 2],
+      ["2026-09-08", "2026-09-14", 0, { meta_ads: 0, apple_ads: 0 }, 109, 109, 0, 0],
+      ["2026-09-15", "2026-09-21", 0, { meta_ads: 0, apple_ads: 0 }, 0, 0, 4, 1],
+      ["2026-09-22", "2026-09-28", 0, { meta_ads: 0, apple_ads: 0 }, 0, 0, 0, 0],
+      ["2026-09-29", "2026-10-05", 25, { meta_ads: 20, apple_ads: 5 }, 30, 5, 6, 2],
     ],
   );
-  assert.match(formatBrief(o), /## Weekly trend\n(?:.*\n){2}\| 2026-09-08 to 2026-09-14 \| 0\.00 \| 109\.00 \| 109\.00 \| 0 \| 0 \|/);
+  assert.match(
+    formatBrief(o),
+    /## Weekly trend\n\| Week \| Spend \| meta_ads \| apple_ads \| Proceeds \| Profit \| Trials \| Paid \|\n\| --- \| ---: \| ---: \| ---: \| ---: \| ---: \| ---: \| ---: \|\n\| 2026-09-08 to 2026-09-14 \| 0\.00 \| 0\.00 \| 0\.00 \| 109\.00 \| 109\.00 \| 0 \| 0 \|/,
+  );
   assert.deepEqual(buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW }).trend, []);
 });

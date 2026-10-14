@@ -69,6 +69,7 @@ export interface WeekLine {
   from: string;
   to: string;
   spend: number;
+  spendByChannel: Record<string, number>;
   proceeds: number;
   profit: number;
   trials: number;
@@ -101,15 +102,17 @@ const per = (a: number | null, b: number) => (a != null && b > 0 ? round(a / b) 
 
 /** Buckets daily rows into `weeks` 7-day blocks ending on `through`, oldest first. Rows in other currencies are left out. */
 export function weeklyTrend(data: ScorecardData, currency: string, through: string, weeks = TREND_WEEKS): WeekLine[] {
-  const spend = Object.values(data.spend).flat();
+  const channels = Object.entries(data.spend);
+  const spend = channels.flatMap(([, rows]) => rows);
   return Array.from({ length: weeks }, (_, i) => {
     const to = addDays(through, -7 * (weeks - 1 - i));
     const from = addDays(to, -6);
     const inWeek = (r: { date: string }) => r.date >= from && r.date <= to;
     const money = (rows: { date: string; amount: number; currency: string }[]) => round(rows.filter((r) => inWeek(r) && r.currency === currency).reduce((a, r) => a + r.amount, 0));
     const t = data.trials.filter(inWeek);
+    const spendByChannel = Object.fromEntries(channels.map(([channel, rows]) => [channel, money(rows)]));
     const w = { spend: money(spend), proceeds: money(data.proceeds) };
-    return { from, to, ...w, profit: round(w.proceeds - w.spend), trials: t.reduce((a, r) => a + r.n, 0), paid: t.reduce((a, r) => a + r.paid, 0) };
+    return { from, to, ...w, spendByChannel, profit: round(w.proceeds - w.spend), trials: t.reduce((a, r) => a + r.n, 0), paid: t.reduce((a, r) => a + r.paid, 0) };
   });
 }
 
@@ -279,8 +282,13 @@ export function formatBrief(o: Overview): string {
     "Meta's trials also appear in RevenueCat's \"Not attributed\" row, so channel trials do not add up to the total.",
   ];
   if (o.trend.length) {
-    lines.push("", "## Weekly trend", "| Week | Spend | Proceeds | Profit | Trials | Paid |", "| --- | ---: | ---: | ---: | ---: | ---: |");
-    for (const w of o.trend) lines.push(`| ${w.from} to ${w.to} | ${money(w.spend)} | ${money(w.proceeds)} | ${money(w.profit)} | ${whole(w.trials)} | ${whole(w.paid)} |`);
+    const spendChannels = Object.keys(o.trend[0]!.spendByChannel);
+    const columns = ["Week", "Spend", ...spendChannels, "Proceeds", "Profit", "Trials", "Paid"];
+    lines.push("", "## Weekly trend", `| ${columns.join(" | ")} |`, `| ${columns.map((_, i) => (i ? "---:" : "---")).join(" | ")} |`);
+    for (const w of o.trend) {
+      const channelSpend = spendChannels.map((channel) => money(w.spendByChannel[channel] ?? 0));
+      lines.push(`| ${[`${w.from} to ${w.to}`, money(w.spend), ...channelSpend, money(w.proceeds), money(w.profit), whole(w.trials), whole(w.paid)].join(" | ")} |`);
+    }
   }
   if (o.ads.length) {
     lines.push("", "## Meta ads by spend", "| Ad | Status | Spend | Trials | Cost per trial |", "| --- | --- | ---: | ---: | ---: |");
