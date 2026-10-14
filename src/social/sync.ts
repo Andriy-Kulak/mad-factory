@@ -23,7 +23,7 @@ export interface SocialSyncResult {
   mediaFailures: string[];
 }
 
-interface SyncStats {
+export interface SyncStats {
   postsSeen: number;
   postsNew: number;
   mediaStored: number;
@@ -64,7 +64,7 @@ async function storeMedia(
   }
 }
 
-async function savePostMedia(postId: string, post: SocialPost, store: SocialStore, stats: SyncStats): Promise<void> {
+export async function savePostMedia(postId: string, post: SocialPost, store: SocialStore, stats: SyncStats): Promise<void> {
   const assets: Array<{
     url: string;
     prefix: "images" | "videos";

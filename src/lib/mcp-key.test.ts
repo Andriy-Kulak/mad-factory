@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hashMcpKey, newMcpKey } from "./mcp-key.ts";
+import { hashMcpKey, isMcpKeyScope, MCP_KEY_SCOPES, newMcpKey } from "./mcp-key.ts";
 
 test("keys are long, random and stored only as a stable hash", () => {
   const a = newMcpKey();
@@ -10,4 +10,10 @@ test("keys are long, random and stored only as a stable hash", () => {
   assert.equal(hashMcpKey(a), hashMcpKey(a));
   assert.match(hashMcpKey(a), /^[0-9a-f]{64}$/);
   assert.notEqual(hashMcpKey(a), hashMcpKey(b));
+});
+
+test("only read and research are key scopes", () => {
+  assert.deepEqual(MCP_KEY_SCOPES, ["read", "research"]);
+  assert.equal(isMcpKeyScope("research"), true);
+  for (const bad of ["write", "admin", "", undefined, null]) assert.equal(isMcpKeyScope(bad), false, String(bad));
 });

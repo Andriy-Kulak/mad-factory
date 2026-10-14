@@ -4,3 +4,8 @@ import { createHash, randomBytes } from "node:crypto";
 export const newMcpKey = () => `mf_${randomBytes(32).toString("base64url")}`;
 
 export const hashMcpKey = (key: string) => createHash("sha256").update(key).digest("hex");
+
+/** read = every read tool; research = also add competitor/inspiration sources and star items. Never ad-account writes. */
+export const MCP_KEY_SCOPES = ["read", "research"] as const;
+export type McpKeyScope = (typeof MCP_KEY_SCOPES)[number];
+export const isMcpKeyScope = (v: unknown): v is McpKeyScope => (MCP_KEY_SCOPES as readonly unknown[]).includes(v);
