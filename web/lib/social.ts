@@ -1,6 +1,7 @@
 import "server-only";
 import { fetchAll } from "./apple-ads";
 import { getDb } from "./db";
+import { favoriteIds } from "./favorites";
 import { engagementRate, median, outlierScore, snapshotPair } from "./social-score.ts";
 
 export const SOCIAL_PLATFORMS = ["instagram", "tiktok", "facebook"] as const;
@@ -57,6 +58,10 @@ function fail(ctx: string, e: { message: string } | null): never {
 }
 
 /** Runs `fn` over `.in()`-sized slices so URLs stay short and each request stays under PostgREST's 1000-row cap. */
+async function starredPostIds(productId: string): Promise<string[]> {
+  return favoriteIds(productId, "post");
+}
+
 async function inChunks<T>(ids: string[], fn: (ids: string[]) => Promise<T[]>, size = 50): Promise<T[]> {
   const out: Promise<T[]>[] = [];
   for (let i = 0; i < ids.length; i += size) out.push(fn(ids.slice(i, i + size)));
@@ -105,7 +110,9 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
       accountId: typeof cfg.account_id === "string" ? cfg.account_id : null,
     });
   }
-  if (!tracked.length) return { accounts: [], posts: [] };
+  // Starred posts from accounts nobody follows (saved one at a time) count as competitor posts, like saved ads.
+  const savedPostIds = !filter.relations || filter.relations.includes("competitor") ? await starredPostIds(productId) : [];
+  if (!tracked.length && !savedPostIds.length) return { accounts: [], posts: [] };
 
   // The sync writes config.account_id; sources synced before that are matched on platform + handle.
   const byId = new Map(tracked.filter((t) => t.accountId).map((t) => [t.accountId!, t]));
@@ -134,8 +141,28 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
       return t && !byId.has(a.id) ? [{ a, t }] : [];
     }),
   ];
+  const savedOnly = new Set<string>();
+  if (savedPostIds.length) {
+    const seen = new Set(accRows.map(({ a }) => a.id));
+    const owners = await inChunks(savedPostIds, async (ids) => {
+      const r = await db.from("social_posts").select("account_id").in("id", ids);
+      if (r.error) fail("social_posts", r.error);
+      return r.data ?? [];
+    });
+    const missing = [...new Set(owners.map((o) => o.account_id))].filter((id) => !seen.has(id));
+    const extra = await inChunks(missing, async (ids) => {
+      const r = await db.from("social_accounts").select(cols).in("id", ids);
+      if (r.error) fail("social_accounts", r.error);
+      return r.data ?? [];
+    });
+    for (const a of extra) {
+      savedOnly.add(a.id);
+      accRows.push({ a, t: { platform: a.platform, value: a.handle, label: null, relation: "competitor", accountId: a.id } });
+    }
+  }
   if (!accRows.length) return { accounts: [], posts: [] };
   const accIds = accRows.map(({ a }) => a.id);
+  const savedSet = new Set(savedPostIds);
 
   const [accSnaps, postRows] = await Promise.all([
     inChunks(accIds, async (ids) => {
@@ -150,7 +177,8 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
       return fetchAll((from, to) => q.order("posted_at", { ascending: false }).order("id").range(from, to), "social_posts");
     }),
   ]);
-  const postIds = postRows.map((p) => p.id);
+  const keptPosts = postRows.filter((p) => !savedOnly.has(p.account_id) || savedSet.has(p.id));
+  const postIds = keptPosts.map((p) => p.id);
   const [postSnaps, media] = await Promise.all([
     inChunks(postIds, async (ids) => {
       return fetchAll(
@@ -191,7 +219,7 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
     });
   }
 
-  const raw = postRows.map((p) => {
+  const raw = keptPosts.map((p) => {
     const { latest, previous } = snapshotPair(postSnaps.filter((x) => x.post_id === p.id));
     const url = (role: string) => {
       const m = media.find((x) => x.post_id === p.id && x.role === role);
@@ -204,7 +232,8 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
     accounts.get(p.account_id)!.postsTracked++;
     if (snap?.views != null) viewsByAccount.set(p.account_id, [...(viewsByAccount.get(p.account_id) ?? []), snap.views]);
   }
-  for (const [id, views] of viewsByAccount) accounts.get(id)!.medianViews = median(views);
+  // A few hand-picked posts are no baseline for an account's normal views.
+  for (const [id, views] of viewsByAccount) if (!savedOnly.has(id)) accounts.get(id)!.medianViews = median(views);
 
   const posts: OrganicPost[] = raw.map(({ p, snap, prev, thumb, video }) => {
     const acc = accounts.get(p.account_id)!;
@@ -234,5 +263,5 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
     };
   });
 
-  return { accounts: [...accounts.values()].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)), posts };
+  return { accounts: [...accounts.values()].filter((a) => !savedOnly.has(a.id)).sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)), posts };
 }

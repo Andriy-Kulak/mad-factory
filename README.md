@@ -225,7 +225,10 @@ Every key gets the read tools: `start_here`, `brief`, `recent_activity`, `experi
 `meta_ads`, `competitor_ads`, `organic_posts`, `creative_profile`, `tracked_sources`, `product_docs`, `list_docs` and
 `read_doc`. A `research` key also gets `track_ad_library` and `track_social_account` (follow a competitor or
 adjacent-niche page or account; fetched on the next daily sync) and `favorite` (star or unstar one ad or post without
-following its account). No key can delete anything, touch the product's own accounts or change an ad account.
+following its account), plus `save_url`: fetch one Ad Library ad or one Instagram/TikTok/Facebook post by link, store and
+star it without following anything (about 1 ScrapeCreators credit, free when already stored; capped at 20 credits a day
+per key, logged in `scrape_runs` as `mcp_save`). `save_url` needs `SCRAPECREATORS_API_KEY` on the web server, and the
+`R2_*` keys to keep the media. No key can delete anything, touch the product's own accounts or change an ad account.
 
 ## Working with AI agents
 

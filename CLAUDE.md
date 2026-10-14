@@ -211,7 +211,8 @@ See docs/creative-profile.md.
   Its tools reuse the same loaders as the pages and `pnpm brief`; add new data as tools there rather than a second
   API. A key is read-only unless its scope is `research`, which only adds `track_ad_library`, `track_social_account`
   (competitor/inspiration only, never `own`) and `favorite`, through web/lib/research-writes.ts, the same writes the
-  owner's server actions use. No MCP tool deletes, pauses or edits an existing source, or reaches an ad account.
+  owner's server actions use, plus `save_url` (src/research/save-item.ts: one ad or post fetched by link, stored with no
+  tracked source and starred; per-key daily credit cap in research-writes.ts). No MCP tool deletes, pauses or edits an existing source, or reaches an ad account.
 - The web app never changes an ad account: nothing under `web/` may import Apple Ads or Meta Ads write code
   (web/lib/no-ad-writes.test.ts enforces it), and the hosted web server gets no `META_ADS_TOKEN` or Apple Ads keys.
   Ad-account writes stay in the CLIs, run from your machine with owner approval.
