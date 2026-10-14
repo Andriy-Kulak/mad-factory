@@ -1,12 +1,14 @@
 "use client";
 
 import { useOptimistic, useTransition, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Toggle that runs a server action. Flips immediately (optimistic) and settles when the action returns;
  * the server's value wins if the action fails.
  */
 export function ActionSwitch({ checked, action, label, children }: { checked: boolean; action: () => Promise<void>; label: string; children?: ReactNode }) {
+  const queryClient = useQueryClient();
   const [on, setOn] = useOptimistic(checked);
   const [pending, start] = useTransition();
   return (
@@ -20,6 +22,7 @@ export function ActionSwitch({ checked, action, label, children }: { checked: bo
         start(async () => {
           setOn(!on);
           await action();
+          void queryClient.invalidateQueries();
         })
       }
       aria-busy={pending}

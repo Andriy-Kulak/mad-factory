@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { fetchAll } from "./apple-ads";
 import { rollup, type MetaAdsRollup } from "./meta-ads-rollup";
@@ -48,3 +49,5 @@ export async function getMetaAdsOverview(productId: string, { since, until }: { 
   if (run.error) throw new Error(`scrape_runs: ${run.error.message}`);
   return { ...rollup(campaigns, adsets, ads, creatives, daily, countries), since, until, lastRun: run.data };
 }
+
+export const getMetaAdsOverviewCached = cachedByProduct("metaAdsOverview", getMetaAdsOverview);

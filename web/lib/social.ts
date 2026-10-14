@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedByProduct } from "./cache";
 import { fetchAll } from "./apple-ads";
 import { getDb } from "./db";
 import { favoriteIds } from "./favorites";
@@ -265,3 +266,5 @@ export async function organicOverview(productId: string, filter: OrganicFilter =
 
   return { accounts: [...accounts.values()].filter((a) => !savedOnly.has(a.id)).sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)), posts };
 }
+
+export const organicOverviewCached = cachedByProduct("organicOverview", organicOverview);

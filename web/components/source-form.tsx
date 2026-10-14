@@ -1,11 +1,21 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useCallback, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { SourceFormState } from "@/lib/source-actions";
 
 /** Add-source form: server-rendered inputs as children, inline result message. */
 export function SourceForm({ action, submitLabel, children }: { action: (prev: SourceFormState, form: FormData) => Promise<SourceFormState>; submitLabel: string; children: ReactNode }) {
-  const [state, formAction, pending] = useActionState(action, null);
+  const queryClient = useQueryClient();
+  const actionWithInvalidation = useCallback(
+    async (prev: SourceFormState, form: FormData) => {
+      const result = await action(prev, form);
+      void queryClient.invalidateQueries();
+      return result;
+    },
+    [action, queryClient],
+  );
+  const [state, formAction, pending] = useActionState(actionWithInvalidation, null);
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
       {children}

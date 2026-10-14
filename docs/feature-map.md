@@ -46,6 +46,8 @@ journaled to `meta_ads_changes` and requiring a `--plan` document name.
 
 ## Web pages (`web/app`, server components; Supabase service-role reads unless noted)
 
+Product tabs keep data in a browser React Query cache per product and tab, fetched from `/api/p/[slug]/[tab]`; revisiting a tab shows its cached data while it refreshes. Heavy server data stays cached for 60 seconds with stale-while-revalidate, and server-action writes invalidate the product tag.
+
 | Route | What it shows | Reads/writes | Tables touched | External API cost per run |
 |---|---|---|---|---|
 | `/` | Product list | DB read | `products` | 0 |

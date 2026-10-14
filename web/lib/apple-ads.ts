@@ -1,6 +1,10 @@
 import "server-only";
+import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { blockingNegatives, negativeBlocks, sameText } from "./negatives";
+import { summarizeBids, sumInto, zero, type BidSummary, type Totals } from "./apple-ads-math";
+export { summarizeBids, sumInto, zero } from "./apple-ads-math";
+export type { BidSummary, Totals } from "./apple-ads-math";
 import type {
   AppleAdsCampaignRow,
   AppleAdsKeywordDailyRow,
@@ -12,21 +16,6 @@ import type {
   RevenueCatKeywordDailyRow,
 } from "@db/types";
 
-export interface Totals {
-  impressions: number;
-  taps: number;
-  installs: number;
-  spend: number;
-  /** RevenueCat, by the customer's Apple Ads install keyword: new trials, new paid subscriptions, proceeds. */
-  trials: number;
-  paid: number;
-  revenue: number;
-}
-
-export const zero = (): Totals => ({ impressions: 0, taps: 0, installs: 0, spend: 0, trials: 0, paid: 0, revenue: 0 });
-export const sumInto = (t: Totals, o: Totals) => {
-  for (const k of Object.keys(t) as (keyof Totals)[]) t[k] += o[k];
-};
 const add = (t: Totals, r: { impressions: number; taps: number; tap_installs: number; spend: number }) => {
   t.impressions += r.impressions;
   t.taps += r.taps;
@@ -74,21 +63,6 @@ export async function fetchAll<T>(page: (from: number, to: number) => PromiseLik
 }
 
 /** Keyword-level bid summary for a campaign; null when no keyword carries a bid. */
-export interface BidSummary {
-  avg: number;
-  min: number;
-  max: number;
-}
-
-export function summarizeBids(bids: (number | string | null)[]): BidSummary | null {
-  const nums = bids
-    .filter((b): b is number | string => b != null)
-    .map(Number)
-    .filter(Number.isFinite);
-  if (!nums.length) return null;
-  return { avg: nums.reduce((s, b) => s + b, 0) / nums.length, min: Math.min(...nums), max: Math.max(...nums) };
-}
-
 /** The negative keyword that blocks a search term now, and since when (Apple's creation time, UTC). */
 export interface Blocker {
   text: string;
@@ -300,13 +274,15 @@ export async function getAppleAdsOverview(productId: string, { since, until }: D
   };
 }
 
+export const getAppleAdsOverviewCached = cachedByProduct("appleAdsOverview", getAppleAdsOverview);
+
 export interface ExperimentSummary {
   experiment: ExperimentRow;
   links: ExperimentCampaignRow[];
   /** Dated narrative history, newest first. */
   log: ExperimentLogRow[];
   /** Totals inside the experiment window, per linked campaign id. */
-  byCampaign: Map<number, Totals>;
+  byCampaign: Record<string, Totals>;
   totals: Totals;
   yesterdaySpend: number;
   day: number;
@@ -329,14 +305,14 @@ export async function getAppleAdsExperiments(productId: string): Promise<Experim
     const logRes = await db.from("experiment_log").select("*").eq("experiment_id", experiment.id).order("at", { ascending: false });
     if (logRes.error) throw new Error(`experiment_log: ${logRes.error.message}`);
     const ids = links.map((l) => Number(l.external_campaign_id)).filter(Number.isFinite);
-    const byCampaign = new Map<number, Totals>();
+    const byCampaign: Record<string, Totals> = {};
     const totals = zero();
     let yesterdaySpend = 0;
     if (ids.length && experiment.start_date) {
       const outcomes = await revenueCatRows(productId, experiment.start_date, experiment.end_date ?? today);
       for (const r of outcomes ?? []) {
         if (r.apple_campaign_id == null || !ids.includes(r.apple_campaign_id)) continue;
-        addOutcomes(byCampaign.get(r.apple_campaign_id) ?? byCampaign.set(r.apple_campaign_id, zero()).get(r.apple_campaign_id)!, r);
+        addOutcomes(byCampaign[r.apple_campaign_id] ?? (byCampaign[r.apple_campaign_id] = zero()), r);
         addOutcomes(totals, r);
       }
       const rows = await fetchAll<AppleAdsKeywordDailyRow>(
@@ -354,7 +330,7 @@ export async function getAppleAdsExperiments(productId: string): Promise<Experim
         "apple_ads_keyword_daily",
       );
       for (const r of rows) {
-        add(byCampaign.get(r.campaign_id) ?? byCampaign.set(r.campaign_id, zero()).get(r.campaign_id)!, r);
+        add(byCampaign[r.campaign_id] ?? (byCampaign[r.campaign_id] = zero()), r);
         add(totals, r);
         if (r.date === yesterday) yesterdaySpend += Number(r.spend);
       }
@@ -373,3 +349,5 @@ export async function getAppleAdsExperiments(productId: string): Promise<Experim
   }
   return out;
 }
+
+export const getAppleAdsExperimentsCached = cachedByProduct("appleAdsExperiments", getAppleAdsExperiments);

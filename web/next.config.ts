@@ -11,6 +11,7 @@ const DOCS = ["../playbooks/**/*", "../docs/**/*"];
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
+  experimental: { staleTimes: { dynamic: 1800 } },
   outputFileTracingIncludes: { "/api/mcp": DOCS },
 };
 
