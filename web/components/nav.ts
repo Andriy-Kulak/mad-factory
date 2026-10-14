@@ -1,6 +1,6 @@
 /** Product-scoped navigation, shared by the sidebar, the phone nav and the top-bar breadcrumb. */
 
-export type NavKey = "brand" | "overview" | "meta" | "insights" | "organic" | "my-accounts" | "meta-ads" | "creatives" | "apple" | "apple-keywords";
+export type NavKey = "brand" | "overview" | "meta" | "insights" | "organic" | "my-accounts" | "meta-ads" | "creatives" | "apple" | "apple-keywords" | "favorites";
 
 export interface NavItem {
   key: NavKey;
@@ -21,6 +21,7 @@ const ICON = {
   apple: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
   keywords: "M4 7h16M4 12h10M4 17h7",
   insights: "M4 20h16M7 16v-5M12 16V6M17 16v-8",
+  favorites: "M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z",
 };
 
 /** Three groups by job: the product itself, research (what competitors and creatives do), and the channels you run. */
@@ -39,6 +40,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: "insights", label: "Insights", path: "/insights", icon: ICON.insights },
       { key: "organic", label: "Organic", path: "/organic", icon: ICON.organic },
       { key: "creatives", label: "Creatives", path: "/creatives", icon: ICON.creatives },
+      { key: "favorites", label: "Favorites", path: "/favorites", icon: ICON.favorites },
     ],
   },
   {

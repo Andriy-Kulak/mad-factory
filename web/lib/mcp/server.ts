@@ -16,8 +16,7 @@ import { applyOrganicFilters, NO_FILTERS, sortPosts } from "../organic-filters";
 import { competitorAds } from "../queries";
 import { organicOverview, SOCIAL_PLATFORMS, type OrganicPost } from "../social";
 import { listTrackedSourceItems, trackedSourceUrl } from "../tracked-sources";
-import { insertTrackedSource, recordSave, SAVE_CREDITS_PER_DAY, saveCreditsUsedToday, writeFavorites } from "../research-writes";
-import { saveAd, savePost } from "../../../src/research/save-item.ts";
+import { insertTrackedSource, SAVE_CREDITS_PER_DAY, saveAndStar, saveCreditsUsedToday, writeFavorites } from "../research-writes";
 import { isAdRelation, parseAdLibraryInput, parseSocialAccountInput } from "../../../src/lib/tracked-source-input.ts";
 import type { McpKeyScope } from "../../../src/lib/mcp-key.ts";
 
@@ -655,26 +654,19 @@ function registerResearchWrites(server: McpServer, keyName: string) {
       const p = await resolveProduct(args.product);
       if (!process.env.SCRAPECREATORS_API_KEY)
         return { ...text("save_url is not set up on this server (no ScrapeCreators key). Ask the owner, or star an item that is already stored."), isError: true };
-      const used = await saveCreditsUsedToday(keyName);
+      const collector = `mcp:${keyName}`;
+      const used = await saveCreditsUsedToday(collector);
       if (used >= SAVE_CREDITS_PER_DAY) return { ...text(`This key used its ${SAVE_CREDITS_PER_DAY} save_url credits for today (UTC). Try again tomorrow.`), isError: true };
-      const input = args.url.trim();
-      const isAd = /^\d+$/.test(input) || /facebook\.com\/ads\/library/i.test(input);
       let saved;
       try {
-        saved = isAd ? await saveAd(p.id, input) : await savePost(input);
+        saved = await saveAndStar(p.id, args.url, collector);
       } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        if (!/^Give |^That is an Ad Library/.test(message)) await recordSave(p.id, keyName, 0, message.slice(0, 500));
-        return { ...text(message), isError: true };
+        return { ...text(e instanceof Error ? e.message : String(e)), isError: true };
       }
-      if (saved.credits) await recordSave(p.id, keyName, saved.credits);
-      let target = saved.id;
-      if (saved.kind === "ad") target = (await competitorAds(p.id)).find((c) => c.id === saved.id || c.memberIds.includes(saved.id))?.id ?? saved.id;
-      await writeFavorites(p.id, saved.kind, [target], true);
       return json({
         product: p.slug,
         kind: saved.kind,
-        id: target,
+        id: saved.id,
         favorited: true,
         already_stored: saved.alreadyStored,
         media_stored: saved.mediaStored,

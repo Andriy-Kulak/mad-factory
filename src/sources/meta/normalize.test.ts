@@ -98,7 +98,8 @@ test("normalizeAdDetail maps the camelCase single-ad shape", () => {
 test("parseAdIdInput takes an ad id or an Ad Library ad link only", () => {
   assert.equal(parseAdIdInput(" 28600000000000000 "), "28600000000000000");
   assert.equal(parseAdIdInput("https://www.facebook.com/ads/library/?id=123456"), "123456");
-  for (const bad of ["12", "https://www.facebook.com/ads/library/?view_all_page_id=123456", "https://example.com/ads/library/?id=123456", "nope"]) {
+  for (const bad of ["12", "https://example.com/ads/library/?id=123456", "nope"]) {
     assert.throws(() => parseAdIdInput(bad), /ad id/, bad);
   }
+  assert.throws(() => parseAdIdInput("https://www.facebook.com/ads/library/?view_all_page_id=123456"), /^Error: Give one ad's Library ID.*not the advertiser's page link/);
 });
