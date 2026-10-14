@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
-import { getAppleKeywords } from "@/lib/apple-keywords";
+import { getAppleKeywordsCached } from "@/lib/apple-keywords";
 import { fmtDateTime } from "@/lib/format";
 import { Shell } from "@/components/shell";
 import { Badge, Card, Empty, Meter, Segmented, Stat } from "@/components/ui";
@@ -27,7 +27,7 @@ export default async function AppleKeywordsPage({ params, searchParams }: { para
   const days = RANGES.includes(requested) ? requested : 28;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const k = await getAppleKeywords(product.id, days);
+  const k = await getAppleKeywordsCached(product.id, days);
 
   const ranges = <Segmented label="Range" active={String(days)} items={RANGES.map((d) => ({ key: String(d), label: `${d}D`, href: `/p/${slug}/apple-keywords?days=${d}` }))} />;
   const refresh = <code className="num">pnpm apple-ads research --product {slug} --terms "a, b, c"</code>;

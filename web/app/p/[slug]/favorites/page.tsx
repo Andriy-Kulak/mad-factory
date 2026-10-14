@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { competitorAds, getProductBySlug } from "@/lib/queries";
-import { organicOverview } from "@/lib/social";
+import { competitorAdsCached, getProductBySlug } from "@/lib/queries";
+import { organicOverviewCached } from "@/lib/social";
 import { favoriteIds } from "@/lib/favorites";
 import { saveFavoriteLink } from "@/lib/favorite-actions";
 import { Shell } from "@/components/shell";
@@ -15,7 +15,12 @@ export default async function FavoritesPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [ads, { accounts, posts }, adFavs, postFavs] = await Promise.all([competitorAds(product.id), organicOverview(product.id), favoriteIds(product.id, "ad"), favoriteIds(product.id, "post")]);
+  const [ads, { accounts, posts }, adFavs, postFavs] = await Promise.all([
+    competitorAdsCached(product.id),
+    organicOverviewCached(product.id),
+    favoriteIds(product.id, "ad"),
+    favoriteIds(product.id, "post"),
+  ]);
   const starredAds = new Set(adFavs);
   const starredPosts = new Set(postFavs);
   const favAds = ads.filter((a) => a.memberIds.some((id) => starredAds.has(id)));

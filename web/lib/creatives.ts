@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { fetchAll } from "./apple-ads";
 import { daysBetween } from "./format";
@@ -199,6 +200,8 @@ export async function listCreativeItems(productId: string): Promise<CreativeItem
   competitors.sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
   return [...items, ...competitors];
 }
+
+export const listCreativeItemsCached = cachedByProduct("creativeItems", listCreativeItems);
 
 /** Full profile for one media file, for the creative preview (the list only loads SLIM_PROFILE). */
 export async function getCreativeProfile(sha256: string): Promise<ProfileView | null> {

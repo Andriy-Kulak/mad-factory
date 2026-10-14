@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
-import { getMetaAdsOverview } from "@/lib/meta-ads";
+import { getMetaAdsOverviewCached } from "@/lib/meta-ads";
 import { fmtDateTime } from "@/lib/format";
 import { Shell } from "@/components/shell";
 import { MetaTabs, RangePicker, parseRange } from "@/components/meta-ads";
@@ -13,7 +13,7 @@ export default async function MetaAdsPage({ params, searchParams }: { params: Pr
   const range = parseRange(await searchParams);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const o = await getMetaAdsOverview(product.id, range);
+  const o = await getMetaAdsOverviewCached(product.id, range);
 
   if (!o || !o.campaigns.length) {
     return (

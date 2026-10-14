@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { after } from "next/server";
 import { requireOwner } from "./auth/server";
+import { productTag } from "./cache";
 import type { FavoriteKind } from "./favorites";
 import { profileStarred, saveAndStar, writeFavorites } from "./research-writes";
 import type { SourceFormState } from "./source-actions";
@@ -12,6 +13,7 @@ export async function setFavorite(productId: string, kind: FavoriteKind, ids: st
   await requireOwner();
   await writeFavorites(productId, kind, ids, favorited);
   if (favorited) after(() => profileStarred(productId).catch((e) => console.error("profileStarred", productId, e)));
+  if (ids.length) updateTag(productTag(productId));
 }
 
 /** Saves one Ad Library ad or social post by link and stars it (about 1 ScrapeCreators credit when it isn't stored yet). */
@@ -23,6 +25,7 @@ export async function saveFavoriteLink(productId: string, slug: string, _prev: S
   try {
     const saved = await saveAndStar(productId, input, "web");
     after(() => profileStarred(productId).catch((e) => console.error("profileStarred", productId, e)));
+    updateTag(productTag(productId));
     revalidatePath(`/p/${slug}`, "layout");
     const what = saved.kind === "ad" ? "ad" : "post";
     return { ok: saved.alreadyStored ? `That ${what} was already stored; it's starred now.` : `Saved and starred the ${what}${saved.mediaStored ? "" : " (no media stored)"}.` };

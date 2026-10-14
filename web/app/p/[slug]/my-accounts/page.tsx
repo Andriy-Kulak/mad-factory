@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
-import { organicOverview } from "@/lib/social";
+import { organicOverviewCached } from "@/lib/social";
 import { median, sumKnown } from "@/lib/social-score";
 import { parseOrganicFilters, type SearchParams } from "@/lib/organic-filters";
 import { fmtDate } from "@/lib/format";
@@ -52,7 +52,7 @@ export default async function MyAccountsPage({ params, searchParams }: { params:
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const [{ accounts, posts }, tracked, favorites] = await Promise.all([
-    organicOverview(product.id, { relations: ["own"], kinds: SHORT_FORM_KINDS }),
+    organicOverviewCached(product.id, { relations: ["own"], kinds: SHORT_FORM_KINDS }),
     listTrackedSourceItems(product.id, { kind: "social", relations: ["own"] }),
     favoriteIds(product.id, "post"),
   ]);

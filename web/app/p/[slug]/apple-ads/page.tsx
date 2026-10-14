@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
 import {
-  getAppleAdsExperiments,
-  getAppleAdsOverview,
+  getAppleAdsExperimentsCached,
+  getAppleAdsOverviewCached,
   sumInto,
   summarizeBids,
   zero,
@@ -164,7 +164,7 @@ function ExperimentPanel({ e, names, bids }: { e: ExperimentSummary; names: Map<
   for (const l of e.links) {
     const key = `${l.role ?? "–"} · ${l.geo ?? "–"}`;
     const t = roles.get(key) ?? roles.set(key, zero()).get(key)!;
-    const c = e.byCampaign.get(Number(l.external_campaign_id));
+    const c = e.byCampaign[Number(l.external_campaign_id)];
     if (c) sumInto(t, c);
   }
   const roleM = appleMetrics([...roles.values()]);
@@ -306,7 +306,7 @@ export default async function AppleAdsPage({ params, searchParams }: { params: P
   const rangeLabel = custom ? `${shortDay(range.since)} – ${shortDay(range.until)}` : `last ${days} days`;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [o, experiments] = await Promise.all([getAppleAdsOverview(product.id, range), getAppleAdsExperiments(product.id)]);
+  const [o, experiments] = await Promise.all([getAppleAdsOverviewCached(product.id, range), getAppleAdsExperimentsCached(product.id)]);
   const linkOf = new Map(experiments.filter((e) => e.experiment.status === "running").flatMap((e) => e.links.map((l) => [l.external_campaign_id, l] as const)));
 
   const ranges = (

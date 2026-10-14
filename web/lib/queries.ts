@@ -1,5 +1,7 @@
 import "server-only";
+import { deflateSync, inflateSync } from "node:zlib";
 import { cache } from "react";
+import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { groupAdCards, type AdCard, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
 import { mergeAdRelations } from "../../src/lib/tracked-source-input.ts";
@@ -206,6 +208,13 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
     const p = c.media ? profiles.get(c.media.sha256) : undefined;
     return p ? { ...c, profile: { fields: p.fields, hook: p.hook.spoken ?? p.hook.onscreen } } : c;
   });
+}
+
+const competitorAdsPayloadCached = cachedByProduct("competitorAds", async (productId: string) => deflateSync(JSON.stringify(await competitorAds(productId))).toString("base64"));
+
+export async function competitorAdsCached(productId: string): Promise<AdCard[]> {
+  const payload = await competitorAdsPayloadCached(productId);
+  return JSON.parse(inflateSync(Buffer.from(payload, "base64")).toString("utf8")) as AdCard[];
 }
 
 async function creativesForAds(adIds: string[]): Promise<Map<string, CreativeRow[]>> {

@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireOwner } from "./auth/server";
+import { productTag } from "./cache";
 import { getDb } from "./db";
 import { insertTrackedSource, type TrackedSourceInsert } from "./research-writes";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "./social";
@@ -16,9 +17,12 @@ const MANAGED_SOURCES = ["meta", ...SOCIAL_PLATFORMS];
 const field = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-async function insertSource(slug: string, row: TrackedSourceInsert, what: string): Promise<SourceFormState> {
+async function insertSource(productId: string, slug: string, row: TrackedSourceInsert, what: string): Promise<SourceFormState> {
   const result = await insertTrackedSource(row, what);
-  if (result.ok) revalidatePath(`/p/${slug}`, "layout");
+  if (result.ok) {
+    updateTag(productTag(productId));
+    revalidatePath(`/p/${slug}`, "layout");
+  }
   return result;
 }
 
@@ -35,6 +39,7 @@ export async function addSocialAccount(productId: string, slug: string, _prev: S
     return { error: message(e) };
   }
   return insertSource(
+    productId,
     slug,
     { product_id: productId, source: platform, kind: "account", value, country: "ALL", label: field(form, "label") || null, config: { relation } },
     platform === "facebook" ? "That Facebook page" : `@${value}`,
@@ -52,6 +57,7 @@ export async function addAdLibrarySource(productId: string, slug: string, _prev:
     return { error: message(e) };
   }
   return insertSource(
+    productId,
     slug,
     { product_id: productId, source: "meta", kind: parsed.kind, value: parsed.value, country: parsed.country, label: field(form, "label") || null, config: { ...parsed.config, relation } },
     parsed.kind === "page" ? `Page ${parsed.value}` : `"${parsed.value}"`,
@@ -71,6 +77,7 @@ export async function setAdSourceRelation(productId: string, slug: string, id: s
     .update({ config: { ...config, relation } })
     .match({ id, product_id: productId, source: "meta" });
   if (res.error) throw new Error(res.error.message);
+  updateTag(productTag(productId));
   revalidatePath(`/p/${slug}`, "layout");
 }
 
@@ -78,6 +85,7 @@ export async function setSourceEnabled(productId: string, slug: string, id: stri
   await requireOwner();
   const res = await getDb().from("tracked_sources").update({ enabled }).match({ id, product_id: productId }).in("source", MANAGED_SOURCES);
   if (res.error) throw new Error(res.error.message);
+  updateTag(productTag(productId));
   revalidatePath(`/p/${slug}`, "layout");
 }
 
@@ -86,5 +94,6 @@ export async function removeSource(productId: string, slug: string, id: string):
   await requireOwner();
   const res = await getDb().from("tracked_sources").delete().match({ id, product_id: productId }).in("source", MANAGED_SOURCES);
   if (res.error) throw new Error(res.error.message);
+  updateTag(productTag(productId));
   revalidatePath(`/p/${slug}`, "layout");
 }

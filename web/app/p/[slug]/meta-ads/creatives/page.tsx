@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
-import { getMetaAdsOverview } from "@/lib/meta-ads";
+import { getMetaAdsOverviewCached } from "@/lib/meta-ads";
 import { attributeKeys } from "@/lib/meta-ads-rollup";
 import { Shell } from "@/components/shell";
 import { MetaTabs, RangePicker, parseRange } from "@/components/meta-ads";
@@ -20,7 +20,7 @@ export default async function MetaCreativesPage({
   const range = parseRange(sp);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const o = await getMetaAdsOverview(product.id, range);
+  const o = await getMetaAdsOverviewCached(product.id, range);
 
   if (!o || !o.campaigns.length) {
     return (

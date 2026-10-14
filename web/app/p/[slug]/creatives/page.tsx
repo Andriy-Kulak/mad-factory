@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/queries";
-import { listCreativeItems } from "@/lib/creatives";
+import { listCreativeItemsCached } from "@/lib/creatives";
 import { LONG_RUN_DAYS, parseCreativeFilters, type SearchParams } from "@/lib/creative-groups";
 import { Shell } from "@/components/shell";
 import { Empty, Stat } from "@/components/ui";
@@ -12,7 +12,7 @@ export default async function CreativesPage({ params, searchParams }: { params: 
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const items = await listCreativeItems(product.id);
+  const items = await listCreativeItemsCached(product.id);
   const own = items.filter((it) => it.owner === "own").length;
   return (
     <Shell title="Creatives" subtitle="AI breakdown of every stored ad video and image, ours and competitors' · competitor run length from the Ad Library">
