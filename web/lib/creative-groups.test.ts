@@ -67,3 +67,12 @@ test("creativeFiltersHref round-trips and omits defaults", () => {
   assert.deepEqual(parseCreativeFilters(Object.fromEntries([...new Set(qs.keys())].map((k) => [k, qs.getAll(k)]))), f);
   assert.equal(creativeFiltersHref(parseCreativeFilters({ by: "bogus" })), "?");
 });
+
+test("run=90d keeps only competitor media that ran 90+ days", () => {
+  const pool = [item("short", { days: 40 }), item("ninety", { days: 90, active: false }), item("long", { days: 200 }), item("ours", { owner: "own", bucket: null, days: null })];
+  assert.deepEqual(
+    applyCreativeFilters(pool, parseCreativeFilters({ run: "90d" })).map((i) => i.sha256),
+    ["ninety", "long"],
+  );
+  assert.equal(creativeFiltersHref(parseCreativeFilters({ run: "90d" })), "?run=90d");
+});

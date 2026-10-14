@@ -48,7 +48,7 @@ const OWNER_LABEL: Record<Owner, string> = { own: "Ours", competitor: "Competito
  */
 
 const PAGE_SIZE = 48;
-const RUN_LABEL = { long: "Ran 30+ days", stopped: "Stopped within 14 days", live: "Still live" } as const;
+const RUN_LABEL = { long: "Ran 30+ days", "90d": "Ran 90+ days", stopped: "Stopped within 14 days", live: "Still live" } as const;
 
 export function CreativeBrowser({ items, initial }: { items: CreativeItem[]; initial: CreativeFilters }) {
   const [f, setF] = useState(initial);
@@ -109,6 +109,7 @@ export function CreativeBrowser({ items, initial }: { items: CreativeItem[]; ini
           items={[
             { key: "", label: "Any" },
             { key: "long", label: "30+ days" },
+            { key: "90d", label: "90+ days" },
             { key: "stopped", label: "Stopped fast" },
             { key: "live", label: "Live" },
           ]}

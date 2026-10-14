@@ -75,7 +75,9 @@ export function groupItems(items: CreativeItem[], by: GroupKey): GroupRow[] {
   return [...rows.values()].sort((a, b) => b.total - a.total || a.value.localeCompare(b.value));
 }
 
-export type RunFilter = "long" | "stopped" | "live";
+/** `90d` = competitor media that ran 90+ days, a subset of `long`. */
+export const LONG_RUN_DAYS = 90;
+export type RunFilter = "long" | "90d" | "stopped" | "live";
 
 export interface CreativeFilters {
   owner: Owner | null;
@@ -100,7 +102,7 @@ export function parseCreativeFilters(sp: SearchParams): CreativeFilters {
   return {
     owner: (OWNERS as string[]).includes(owner) ? (owner as Owner) : null,
     sources: many(sp.src),
-    run: run === "long" || run === "stopped" || run === "live" ? run : null,
+    run: run === "long" || run === "90d" || run === "stopped" || run === "live" ? run : null,
     q: one(sp.q),
     by: by in GROUP_FIELDS ? (by as GroupKey) : "angle",
     value: one(sp.v) || null,
@@ -133,9 +135,15 @@ export function applyScopeFilters(items: CreativeItem[], f: CreativeFilters): Cr
     (it) =>
       (!f.owner || it.owner === f.owner) &&
       (!sources.size || sources.has(it.source)) &&
-      (!f.run || (f.run === "live" ? it.active === true : it.bucket === f.run)) &&
+      (!f.run || runMatches(it, f.run)) &&
       (!q || [it.hook.spoken, it.hook.onscreen, it.hook.visual, it.source].some((s) => s?.toLowerCase().includes(q))),
   );
+}
+
+function runMatches(it: CreativeItem, run: RunFilter): boolean {
+  if (run === "live") return it.active === true;
+  if (run === "90d") return it.bucket === "long" && (it.days ?? 0) >= LONG_RUN_DAYS;
+  return it.bucket === run;
 }
 
 export function applyCreativeFilters(items: CreativeItem[], f: CreativeFilters): CreativeItem[] {
