@@ -153,6 +153,9 @@ export function parseAdIdInput(input: string): string {
     throw new Error("Give an Ad Library ad id or a facebook.com/ads/library/?id=... link");
   }
   const id = url.searchParams.get("id");
+  if (!id && url.searchParams.get("view_all_page_id")) {
+    throw new Error("Give one ad's Library ID (shown on its card in the Ad Library), not the advertiser's page link; to follow the whole page, track it instead");
+  }
   if (!/(^|\.)facebook\.com$/.test(url.hostname) || url.pathname.replace(/\/+$/, "") !== "/ads/library" || !id || !/^\d{5,25}$/.test(id)) {
     throw new Error("Give an Ad Library ad id or a facebook.com/ads/library/?id=... link");
   }
