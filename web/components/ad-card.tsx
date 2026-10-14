@@ -9,6 +9,8 @@ import { Modal, previewClick } from "@/components/controls";
 import { FavoriteStar, Media, MediaTag, PREVIEW_MEDIA, PreviewPane } from "@/components/media";
 import { Transcript } from "@/components/transcript";
 import { loadMediaTranscript } from "@/lib/transcript-actions";
+import { Breakdown } from "@/components/breakdown";
+import { loadCreativeProfile } from "@/lib/creative-actions";
 
 /*
  * Competitor ads drawn the way they look in the feed: page, run dates, primary text, media, then the link bar with
@@ -247,6 +249,7 @@ export function AdPreview({
             <div className="card overflow-hidden">
               <LinkBar ad={ad} />
             </div>
+            <Breakdown id={ad.media?.sha256 ?? null} load={loadCreativeProfile} />
             {mediaFormat(ad) !== "image" && <Transcript id={ad.media?.sha256 ?? null} load={loadMediaTranscript} />}
             {ad.linkUrl && (
               <div className="text-[12px] text-fg-3 break-all">

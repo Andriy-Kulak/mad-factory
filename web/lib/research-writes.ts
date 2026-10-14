@@ -3,6 +3,8 @@ import { getDb } from "./db";
 import type { FavoriteKind } from "./favorites";
 import { competitorAds } from "./queries";
 import { saveAd, savePost, type SavedItem } from "../../src/research/save-item.ts";
+import { profileCreatives } from "../../src/creative-profiles/profile.ts";
+import { latestFlashModel } from "../../src/creative-profiles/gemini.ts";
 
 /** The research writes shared by the owner's server actions and research-scoped MCP keys. Callers check who may write. */
 
@@ -85,4 +87,15 @@ export async function saveAndStar(productId: string, input: string, collector: s
   if (saved.kind === "ad") id = (await competitorAds(productId)).find((c) => c.id === saved.id || c.memberIds.includes(saved.id))?.id ?? saved.id;
   await writeFavorites(productId, saved.kind, [id], true);
   return { ...saved, id };
+}
+
+/**
+ * Gemini Flash breakdown (transcript, hook, angle, format…) of starred media that has none yet; one call per new file,
+ * already-profiled files cost nothing. Runs after a star so the preview has it a minute later.
+ */
+export async function profileStarred(productId: string): Promise<void> {
+  if (!process.env.GEMINI_API_KEY) return;
+  const product = await getDb().from("products").select("slug").eq("id", productId).single();
+  if (product.error) throw new Error(`products: ${product.error.message}`);
+  await profileCreatives(product.data.slug, { source: "favorites", limit: 5, model: await latestFlashModel(), force: false, concurrency: 2, dryRun: false });
 }

@@ -15,7 +15,8 @@ import { parseCreativeProfile, SCHEMA_VERSION, type CreativeProfile } from "./sc
 const MAX_BYTES = 20 * 1024 * 1024;
 
 export interface ProfileOptions {
-  source: "own" | "library" | "all";
+  /** `favorites`: media of the product's starred ads and posts, whatever their source or age. */
+  source: "own" | "library" | "all" | "favorites";
   limit?: number;
   /** Ad Library media only: skip files whose longest-running ad ran fewer days (one-day tests never cost a call). */
   minDays?: number;
@@ -44,6 +45,7 @@ export interface ProfileDeps {
   loadVocab(productId: string): Promise<ProductVocab>;
   listOwnShas(productId: string): Promise<string[]>;
   listLibraryShas(productId: string): Promise<LibraryMedia[]>;
+  listFavoriteShas(productId: string): Promise<string[]>;
   listCreatives(shas: string[]): Promise<CreativeRow[]>;
   /** Which of these files already have a profile (llm or manual). */
   listProfiledShas(shas: string[]): Promise<Set<string>>;
@@ -119,6 +121,7 @@ export interface Candidate {
 }
 
 export async function selectCandidates(deps: ProfileDeps, productId: string, options: Pick<ProfileOptions, "source" | "minDays">): Promise<Candidate[]> {
+  if (options.source === "favorites") return [...new Set(await deps.listFavoriteShas(productId))].map((sha256) => ({ sha256, owner: "competitor" as const }));
   const own = options.source === "library" ? [] : await deps.listOwnShas(productId);
   const ownSet = new Set(own);
   const candidates: Candidate[] = own.map((sha256) => ({ sha256, owner: "own" as const }));
@@ -372,6 +375,50 @@ async function listOwnShas(productId: string): Promise<string[]> {
   }
 }
 
+/** Media files behind the product's starred ads (`ad_creatives`) and posts (`social_post_media`, the video or image itself). */
+async function listFavoriteShas(productId: string): Promise<string[]> {
+  const db = getDb();
+  const favs: { kind: string; target_id: string }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const res = await db
+      .from("favorites")
+      .select("kind,target_id")
+      .match({ product_id: productId, favorited: true })
+      .order("kind")
+      .order("target_id")
+      .range(from, from + PAGE - 1);
+    if (res.error) throw new Error(`listFavoriteShas: ${res.error.message}`);
+    favs.push(...(res.data ?? []));
+    if ((res.data ?? []).length < PAGE) break;
+  }
+  const ids = (kind: string) => favs.filter((f) => f.kind === kind).map((f) => f.target_id);
+  const shas: string[] = [];
+  const collect = (table: string, res: { data: { sha256: string }[] | null; error: { message: string } | null }) => {
+    if (res.error) throw new Error(`listFavoriteShas ${table}: ${res.error.message}`);
+    shas.push(...(res.data ?? []).map((r) => r.sha256));
+  };
+  const adIds = ids("ad");
+  const postIds = ids("post");
+  for (let i = 0; i < adIds.length; i += IN_CHUNK)
+    collect(
+      "ad_creatives",
+      await db
+        .from("ad_creatives")
+        .select("sha256")
+        .in("ad_id", adIds.slice(i, i + IN_CHUNK)),
+    );
+  for (let i = 0; i < postIds.length; i += IN_CHUNK)
+    collect(
+      "social_post_media",
+      await db
+        .from("social_post_media")
+        .select("sha256")
+        .in("post_id", postIds.slice(i, i + IN_CHUNK))
+        .eq("role", "media"),
+    );
+  return shas;
+}
+
 const DAY_MS = 86_400_000;
 
 /** Days an ad ran: start to end, or to `now` while it is still active. */
@@ -477,6 +524,7 @@ export const defaultDeps: ProfileDeps = {
   loadVocab: loadProductVocab,
   listOwnShas,
   listLibraryShas,
+  listFavoriteShas,
   listCreatives,
   listProfiledShas,
   getProfile: getCreativeProfile,

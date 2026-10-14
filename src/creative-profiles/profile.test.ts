@@ -67,6 +67,7 @@ interface HarnessOptions {
   library?: { sha256: string; start_date: string | null; days?: number | null }[];
   creatives?: CreativeRow[];
   profiles?: Map<string, CreativeProfileRow>;
+  favorites?: string[];
   replies?: string[];
   replyError?: Error;
   vocab?: { angles: { slug: string; name: string; audiences: string[]; desires: string[] }[]; audiences: { slug: string; name: string }[]; desires: string[]; library?: boolean };
@@ -85,6 +86,7 @@ function harness(options: HarnessOptions) {
     },
     listOwnShas: async () => options.own ?? [],
     listLibraryShas: async () => (options.library ?? []).map((row) => ({ days: null, ...row })),
+    listFavoriteShas: async () => options.favorites ?? [],
     listCreatives: async () => options.creatives ?? [],
     listProfiledShas: async (shas) => new Set(shas.filter((sha) => options.profiles?.has(sha))),
     getProfile: async (sha) => options.profiles?.get(sha) ?? null,
@@ -468,6 +470,22 @@ test("library ads that are also own are not double-profiled and carousel is skip
   assert.deepEqual(
     upserts.map((u) => u.sha),
     ["shared"],
+  );
+  assert.equal(stats.profiled, 1);
+});
+
+test("source favorites profiles only the starred media, once each, skipping profiled files and ignoring min-days", async () => {
+  const shas = ["fav-new", "fav-done", "lib-only"];
+  const { deps, upserts } = harness({
+    favorites: ["fav-new", "fav-done", "fav-new"],
+    library: [{ sha256: "lib-only", start_date: "2026-01-01" }],
+    creatives: shas.map((sha256) => ({ sha256, media_type: "video", bytes: 1000, storage_key: `videos/${sha256}.mp4`, public_url: `https://cdn.example/${sha256}.mp4`, created_at: "2026-01-01" })),
+    profiles: new Map([["fav-done", { profiled_by: "llm", profile: {} } as never]]),
+  });
+  const stats = await profileCreatives("demo", { source: "favorites", minDays: 30, model: "m", force: false, concurrency: 1, dryRun: false }, deps);
+  assert.deepEqual(
+    upserts.map((u) => u.sha),
+    ["fav-new"],
   );
   assert.equal(stats.profiled, 1);
 });
