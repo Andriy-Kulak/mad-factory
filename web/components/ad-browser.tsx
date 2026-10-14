@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { activeAdFilterCount, adFiltersHref, applyAdFilters, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, sortAdCards, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
 import { AdGrid, AdPreview, AdTable, PageAvatar, type Favorites } from "@/components/ad-card";
 import { setFavorite } from "@/lib/favorite-actions";
+import { useInvalidateProduct } from "@/lib/use-tab";
 import {
   ActiveFilters,
   BrowseLayout,
@@ -41,9 +42,13 @@ const MIN_DAYS = [7, 30, 90];
 const PAGE_SIZE = 36;
 
 export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads: AdCard[]; slug: string; productId: string; favoriteIds: string[]; initial: AdFilters }) {
+  const invalidateProduct = useInvalidateProduct();
   const [f, setF] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "ad", ids, on));
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, async (ids, on) => {
+    await setFavorite(productId, "ad", ids, on);
+    await invalidateProduct(productId);
+  });
   // The favorites filter uses the set as of when it was applied, so unstarring a card doesn't make it vanish mid-browse.
   const [filterFavs, setFilterFavs] = useState(favs);
   const matched = useMemo(() => sortAdCards(applyAdFilters(ads, f, Date.now(), filterFavs), f.sort), [ads, f, filterFavs]);

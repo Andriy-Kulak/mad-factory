@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 
-export const DATA_TTL_SECONDS = 300;
+export const DATA_TTL_SECONDS = 60;
 export const productTag = (productId: string) => `product:${productId}`;
 
 /** Rejects return types that don't survive the JSON round trip unstable_cache stores them as. */

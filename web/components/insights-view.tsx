@@ -19,6 +19,7 @@ import {
 import { DataTable, type Column, type Row } from "@/components/data-table";
 import { AdGrid, AdPreview, type Favorites } from "@/components/ad-card";
 import { setFavorite } from "@/lib/favorite-actions";
+import { useInvalidateProduct } from "@/lib/use-tab";
 import { Chips, Toggle, useFavoriteSet, useUrlState } from "@/components/controls";
 import { Badge, Pair, SectionHead, Stat } from "@/components/ui";
 
@@ -61,9 +62,13 @@ export function InsightsView({
   initial: InsightFilters;
   hasAdjacent: boolean;
 }) {
+  const invalidateProduct = useInvalidateProduct();
   const [f, setF] = useState(initial);
   // Same favorites as Competitor ads: a card is starred when any ad in its group is.
-  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "ad", ids, on));
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, async (ids, on) => {
+    await setFavorite(productId, "ad", ids, on);
+    await invalidateProduct(productId);
+  });
   const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
   const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
   useUrlState(insightFiltersHref(f));

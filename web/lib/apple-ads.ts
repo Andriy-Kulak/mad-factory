@@ -2,6 +2,9 @@ import "server-only";
 import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { blockingNegatives, negativeBlocks, sameText } from "./negatives";
+import { summarizeBids, sumInto, zero, type BidSummary, type Totals } from "./apple-ads-math";
+export { summarizeBids, sumInto, zero } from "./apple-ads-math";
+export type { BidSummary, Totals } from "./apple-ads-math";
 import type {
   AppleAdsCampaignRow,
   AppleAdsKeywordDailyRow,
@@ -13,21 +16,6 @@ import type {
   RevenueCatKeywordDailyRow,
 } from "@db/types";
 
-export interface Totals {
-  impressions: number;
-  taps: number;
-  installs: number;
-  spend: number;
-  /** RevenueCat, by the customer's Apple Ads install keyword: new trials, new paid subscriptions, proceeds. */
-  trials: number;
-  paid: number;
-  revenue: number;
-}
-
-export const zero = (): Totals => ({ impressions: 0, taps: 0, installs: 0, spend: 0, trials: 0, paid: 0, revenue: 0 });
-export const sumInto = (t: Totals, o: Totals) => {
-  for (const k of Object.keys(t) as (keyof Totals)[]) t[k] += o[k];
-};
 const add = (t: Totals, r: { impressions: number; taps: number; tap_installs: number; spend: number }) => {
   t.impressions += r.impressions;
   t.taps += r.taps;
@@ -75,21 +63,6 @@ export async function fetchAll<T>(page: (from: number, to: number) => PromiseLik
 }
 
 /** Keyword-level bid summary for a campaign; null when no keyword carries a bid. */
-export interface BidSummary {
-  avg: number;
-  min: number;
-  max: number;
-}
-
-export function summarizeBids(bids: (number | string | null)[]): BidSummary | null {
-  const nums = bids
-    .filter((b): b is number | string => b != null)
-    .map(Number)
-    .filter(Number.isFinite);
-  if (!nums.length) return null;
-  return { avg: nums.reduce((s, b) => s + b, 0) / nums.length, min: Math.min(...nums), max: Math.max(...nums) };
-}
-
 /** The negative keyword that blocks a search term now, and since when (Apple's creation time, UTC). */
 export interface Blocker {
   text: string;

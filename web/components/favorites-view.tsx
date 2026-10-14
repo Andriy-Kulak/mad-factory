@@ -7,6 +7,7 @@ import { AdGrid, AdPreview, type Favorites } from "@/components/ad-card";
 import { PostGrid, PostPreview } from "@/components/post-grid";
 import { Toggle, useFavoriteSet } from "@/components/controls";
 import { setFavorite } from "@/lib/favorite-actions";
+import { useInvalidateProduct } from "@/lib/use-tab";
 import { Empty, SectionHead } from "@/components/ui";
 
 type Show = "all" | "ads" | "posts";
@@ -32,10 +33,17 @@ export function FavoritesView({
   now: number;
 }) {
   const [show, setShow] = useState<Show>("all");
+  const invalidateProduct = useInvalidateProduct();
   const [openAd, setOpenAd] = useState<string | null>(null);
   const [openPost, setOpenPost] = useState<string | null>(null);
-  const [adFavs, setAdFavs] = useFavoriteSet(adFavoriteIds, (ids, on) => setFavorite(productId, "ad", ids, on));
-  const [postFavs, setPostFavs] = useFavoriteSet(postFavoriteIds, (ids, on) => setFavorite(productId, "post", ids, on));
+  const [adFavs, setAdFavs] = useFavoriteSet(adFavoriteIds, async (ids, on) => {
+    await setFavorite(productId, "ad", ids, on);
+    await invalidateProduct(productId);
+  });
+  const [postFavs, setPostFavs] = useFavoriteSet(postFavoriteIds, async (ids, on) => {
+    await setFavorite(productId, "post", ids, on);
+    await invalidateProduct(productId);
+  });
   const isAdFav = (a: AdCard) => a.memberIds.some((id) => adFavs.has(id));
   const adFav: Favorites<AdCard> = { has: isAdFav, toggle: (a) => (isAdFav(a) ? setAdFavs(a.memberIds, false) : setAdFavs([a.id], true)) };
   const postFav: Favorites<OrganicPost> = { has: (p) => postFavs.has(p.id), toggle: (p) => setPostFavs([p.id], !postFavs.has(p.id)) };

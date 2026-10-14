@@ -19,6 +19,7 @@ import { fmtCount, platformLabel, PostTable } from "@/components/social";
 import { handleOf, PlatformIcon, PostGrid, PostPreview } from "@/components/post-grid";
 import type { Favorites } from "@/components/ad-card";
 import { setFavorite } from "@/lib/favorite-actions";
+import { useInvalidateProduct } from "@/lib/use-tab";
 import {
   ActiveFilters,
   BrowseLayout,
@@ -97,9 +98,13 @@ export function OrganicBrowser({
   initial: OrganicFilters;
   now: number;
 }) {
+  const invalidateProduct = useInvalidateProduct();
   const [f, setF] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [favs, setFavs] = useFavoriteSet(favoriteIds, (ids, on) => setFavorite(productId, "post", ids, on));
+  const [favs, setFavs] = useFavoriteSet(favoriteIds, async (ids, on) => {
+    await setFavorite(productId, "post", ids, on);
+    await invalidateProduct(productId);
+  });
   // The favorites filter uses the set as of when it was applied, so unstarring a post doesn't make it vanish mid-browse.
   const [filterFavs, setFilterFavs] = useState(favs);
   const matched = useMemo(() => sortPosts(applyOrganicFilters(posts, f, now, filterFavs), f.sort), [posts, f, now, filterFavs]);
