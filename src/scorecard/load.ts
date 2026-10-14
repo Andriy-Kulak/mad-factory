@@ -1,5 +1,5 @@
 import { listProductGoals, loadScorecardData, loadWindowData } from "../db/index.ts";
-import { buildOverview, DEFAULT_WINDOW_DAYS, type Overview } from "./overview.ts";
+import { buildOverview, DEFAULT_WINDOW_DAYS, TREND_WEEKS, type Overview } from "./overview.ts";
 import { addDays, buildScorecard, daysInMonth, scorecardFrom, type Goal, type Scorecard } from "./scorecard.ts";
 
 /**
@@ -26,6 +26,10 @@ export async function overviewFor(product: { id: string; slug: string }, opts: {
   const days = opts.days ?? DEFAULT_WINDOW_DAYS;
   const to = addDays(now.toISOString().slice(0, 10), -1);
   const from = addDays(to, -(days - 1));
-  const [scorecard, data] = await Promise.all([scorecardFor(product, { through: to }), loadWindowData(product.id, from, to)]);
-  return buildOverview({ product: product.slug, window: { from, to, days }, scorecard, data, now });
+  const [scorecard, data, trendData] = await Promise.all([
+    scorecardFor(product, { through: to }),
+    loadWindowData(product.id, from, to),
+    loadScorecardData(product.id, addDays(to, -(7 * TREND_WEEKS - 1)), to),
+  ]);
+  return buildOverview({ product: product.slug, window: { from, to, days }, scorecard, data, trendData, now });
 }

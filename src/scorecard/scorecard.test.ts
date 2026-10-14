@@ -9,8 +9,8 @@ function data(over: Partial<ScorecardData> = {}): ScorecardData {
   return {
     proceeds: [usd("2026-10-01", 100), usd("2026-10-02", 100)],
     trials: [
-      { date: "2026-10-01", n: 3 },
-      { date: "2026-10-02", n: 2 },
+      { date: "2026-10-01", n: 3, paid: 0 },
+      { date: "2026-10-02", n: 2, paid: 0 },
     ],
     spend: { apple_ads: [usd("2026-10-01", 40), usd("2026-10-02", 40)], meta_ads: [usd("2026-10-02", 20)] },
     latest: { revenuecat: "2026-10-02", apple_ads: "2026-10-02", meta_ads: "2026-10-02" },
