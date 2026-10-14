@@ -151,3 +151,36 @@ test("follow-ups: no follow-ups means no heading", () => {
   const text = formatBrief(buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW }));
   assert.doesNotMatch(text, /Follow-ups/);
 });
+
+test("weekly trend: 7-day blocks ending on the window end, all channels' spend, other currencies left out", () => {
+  const trendData: ScorecardData = {
+    proceeds: [
+      { date: "2026-09-08", amount: 99, currency: "USD" },
+      { date: "2026-09-09", amount: 10, currency: "USD" },
+      { date: "2026-10-05", amount: 30, currency: "USD" },
+      { date: "2026-10-05", amount: 50, currency: "EUR" },
+    ],
+    trials: [
+      { date: "2026-09-15", n: 4, paid: 1 },
+      { date: "2026-09-29", n: 6, paid: 2 },
+    ],
+    spend: {
+      meta_ads: [{ date: "2026-09-29", amount: 20, currency: "USD" }],
+      apple_ads: [{ date: "2026-10-05", amount: 5, currency: "USD" }],
+    },
+    latest: {},
+    running: [],
+  };
+  const o = buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), trendData, now: NOW });
+  assert.deepEqual(
+    o.trend.map((w) => [w.from, w.to, w.spend, w.proceeds, w.profit, w.trials, w.paid]),
+    [
+      ["2026-09-08", "2026-09-14", 0, 109, 109, 0, 0],
+      ["2026-09-15", "2026-09-21", 0, 0, 0, 4, 1],
+      ["2026-09-22", "2026-09-28", 0, 0, 0, 0, 0],
+      ["2026-09-29", "2026-10-05", 25, 30, 5, 6, 2],
+    ],
+  );
+  assert.match(formatBrief(o), /## Weekly trend\n(?:.*\n){2}\| 2026-09-08 to 2026-09-14 \| 0\.00 \| 109\.00 \| 109\.00 \| 0 \| 0 \|/);
+  assert.deepEqual(buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW }).trend, []);
+});

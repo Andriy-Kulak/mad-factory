@@ -22,7 +22,8 @@ export interface DailyAmount {
 export interface ScorecardData {
   /** RevenueCat proceeds (after store fees and taxes), summed over every campaign/keyword bucket. */
   proceeds: DailyAmount[];
-  trials: { date: string; n: number }[];
+  /** RevenueCat new trials (n) and trial conversions (paid) per day. */
+  trials: { date: string; n: number; paid: number }[];
   /** Ad spend per channel. A channel with no daily table yet is simply absent. */
   spend: Record<string, DailyAmount[]>;
   /** Latest date each daily table has for this product, null when it has none. */
@@ -32,7 +33,7 @@ export interface ScorecardData {
 
 const PAGE = 1000;
 
-/** Reads every page of a query; PostgREST caps a response at 1000 rows. */
+/** Reads every page of a query; callers must order by a unique key to keep pagination stable. */
 async function all<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>, ctx: string): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -51,18 +52,55 @@ async function latestDate(table: "revenuecat_keyword_daily" | "meta_ads_ad_daily
 export async function loadScorecardData(productId: string, from: string, to: string): Promise<ScorecardData> {
   const db = getDb();
   const rc = await all(
-    (a, b) => db.from("revenuecat_keyword_daily").select("date,proceeds,new_trials,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b),
+    (a, b) =>
+      db
+        .from("revenuecat_keyword_daily")
+        .select("date,proceeds,new_trials,trial_conversions,currency")
+        .eq("product_id", productId)
+        .gte("date", from)
+        .lte("date", to)
+        .order("tracked_source_id")
+        .order("date")
+        .order("campaign")
+        .order("keyword")
+        .range(a, b),
     "scorecard revenuecat",
   );
 
   const campaignIds = unwrap(await db.from("apple_ads_campaigns").select("id").eq("product_id", productId), "scorecard apple campaigns").map((c) => c.id);
   const apple = campaignIds.length
-    ? await all((a, b) => db.from("apple_ads_keyword_daily").select("date,spend,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b), "scorecard apple keywords")
+    ? await all(
+        (a, b) =>
+          db
+            .from("apple_ads_keyword_daily")
+            .select("date,spend,currency")
+            .in("campaign_id", campaignIds)
+            .gte("date", from)
+            .lte("date", to)
+            .order("date")
+            .order("keyword_id")
+            .order("country")
+            .range(a, b),
+        "scorecard apple keywords",
+      )
     : [];
   // Search Match spend has no keyword row; it only shows up in the search-term report under keyword_id 0.
   const appleAuto = campaignIds.length
     ? await all(
-        (a, b) => db.from("apple_ads_search_terms_daily").select("date,spend,currency").in("campaign_id", campaignIds).eq("keyword_id", 0).gte("date", from).lte("date", to).range(a, b),
+        (a, b) =>
+          db
+            .from("apple_ads_search_terms_daily")
+            .select("date,spend,currency")
+            .in("campaign_id", campaignIds)
+            .eq("keyword_id", 0)
+            .gte("date", from)
+            .lte("date", to)
+            .order("date")
+            .order("campaign_id")
+            .order("keyword_id")
+            .order("search_term")
+            .order("country")
+            .range(a, b),
         "scorecard apple search match",
       )
     : [];
@@ -71,7 +109,10 @@ export async function loadScorecardData(productId: string, from: string, to: str
     : null;
 
   const metaLatest = await latestDate("meta_ads_ad_daily", productId);
-  const meta = await all((a, b) => db.from("meta_ads_ad_daily").select("date,spend,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b), "scorecard meta");
+  const meta = await all(
+    (a, b) => db.from("meta_ads_ad_daily").select("date,spend,currency").eq("product_id", productId).gte("date", from).lte("date", to).order("date").order("ad_id").range(a, b),
+    "scorecard meta",
+  );
 
   const running = unwrap(await db.from("experiments").select("slug,channel,name").eq("product_id", productId).eq("status", "running").order("channel"), "scorecard experiments");
   const money = (rows: { date: string; currency: string }[], key: "proceeds" | "spend") =>
@@ -79,7 +120,7 @@ export async function loadScorecardData(productId: string, from: string, to: str
 
   return {
     proceeds: money(rc, "proceeds"),
-    trials: rc.map((r) => ({ date: r.date, n: r.new_trials })),
+    trials: rc.map((r) => ({ date: r.date, n: r.new_trials, paid: r.trial_conversions })),
     spend: {
       ...(campaignIds.length ? { apple_ads: money([...apple, ...appleAuto], "spend") } : {}),
       ...(metaLatest ? { meta_ads: money(meta, "spend") } : {}),
@@ -114,7 +155,7 @@ const SOCIAL = ["instagram", "tiktok", "facebook"];
 export async function loadWindowData(productId: string, from: string, to: string): Promise<WindowData> {
   const db = getDb();
   const meta = await all(
-    (a, b) => db.from("meta_ads_ad_daily").select("ad_id,spend,installs,trials,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b),
+    (a, b) => db.from("meta_ads_ad_daily").select("ad_id,spend,installs,trials,currency").eq("product_id", productId).gte("date", from).lte("date", to).order("date").order("ad_id").range(a, b),
     "overview meta",
   );
   const adIds = [...new Set(meta.map((m) => m.ad_id))];
@@ -135,23 +176,60 @@ export async function loadWindowData(productId: string, from: string, to: string
     return { id: campaign.id, name: campaign.name, role: link?.role ?? null, geo: link?.geo ?? null };
   });
   const appleCoverageKeywords = campaignIds.length
-    ? await all((a, b) => db.from("apple_ads_keywords").select("campaign_id,text,match_type,is_negative,deleted").in("campaign_id", campaignIds).range(a, b), "overview apple coverage keywords")
+    ? await all(
+        (a, b) => db.from("apple_ads_keywords").select("campaign_id,text,match_type,is_negative,deleted").in("campaign_id", campaignIds).order("id").order("is_negative").range(a, b),
+        "overview apple coverage keywords",
+      )
     : [];
   const apple = campaignIds.length
     ? [
         ...(await all(
-          (a, b) => db.from("apple_ads_keyword_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).gte("date", from).lte("date", to).range(a, b),
+          (a, b) =>
+            db
+              .from("apple_ads_keyword_daily")
+              .select("spend,tap_installs,currency")
+              .in("campaign_id", campaignIds)
+              .gte("date", from)
+              .lte("date", to)
+              .order("date")
+              .order("keyword_id")
+              .order("country")
+              .range(a, b),
           "overview apple",
         )),
         ...(await all(
-          (a, b) => db.from("apple_ads_search_terms_daily").select("spend,tap_installs,currency").in("campaign_id", campaignIds).eq("keyword_id", 0).gte("date", from).lte("date", to).range(a, b),
+          (a, b) =>
+            db
+              .from("apple_ads_search_terms_daily")
+              .select("spend,tap_installs,currency")
+              .in("campaign_id", campaignIds)
+              .eq("keyword_id", 0)
+              .gte("date", from)
+              .lte("date", to)
+              .order("date")
+              .order("campaign_id")
+              .order("keyword_id")
+              .order("search_term")
+              .order("country")
+              .range(a, b),
           "overview apple search match",
         )),
       ]
     : [];
 
   const rc = await all(
-    (a, b) => db.from("revenuecat_keyword_daily").select("campaign,new_trials,trial_conversions,proceeds,currency").eq("product_id", productId).gte("date", from).lte("date", to).range(a, b),
+    (a, b) =>
+      db
+        .from("revenuecat_keyword_daily")
+        .select("campaign,new_trials,trial_conversions,proceeds,currency")
+        .eq("product_id", productId)
+        .gte("date", from)
+        .lte("date", to)
+        .order("tracked_source_id")
+        .order("date")
+        .order("campaign")
+        .order("keyword")
+        .range(a, b),
     "overview revenuecat",
   );
 

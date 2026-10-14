@@ -3,12 +3,14 @@
  * own posts and data freshness. Pure. The web overview renders it and `pnpm brief` prints it for agents,
  * so humans and LLMs read the same numbers.
  */
-import type { WindowData } from "../db/scorecard.ts";
-import type { Scorecard } from "./scorecard.ts";
+import type { ScorecardData, WindowData } from "../db/scorecard.ts";
+import { addDays, type Scorecard } from "./scorecard.ts";
 import { discoveryGaps, formatDiscoveryGaps } from "../apple-ads/coverage.ts";
 
 /** Attribution older than this is not trusted (Meta via AppsFlyer and RevenueCat both settle within days). */
 export const DEFAULT_WINDOW_DAYS = 7;
+/** Complete 7-day weeks in the overview's trend, newest last. */
+export const TREND_WEEKS = 4;
 /** A source whose last successful run is older than this is stale. */
 const STALE_HOURS = 36;
 
@@ -62,6 +64,17 @@ export interface FollowUp {
   daysOverdue: number;
 }
 
+/** One 7-day block of the trend: all ad spend against RevenueCat proceeds, trials and trial conversions. */
+export interface WeekLine {
+  from: string;
+  to: string;
+  spend: number;
+  proceeds: number;
+  profit: number;
+  trials: number;
+  paid: number;
+}
+
 export interface Overview {
   product: string;
   generatedAt: string;
@@ -74,6 +87,8 @@ export interface Overview {
   windowProfit: number;
   /** RevenueCat proceeds per RevenueCat trial in the window: a first-payment ceiling for cost per trial. */
   proceedsPerTrial: number | null;
+  /** The last TREND_WEEKS 7-day blocks ending on window.to, oldest first; independent of the window length. */
+  trend: WeekLine[];
   ads: AdLine[];
   organic: { accounts: number; posts: PostLine[]; views: number };
   freshness: SourceFreshness[];
@@ -84,7 +99,29 @@ export interface Overview {
 const round = (n: number) => Math.round(n * 100) / 100;
 const per = (a: number | null, b: number) => (a != null && b > 0 ? round(a / b) : null);
 
-export function buildOverview(input: { product: string; window: { from: string; to: string; days: number }; scorecard: Scorecard; data: WindowData; now?: Date }): Overview {
+/** Buckets daily rows into `weeks` 7-day blocks ending on `through`, oldest first. Rows in other currencies are left out. */
+export function weeklyTrend(data: ScorecardData, currency: string, through: string, weeks = TREND_WEEKS): WeekLine[] {
+  const spend = Object.values(data.spend).flat();
+  return Array.from({ length: weeks }, (_, i) => {
+    const to = addDays(through, -7 * (weeks - 1 - i));
+    const from = addDays(to, -6);
+    const inWeek = (r: { date: string }) => r.date >= from && r.date <= to;
+    const money = (rows: { date: string; amount: number; currency: string }[]) => round(rows.filter((r) => inWeek(r) && r.currency === currency).reduce((a, r) => a + r.amount, 0));
+    const t = data.trials.filter(inWeek);
+    const w = { spend: money(spend), proceeds: money(data.proceeds) };
+    return { from, to, ...w, profit: round(w.proceeds - w.spend), trials: t.reduce((a, r) => a + r.n, 0), paid: t.reduce((a, r) => a + r.paid, 0) };
+  });
+}
+
+export function buildOverview(input: {
+  product: string;
+  window: { from: string; to: string; days: number };
+  scorecard: Scorecard;
+  data: WindowData;
+  /** Daily rows covering the trend weeks (see weeklyTrend); no trend when absent. */
+  trendData?: ScorecardData;
+  now?: Date;
+}): Overview {
   const { scorecard: sc, data } = input;
   const now = input.now ?? new Date();
   const cur = sc.currency;
@@ -204,6 +241,7 @@ export function buildOverview(input: { product: string; window: { from: string; 
     channels,
     windowProfit: round(totalProceeds - totalSpend),
     proceedsPerTrial: per(totalProceeds, totalTrials),
+    trend: input.trendData ? weeklyTrend(input.trendData, cur, input.window.to) : [],
     ads,
     organic: { accounts: data.ownAccounts, posts, views: posts.reduce((a, p) => a + (p.views ?? 0), 0) },
     freshness,
@@ -240,6 +278,10 @@ export function formatBrief(o: Overview): string {
     "",
     "Meta's trials also appear in RevenueCat's \"Not attributed\" row, so channel trials do not add up to the total.",
   ];
+  if (o.trend.length) {
+    lines.push("", "## Weekly trend", "| Week | Spend | Proceeds | Profit | Trials | Paid |", "| --- | ---: | ---: | ---: | ---: | ---: |");
+    for (const w of o.trend) lines.push(`| ${w.from} to ${w.to} | ${money(w.spend)} | ${money(w.proceeds)} | ${money(w.profit)} | ${whole(w.trials)} | ${whole(w.paid)} |`);
+  }
   if (o.ads.length) {
     lines.push("", "## Meta ads by spend", "| Ad | Status | Spend | Trials | Cost per trial |", "| --- | --- | ---: | ---: | ---: |");
     for (const a of o.ads.slice(0, 10)) lines.push(`| ${a.name} | ${a.status} | ${money(a.spend)} | ${whole(a.trials)} | ${money(a.costPerTrial)} |`);

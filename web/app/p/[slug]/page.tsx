@@ -5,6 +5,7 @@ import { channelSetup, type ChannelSetup } from "@/lib/setup";
 import { DEFAULT_WINDOW_DAYS, formatBrief, overviewFor, type Overview } from "@/lib/overview";
 import { fmtAgo, fmtDate, fmtDateTime, fmtInt, fmtMoney } from "@/lib/format";
 import { Shell } from "@/components/shell";
+import { TrendChart } from "@/components/trend-chart";
 import { DataTable } from "@/components/data-table";
 import { Badge, Card, Empty, Meter, SectionHead, Segmented, Stat, StatusDot } from "@/components/ui";
 
@@ -12,24 +13,46 @@ export const dynamic = "force-dynamic";
 
 const WINDOWS = [7, 14, 28];
 
-export default async function ProductOverview({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ days?: string }> }) {
+export default async function ProductOverview({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ days?: string; present?: string }> }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const days = WINDOWS.includes(Number(sp.days)) ? Number(sp.days) : DEFAULT_WINDOW_DAYS;
   const [o, sources] = await Promise.all([overviewFor(product, { days }), getTrackedSources(product.id)]);
   const channels = channelSetup(slug, sources);
+  // Presenter mode: the trend and channel numbers only, without the goal, internal notes and agent sections.
+  const present = sp.present === "1";
+  const href = (d: number, p: boolean) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}`;
+
+  const action = (
+    <div className="flex items-center gap-2">
+      <Segmented label="Window" active={String(days)} items={WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: href(d, present) }))} />
+      <Link href={href(days, !present)} className="btn" title="Show only the trend and channel numbers, for a demo">
+        {present ? "Exit presenting" : "Present"}
+      </Link>
+    </div>
+  );
+  const subtitle = `Numbers through ${fmtDate(o.window.to)} · refreshed ${fmtDateTime(o.generatedAt)}`;
+
+  if (present)
+    return (
+      <Shell title="Overview" subtitle={subtitle} action={action}>
+        <Trend o={o} />
+        <Window o={o} slug={slug} />
+        <div className="grid xl:grid-cols-2 gap-x-3">
+          <MetaAds o={o} slug={slug} />
+          <Organic o={o} slug={slug} />
+        </div>
+      </Shell>
+    );
 
   return (
-    <Shell
-      title="Overview"
-      subtitle={`Numbers through ${fmtDate(o.window.to)} · refreshed ${fmtDateTime(o.generatedAt)}`}
-      action={<Segmented label="Window" active={String(days)} items={WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: `/p/${slug}?days=${d}` }))} />}
-    >
+    <Shell title="Overview" subtitle={subtitle} action={action}>
       <Goal o={o} />
       <Attention o={o} slug={slug} />
       <Setup channels={channels} slug={slug} />
       <Window o={o} slug={slug} />
+      <Trend o={o} />
       <div className="grid xl:grid-cols-2 gap-x-3">
         <MetaAds o={o} slug={slug} />
         <Organic o={o} slug={slug} />
@@ -200,6 +223,40 @@ function Setup({ channels, slug }: { channels: ChannelSetup[]; slug: string }) {
           lists them; <code className="num">pnpm doctor</code> checks them.
         </p>
       </details>
+    </section>
+  );
+}
+
+/** The last few complete weeks: proceeds and paying users against the week before, and spend vs proceeds per week. */
+function Trend({ o }: { o: Overview }) {
+  const weeks = o.trend;
+  if (!weeks.length) return null;
+  const c = o.scorecard.currency;
+  const last = weeks[weeks.length - 1]!;
+  const prev = weeks[weeks.length - 2];
+  const trials = weeks.reduce((a, w) => a + w.trials, 0);
+  const paid = weeks.reduce((a, w) => a + w.paid, 0);
+  return (
+    <section aria-label="Weekly trend" className="mb-6">
+      <SectionHead
+        right={
+          <span className="text-[13px] text-fg-3">
+            {fmtDate(weeks[0]!.from)} – {fmtDate(last.to)}
+          </span>
+        }
+      >
+        Last {weeks.length} weeks
+      </SectionHead>
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
+        <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
+          <Stat label="Proceeds, last 7 days" value={fmtMoney(last.proceeds, c)} hint={prev ? `${fmtMoney(prev.proceeds, c)} the week before` : undefined} />
+          <Stat label="Paying users, last 7 days" value={fmtInt(last.paid)} hint={prev ? `${fmtInt(prev.paid)} the week before` : undefined} />
+          <Stat label="Trial to paid" value={trials ? `${Math.round((paid / trials) * 100)}%` : "–"} hint={`${fmtInt(paid)} paid of ${fmtInt(trials)} trials in ${weeks.length} weeks`} />
+        </div>
+        <Card className="px-4 py-3.5 min-w-0">
+          <TrendChart weeks={weeks} />
+        </Card>
+      </div>
     </section>
   );
 }
