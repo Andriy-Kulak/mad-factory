@@ -71,7 +71,7 @@ const videoAdsMissing = (allAds.data ?? []).filter((a) => {
 console.log(`  video ads without a creative    ${videoAdsMissing}  (expected 0 unless scraped with --no-download or a download failed)`);
 
 const noUrl = await count("creatives", (q) => q.is("public_url", null));
-console.log(`  creatives without public_url    ${noUrl}  (0 when R2_PUBLIC_URL is set)`);
+console.log(`  creatives without public_url    ${noUrl}  (should be 0)`);
 
 const errored = await count("scrape_runs", (q) => q.eq("status", "error"));
 const running = await count("scrape_runs", (q) => q.eq("status", "running"));

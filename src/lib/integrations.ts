@@ -64,14 +64,13 @@ export const INTEGRATIONS: Integration[] = [
   {
     key: "r2",
     name: "Cloudflare R2",
-    env: [["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"]],
-    optional: ["R2_PUBLIC_URL"],
+    env: [["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_URL"]],
     required: false,
     where: "cli",
     summary: "Media storage for previews",
     enables: "Stores downloaded videos and images in a bucket, so the web app can play them.",
     without: "Media is saved under ./data/media on this machine and the web app shows placeholders instead of previews.",
-    setup: "Cloudflare dashboard → R2 → create a bucket and an API token with object read & write",
+    setup: "Cloudflare dashboard → R2 → create a bucket, an API token with object read & write, and a public bucket URL (r2.dev or custom domain)",
   },
   {
     key: "proxy",
