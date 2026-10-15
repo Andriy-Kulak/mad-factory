@@ -44,7 +44,7 @@ import {
  * here so each change is instant, and the URL follows along so a filtered view can be shared.
  */
 
-const SORTS: { key: OrganicSort; label: string }[] = [
+export const ORGANIC_SORTS: { key: OrganicSort; label: string }[] = [
   { key: "outlier", label: "Outliers" },
   { key: "views", label: "Most views" },
   { key: "engagement", label: "Engagement" },
@@ -288,7 +288,7 @@ export function OrganicBrowser({
   return (
     <BrowseLayout filters={filters} count={count} onReset={clear}>
       <ResultsBar shown={matched.length} total={posts.length} noun={["post", "posts"]}>
-        <Toggle label="Sort" items={SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
+        <Toggle label="Sort" items={ORGANIC_SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
         <Toggle label="View" items={VIEWS} active={f.view} onChange={(view) => setF((cur) => ({ ...cur, view }))} />
       </ResultsBar>
       <ActiveFilters filters={chips} onClear={clear} />

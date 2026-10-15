@@ -27,7 +27,7 @@ import {
  * changes are instant, and the URL follows along.
  */
 
-const SORTS: { key: AdSort; label: string }[] = [
+export const AD_SORTS: { key: AdSort; label: string }[] = [
   { key: "impressions", label: "Top impressions" },
   { key: "newest", label: "Newest" },
   { key: "longest", label: "Longest running" },
@@ -246,7 +246,7 @@ export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads:
   return (
     <BrowseLayout filters={filters} count={count} onReset={clear}>
       <ResultsBar shown={matched.length} total={ads.length} noun={["ad", "ads"]}>
-        <Toggle label="Sort" items={SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
+        <Toggle label="Sort" items={AD_SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
         <Toggle label="View" items={VIEWS} active={f.view} onChange={(view) => setF((cur) => ({ ...cur, view }))} />
       </ResultsBar>
       <ActiveFilters filters={chips} onClear={clear} />

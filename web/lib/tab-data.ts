@@ -5,7 +5,7 @@ import { docName } from "../../src/lib/product-docs.ts";
 import { getAppleAdsExperimentsCached, getAppleAdsOverviewCached } from "./apple-ads";
 import { getAppleKeywordsCached } from "./apple-keywords";
 import { competitorAdsCached, getTrackedSources } from "./queries";
-import { favoriteIds } from "./favorites";
+import { favoriteIds, favoriteStars } from "./favorites";
 import { organicOverviewCached } from "./social";
 import { getMetaAdsOverviewCached } from "./meta-ads";
 import { listCreativeItemsCached } from "./creatives";
@@ -35,13 +35,13 @@ export const tabLoaders = {
     return { ads, favorites };
   },
   favorites: async (product: ProductRow) => {
-    const [{ accounts, posts }, ads, adFavorites, postFavorites] = await Promise.all([
+    const [{ accounts, posts }, ads, adStarredAt, postStarredAt] = await Promise.all([
       organicOverviewCached(product.id),
       competitorAdsCached(product.id),
-      favoriteIds(product.id, "ad"),
-      favoriteIds(product.id, "post"),
+      favoriteStars(product.id, "ad"),
+      favoriteStars(product.id, "post"),
     ]);
-    return { accounts, posts, ads, adFavorites, postFavorites };
+    return { accounts, posts, ads, adStarredAt, postStarredAt };
   },
   organic: async (product: ProductRow) => {
     const [{ accounts, posts }, favorites] = await Promise.all([organicOverviewCached(product.id, { relations: ["competitor", "inspiration"] }), favoriteIds(product.id, "post")]);

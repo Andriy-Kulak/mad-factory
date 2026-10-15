@@ -12,17 +12,17 @@ export function FavoritesTab({ product, panel }: { product: { id: string; slug: 
   const { data, isPending, isError, refetch } = useTab(product, "favorites");
   if (isPending) return <PageSkeleton title="Favorites" stats={0} body="cards" />;
   if (isError || !data) return <TabLoadError title="Favorites" retry={() => void refetch()} />;
-  const { ads, accounts, posts, adFavorites: adFavs, postFavorites: postFavs } = data;
+  const { ads, accounts, posts, adStarredAt, postStarredAt } = data;
   const { slug } = product;
-  const starredAds = new Set(adFavs);
-  const starredPosts = new Set(postFavs);
+  const starredAds = new Set(Object.keys(adStarredAt));
+  const starredPosts = new Set(Object.keys(postStarredAt));
   const favAds = ads.filter((a) => a.memberIds.some((id) => starredAds.has(id)));
   const favPosts = posts.filter((p) => starredPosts.has(p.id));
 
   return (
     <Shell title="Favorites" subtitle={`${favAds.length} ads · ${favPosts.length} posts · star an ad or post anywhere in Research and it shows here`}>
       {panel}
-      <FavoritesView ads={favAds} posts={favPosts} accounts={accounts} slug={slug} productId={product.id} adFavoriteIds={adFavs} postFavoriteIds={postFavs} now={Date.now()} />
+      <FavoritesView ads={favAds} posts={favPosts} accounts={accounts} slug={slug} productId={product.id} adStarredAt={adStarredAt} postStarredAt={postStarredAt} now={Date.now()} />
     </Shell>
   );
 }
