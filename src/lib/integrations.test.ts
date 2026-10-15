@@ -31,7 +31,10 @@ test(".env.example has no variable the registry does not know", () => {
 });
 
 test("a group counts only when complete; the closest group names what is missing", () => {
-  assert.deepEqual(integrationStatus("r2", { R2_ACCOUNT_ID: "a", R2_BUCKET: "b" }), { configured: false, missing: ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"] });
+  assert.deepEqual(integrationStatus("r2", { R2_ACCOUNT_ID: "a", R2_BUCKET: "b" }), {
+    configured: false,
+    missing: ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_PUBLIC_URL"],
+  });
   assert.equal(integrationStatus("apple-ads", { APPLE_ADS_DIR: "/x" }).configured, true);
   assert.deepEqual(integrationStatus("apple-ads", { APPLE_ADS_CLIENT_ID: "c" }).missing, ["APPLE_ADS_TEAM_ID", "APPLE_ADS_KEY_ID", "APPLE_ADS_PRIVATE_KEY"]);
   assert.equal(integrationStatus("meta-ads", { META_ADS_TOKEN: "" }).configured, false);

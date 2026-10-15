@@ -14,7 +14,7 @@ const R2_SECRET_ACCESS_KEY = optionalEnv("R2_SECRET_ACCESS_KEY");
 const R2_BUCKET = optionalEnv("R2_BUCKET");
 const R2_PUBLIC_URL = optionalEnv("R2_PUBLIC_URL");
 
-export const r2Enabled = !!(R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET);
+export const r2Enabled = !!(R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET && R2_PUBLIC_URL);
 
 const s3 = r2Enabled
   ? new S3Client({
@@ -201,6 +201,6 @@ export async function store(hash: string, buf: Buffer, ext = "mp4", prefix = "vi
   }
   return {
     storageKey,
-    publicUrl: R2_PUBLIC_URL ? `${R2_PUBLIC_URL.replace(/\/$/, "")}/${storageKey}` : null,
+    publicUrl: `${R2_PUBLIC_URL!.replace(/\/$/, "")}/${storageKey}`,
   };
 }
