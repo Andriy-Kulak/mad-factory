@@ -1,0 +1,53 @@
+import { notFound } from "next/navigation";
+import { Shell } from "@/components/shell";
+import { CommentersView, LinkedInView, XView } from "@/components/social-reach-views";
+import { Empty, Tabs } from "@/components/ui";
+import { fmtDate } from "@/lib/format";
+import { getProductBySlug } from "@/lib/queries";
+import { loadSocialReach } from "@/lib/social-reach-data";
+
+export const dynamic = "force-dynamic";
+
+const VIEWS = ["x", "linkedin", "commenters"] as const;
+type View = (typeof VIEWS)[number];
+
+export default async function SocialReachPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ view?: string }> }) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const product = await getProductBySlug(slug);
+  if (!product) notFound();
+  const data = await loadSocialReach(slug);
+  const view: View = (VIEWS as readonly string[]).includes(sp.view ?? "") ? (sp.view as View) : "x";
+  const tabs = (
+    <Tabs
+      items={[
+        { key: "x", label: "X", href: `/p/${slug}/reach` },
+        { key: "linkedin", label: "LinkedIn", href: `/p/${slug}/reach?view=linkedin` },
+        { key: "commenters", label: "LinkedIn commenters", href: `/p/${slug}/reach?view=commenters` },
+      ]}
+      active={view}
+    />
+  );
+  return (
+    <Shell
+      title="Social reach"
+      subtitle={
+        data
+          ? `Snapshot from ${fmtDate(data.capturedAt)} · ${data.credits} ScrapeCreators credits · stored in local/${slug}/social-reach.json`
+          : "X and LinkedIn reach for the company, its team and competitors"
+      }
+      tabs={data ? tabs : undefined}
+    >
+      {!data ? (
+        <Empty>
+          No snapshot for this product. Save one as <code>local/{slug}/social-reach.json</code> (format in <code>web/lib/social-reach.ts</code>); it stays on this machine.
+        </Empty>
+      ) : view === "linkedin" ? (
+        <LinkedInView data={data} />
+      ) : view === "commenters" ? (
+        <CommentersView data={data} slug={slug} />
+      ) : (
+        <XView data={data} />
+      )}
+    </Shell>
+  );
+}
