@@ -1,6 +1,6 @@
 import { getProductBySlug } from "@/lib/queries";
-import { commentersCsv, leads } from "@/lib/social-reach";
-import { loadSocialReach } from "@/lib/social-reach-data";
+import { commentersCsv, leads } from "@/lib/b2b-social";
+import { loadB2BSocial } from "@/lib/b2b-social-data";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  const data = product ? await loadSocialReach(slug) : null;
+  const data = product ? await loadB2BSocial(slug) : null;
   if (!data) return new Response("No social reach snapshot for this product", { status: 404 });
   return new Response(
     commentersCsv(

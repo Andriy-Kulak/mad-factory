@@ -30,8 +30,8 @@ import {
   type ReachGroup,
   type ReachPost,
   median,
-  type SocialReachData,
-} from "@/lib/social-reach";
+  type B2BSocialData,
+} from "@/lib/b2b-social";
 
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 const num = (v: number | null | undefined) => (v == null ? "–" : compact.format(v));
@@ -83,7 +83,7 @@ function BreakdownTable({ rows, label, views }: { rows: BreakdownRow[]; label: (
 
 const FORMAT_LABEL: Record<string, string> = { video: "Video", image: "Image", link: "Link", text: "Text only" };
 
-export function XView({ data }: { data: SocialReachData }) {
+export function XView({ data }: { data: B2BSocialData }) {
   const since = new Date(Date.parse(data.capturedAt) - 30 * 86_400_000).toISOString();
   const totals = groupTotals(data, "x", since);
   const company = totals.find((t) => t.group === "company");
@@ -218,7 +218,7 @@ function PostTable({ rows, views }: { rows: Row[]; views: boolean }) {
   );
 }
 
-export function LinkedInView({ data }: { data: SocialReachData }) {
+export function LinkedInView({ data }: { data: B2BSocialData }) {
   const stats = accountStats(data, "linkedin");
   const page = stats.find((s) => s.account.group === "company");
   const groupOf = new Map(stats.map((s) => [s.account.handle, s.account.group]));
@@ -276,7 +276,7 @@ export function LinkedInView({ data }: { data: SocialReachData }) {
 
 const KIND_TONE: Record<CommentKind, BadgeTone> = { using: "green", pain: "red", evaluating: "green", insider: "accent", commentary: "neutral", cheer: "neutral", company: "warn" };
 
-export function CommentersView({ data, slug }: { data: SocialReachData; slug: string }) {
+export function CommentersView({ data, slug }: { data: B2BSocialData; slug: string }) {
   const rows = commenterRows(data);
   const people = new Set(rows.map((r) => r.comment.authorUrl ?? r.comment.authorName));
   const count = (k: CommentKind) => rows.filter((r) => r.kind === k).length;
@@ -296,7 +296,7 @@ export function CommentersView({ data, slug }: { data: SocialReachData; slug: st
 
       <SectionHead
         right={
-          <ButtonLink href={`/p/${slug}/reach/commenters.csv`} primary size="sm">
+          <ButtonLink href={`/p/${slug}/b2b-social/commenters.csv`} primary size="sm">
             Download CSV
           </ButtonLink>
         }
@@ -356,7 +356,7 @@ const tierTags = (tier: CompanyTier) => [tier];
 export const LEAD_WINDOWS = ["7", "30", "all"] as const;
 export type LeadWindow = (typeof LEAD_WINDOWS)[number];
 
-export function LeadsView({ data, slug, window }: { data: SocialReachData; slug: string; window: LeadWindow }) {
+export function LeadsView({ data, slug, window }: { data: B2BSocialData; slug: string; window: LeadWindow }) {
   const since = window === "all" ? null : new Date(Date.parse(data.capturedAt) - Number(window) * 86_400_000).toISOString();
   const list = leads(data, since);
   const accounts = leadAccounts(list);
@@ -442,7 +442,7 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
 
       <SectionHead
         right={
-          <ButtonLink href={`/p/${slug}/reach/commenters.csv`} primary size="sm">
+          <ButtonLink href={`/p/${slug}/b2b-social/commenters.csv`} primary size="sm">
             Download CSV for Clay
           </ButtonLink>
         }
@@ -571,12 +571,12 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
 
 const REASON_TONE: Record<OutreachReason, BadgeTone> = { switching: "red", using: "green", asking: "accent", evaluating: "warn", senior: "neutral" };
 
-function windowSince(data: SocialReachData, window: LeadWindow): string | null {
+function windowSince(data: B2BSocialData, window: LeadWindow): string | null {
   return window === "all" ? null : new Date(Date.parse(data.capturedAt) - Number(window) * 86_400_000).toISOString();
 }
 
 function WindowToggle({ slug, view, window }: { slug: string; view: string; window: LeadWindow }) {
-  const base = `/p/${slug}/reach${view === "outreach" ? "" : `?view=${view}`}`;
+  const base = `/p/${slug}/b2b-social${view === "outreach" ? "" : `?view=${view}`}`;
   const join = base.includes("?") ? "&" : "?";
   return (
     <Segmented
@@ -592,7 +592,7 @@ function WindowToggle({ slug, view, window }: { slug: string; view: string; wind
 }
 
 /** The main tab: people worth a message now, why, and a first line to send. */
-export function OutreachView({ data, slug, window }: { data: SocialReachData; slug: string; window: LeadWindow }) {
+export function OutreachView({ data, slug, window }: { data: B2BSocialData; slug: string; window: LeadWindow }) {
   const list = outreach(data, windowSince(data, window));
   const count = (r: OutreachReason) => list.filter((o) => o.reason === r).length;
   const windowLabel = window === "all" ? "all time" : `the last ${window} days`;

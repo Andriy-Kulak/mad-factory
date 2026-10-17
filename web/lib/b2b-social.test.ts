@@ -15,8 +15,8 @@ import {
   topicOf,
   outreach,
   type ReachPost,
-  type SocialReachData,
-} from "./social-reach.ts";
+  type B2BSocialData,
+} from "./b2b-social.ts";
 
 const post = (over: Partial<ReachPost>): ReachPost => ({
   platform: "x",
@@ -35,7 +35,7 @@ const post = (over: Partial<ReachPost>): ReachPost => ({
   ...over,
 });
 
-const data: SocialReachData = {
+const data: B2BSocialData = {
   capturedAt: "2026-01-10",
   credits: 7,
   accounts: [
@@ -179,7 +179,7 @@ test("leads rank senior people at big companies who asked something above cheers
   const big = { url: "https://www.linkedin.com/company/bigco", name: "BigCo", domain: "bigco.com", size: "10,001+ employees", employees: 50000, industry: "Banking", fortune500: 12 };
   const small = { url: "https://www.linkedin.com/company/tiny", name: "Tiny", domain: null, size: "2-10 employees", employees: 4, industry: null, fortune500: null };
   const person = (url: string, employerUrl: string, title: string) => ({ url, found: true, location: null, followers: null, employer: null, employerUrl, title });
-  const d: SocialReachData = {
+  const d: B2BSocialData = {
     ...data,
     comments: [
       { postId: "10", authorName: "Vee", authorUrl: "https://www.linkedin.com/in/vee", text: "Does it handle our monorepo?" },
@@ -215,7 +215,7 @@ test("leads rank senior people at big companies who asked something above cheers
 });
 
 test("leads: tracked team profiles are insiders anywhere, and since keeps only comments on newer posts", () => {
-  const d: SocialReachData = {
+  const d: B2BSocialData = {
     ...data,
     accounts: [...data.accounts, { platform: "linkedin", handle: "pat", name: "Pat", url: "https://www.linkedin.com/in/pat", group: "team", followers: 10, sample: "recent" }],
     posts: [...data.posts, post({ platform: "linkedin", id: "12", handle: "acme-inc", url: "https://www.linkedin.com/posts/acme-12", text: "New", postedAt: "2026-01-09T00:00:00.000Z" })],
@@ -239,7 +239,7 @@ test("leads: tracked team profiles are insiders anywhere, and since keeps only c
 });
 
 test("outreach: a reason and an opener per identifiable person, competitor pain first, anonymous and brand accounts left out", () => {
-  const d: SocialReachData = {
+  const d: B2BSocialData = {
     ...data,
     accounts: [...data.accounts, { platform: "x", handle: "rival", name: "Rival", url: "https://x.com/rival", group: "competitor", followers: 5000, sample: "recent" }],
     posts: [...data.posts, post({ id: "20", handle: "rival", url: "https://x.com/rival/status/20", text: "Introducing new pricing" })],

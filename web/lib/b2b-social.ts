@@ -1,7 +1,7 @@
 /**
- * Social reach: X and LinkedIn numbers for a product, its team and its competitors, read from a local JSON snapshot
- * (local/<slug>/social-reach.json, gitignored; nothing goes to the database). Pure math here; the loader is
- * social-reach-data.ts. ScrapeCreators gives counts only: no likers, reposters or retweeters, and LinkedIn returns at
+ * B2B Social: X and LinkedIn numbers for a product, its team and its competitors, read from a local JSON snapshot
+ * (local/<slug>/b2b-social.json, gitignored; nothing goes to the database). Pure math here; the loader is
+ * b2b-social-data.ts. ScrapeCreators gives counts only: no likers, reposters or retweeters, and LinkedIn returns at
  * most 10 comments per post.
  */
 
@@ -76,7 +76,7 @@ export interface ReachCompany {
   yc?: string | null;
 }
 
-export interface SocialReachData {
+export interface B2BSocialData {
   capturedAt: string;
   credits: number;
   accounts: ReachAccount[];
@@ -116,7 +116,7 @@ export interface AccountStats {
 const key = (platform: ReachPlatform, handle: string) => `${platform}:${handle}`;
 
 /** Originals only: replies are measured separately (they get a fraction of the views). */
-export function accountStats(data: SocialReachData, platform: ReachPlatform): AccountStats[] {
+export function accountStats(data: B2BSocialData, platform: ReachPlatform): AccountStats[] {
   const byAccount = new Map<string, ReachPost[]>();
   for (const p of data.posts) if (p.platform === platform && !p.isReply) byAccount.set(key(p.platform, p.handle), [...(byAccount.get(key(p.platform, p.handle)) ?? []), p]);
   return data.accounts
@@ -162,7 +162,7 @@ export interface GroupTotals {
 export const GROUP_LABEL: Record<ReachGroup, string> = { company: "Company accounts", team: "Team", competitor: "Competitors" };
 
 /** Followers per group, and what each group's original posts since `since` added up to. */
-export function groupTotals(data: SocialReachData, platform: ReachPlatform, since: string): GroupTotals[] {
+export function groupTotals(data: B2BSocialData, platform: ReachPlatform, since: string): GroupTotals[] {
   const groupOf = new Map(data.accounts.filter((a) => a.platform === platform).map((a) => [a.handle, a.group]));
   const out = new Map<ReachGroup, GroupTotals>();
   const row = (group: ReachGroup) => {
@@ -313,7 +313,7 @@ export interface CommenterRow {
 }
 
 /** Every comment joined to its post, the account that posted it and the commenter's profile when looked up. */
-export function commenterRows(data: SocialReachData): CommenterRow[] {
+export function commenterRows(data: B2BSocialData): CommenterRow[] {
   const posts = new Map(data.posts.map((p) => [p.id, p]));
   const accounts = new Map(data.accounts.map((a) => [key(a.platform, a.handle), a]));
   const people = new Map(data.people.map((p) => [p.url, p]));
@@ -453,7 +453,7 @@ export interface Lead {
  * the last 30 days (relative to the snapshot). Insiders and company pages are left out. `since` keeps only comments on
  * posts from that date on.
  */
-export function leads(data: SocialReachData, since: string | null = null): Lead[] {
+export function leads(data: B2BSocialData, since: string | null = null): Lead[] {
   const companies = new Map((data.companies ?? []).map((c) => [c.url, c]));
   const recentSince = new Date(Date.parse(data.capturedAt) - 30 * 86_400_000).toISOString();
   const byPerson = new Map<string, CommenterRow[]>();
@@ -580,7 +580,7 @@ function openerFor(reason: OutreachReason, touch: CommenterRow, lead: Lead, ownN
  * switching or evaluating moment; on the company's own posts it's a user or a question; a senior person at a big company
  * qualifies even without a signal. Ranked by the lead score times how actionable the reason is.
  */
-export function outreach(data: SocialReachData, since: string | null = null): Outreach[] {
+export function outreach(data: B2BSocialData, since: string | null = null): Outreach[] {
   const ownName = data.accounts.find((a) => a.group === "company")?.name ?? "us";
   const out: Outreach[] = [];
   for (const lead of leads(data, since)) {
