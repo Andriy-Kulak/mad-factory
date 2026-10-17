@@ -58,6 +58,9 @@ export interface ReachPerson {
   /** The employer's LinkedIn page, the key into `companies`. */
   employerUrl?: string | null;
   title?: string | null;
+  /** For a person found on X: their matched LinkedIn profile and X bio. */
+  linkedinUrl?: string | null;
+  bio?: string | null;
 }
 
 /** An employer's LinkedIn page: size bucket ("10,001+ employees"), members on LinkedIn, and its Fortune 500 rank if any. */
@@ -69,6 +72,8 @@ export interface ReachCompany {
   employees: number | null;
   industry: string | null;
   fortune500: number | null;
+  /** Y Combinator batch ("W24") when the employer is a YC company. */
+  yc?: string | null;
 }
 
 export interface SocialReachData {
@@ -269,10 +274,12 @@ export const COMMENT_KIND_LABEL: Record<CommentKind, string> = {
 };
 
 const INSIDER_TEXT = /\b(by our team|work by our|our team!|we('re| are) just getting started|loved working on|proud of (the|our) team|welcome to the team|great to work with)\b/i;
+/** A vendor's support staff answering in the thread. */
+const VENDOR_SUPPORT = /\b(sorry about that|should be resolved now|we('re| are) looking into (it|this)|please (dm|email) (us|support)|reach out to (our )?support)\b/i;
 const USING =
   /\b(we use|we('ve| have) been using|we('re| are) using|i use|i('ve| have) been using|i('ve| have) applied|i have applied|my team (has|have|is)|our team (has|have|is) (been )?using|at our company|we tried|we switched|upgrade to our|improved our|changed our|in our (workflow|stack|codebase))\b/i;
 const PAIN =
-  /\b(pricing|too expensive|expensive|costly|confusing|rate[- ]limit(s|ed)?|usage limits?|hit (the|my|a) limit|quota|too slow|so slow|broken|buggy|unusable|cancel(l?ed|ling)?|switch(ed|ing)? (to|from|away)|downgrad\w*|frustrat\w*|disappointed|regress\w*|outage|keeps (failing|crashing)|worse than)\b/i;
+  /\b(price (hike|increase)|nuked|too expensive|expensive|costly|confusing|rate[- ]limit(s|ed)?|usage limits?|hit (the|my|a) limit|quota|too slow|so slow|broken|buggy|unusable|cancel(l?ed|ling)?|switch(ed|ing)? (to|from|away)|downgrad\w*|frustrat\w*|disappointed|regress\w*|outage|keeps (failing|crashing)|worse than)\b/i;
 const EVALUATING = /\b(compare[ds]?|compared to|vs\.?|versus|alternative to|advantage over|does it (work|support|handle)|can it|any plans|on the roadmap|is there a way|how (does|do|can|is))\b/i;
 /** Long comments with a question mark are usually rhetorical takes; a real question is short. */
 const QUESTION_MAX = 220;
@@ -289,7 +296,7 @@ export function classifyComment(comment: ReachComment, person: ReachPerson | und
   const employer = normalizeName(person?.employer ?? null);
   if (employer && posterNames.some((n) => n && normalizeName(n) === employer)) return "insider";
   const text = comment.text.trim();
-  if (INSIDER_TEXT.test(text) && !text.includes("?")) return "insider";
+  if ((INSIDER_TEXT.test(text) && !text.includes("?")) || VENDOR_SUPPORT.test(text)) return "insider";
   if (USING.test(text)) return "using";
   if (PAIN.test(text)) return "pain";
   if (EVALUATING.test(text) || (text.includes("?") && text.length <= QUESTION_MAX)) return "evaluating";
@@ -405,9 +412,10 @@ export function seniorityOf(title: string | null | undefined): Seniority {
   return "unknown";
 }
 
-export type CompanyTier = "fortune500" | "enterprise" | "other";
+export type CompanyTier = "fortune500" | "enterprise" | "yc" | "other";
 
-export const COMPANY_TIER_LABEL: Record<CompanyTier, string> = { fortune500: "Fortune 500", enterprise: "10k+ employees", other: "Smaller company" };
+export const COMPANY_TIER_LABEL: Record<CompanyTier, string> = { fortune500: "Fortune 500", enterprise: "10k+ employees", yc: "YC startup", other: "Smaller company" };
+export const isEnterprise = (tier: CompanyTier) => tier === "fortune500" || tier === "enterprise";
 
 /** Fortune 500 by rank; otherwise enterprise when LinkedIn puts it in the 10,001+ bucket or lists 10k+ members. */
 /** LinkedIn's catch-all pages ("Self-Employed" lists 10,001+ employees) are not employers. */
@@ -417,11 +425,12 @@ export function companyTier(company: ReachCompany | undefined): CompanyTier {
   if (!company || NOT_AN_EMPLOYER.test(company.name.trim())) return "other";
   if (company.fortune500 != null) return "fortune500";
   if (/10,?001\+/.test(company.size ?? "") || (company.employees ?? 0) >= 10_000) return "enterprise";
+  if (company.yc) return "yc";
   return "other";
 }
 
 const SENIORITY_WEIGHT: Record<Seniority, number> = { exec: 5, vp: 4, director: 3, manager: 2, senior: 1.5, ic: 1, unknown: 1 };
-const TIER_WEIGHT: Record<CompanyTier, number> = { fortune500: 3, enterprise: 2, other: 1 };
+const TIER_WEIGHT: Record<CompanyTier, number> = { fortune500: 3, enterprise: 2, yc: 1.5, other: 1 };
 const KIND_WEIGHT: Record<CommentKind, number> = { using: 3, pain: 3, evaluating: 2.5, commentary: 1.5, cheer: 1, insider: 0, company: 0 };
 
 export interface Lead {
@@ -515,4 +524,88 @@ export function leadAccounts(list: Lead[]): AccountRow[] {
           .at(-1) || null,
     }))
     .sort((a, b) => b.score - a.score);
+}
+
+export const OUTREACH_REASONS = ["switching", "using", "asking", "evaluating", "senior"] as const;
+export type OutreachReason = (typeof OUTREACH_REASONS)[number];
+
+export const OUTREACH_REASON_LABEL: Record<OutreachReason, string> = {
+  switching: "Unhappy with a competitor",
+  using: "Already a user",
+  asking: "Asked about the product",
+  evaluating: "Weighing a competitor",
+  senior: "Senior person at a big company",
+};
+
+const REASON_WEIGHT: Record<OutreachReason, number> = { switching: 1.5, using: 1.3, asking: 1.2, evaluating: 1, senior: 1 };
+
+export interface Outreach {
+  lead: Lead;
+  reason: OutreachReason;
+  /** The comment that makes it worth reaching out. */
+  touch: CommenterRow;
+  /** Where to message them: LinkedIn when known, else their X profile. */
+  profileUrl: string;
+  xUrl: string | null;
+  opener: string;
+  priority: number;
+}
+
+const quote = (text: string, max = 90) => {
+  const chars = Array.from(text.replace(/\s+/g, " ").trim());
+  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : chars.join("");
+};
+
+/** A first line a rep could send, built only from what the person said and where. */
+function openerFor(reason: OutreachReason, touch: CommenterRow, lead: Lead, ownName: string): string {
+  const where = touch.account?.name ?? "a post";
+  const said = quote(touch.comment.text);
+  const at = lead.company?.name ?? lead.person?.employer;
+  switch (reason) {
+    case "switching":
+      return `Saw your reply on ${where}'s post ("${said}"). If that change is pushing you to look around, happy to show how ${ownName} handles it${at ? ` for teams like ${at}` : ""}.`;
+    case "using":
+      return `Thanks for sharing how you use ${ownName} ("${said}"). Would love 15 minutes to hear what's working${at ? ` at ${at}` : ""} and what would help it go further.`;
+    case "asking":
+      return `You asked "${said}" on ${where}'s post. Quick answer and a 15-minute walkthrough if useful?`;
+    case "evaluating":
+      return `Noticed your question on ${where}'s post ("${said}"). If you're comparing options, happy to share how ${ownName} stacks up.`;
+    case "senior":
+      return `Noticed you engaged with ${where}'s post on ${TOPIC_LABEL[touch.topic ?? "other"].toLowerCase()}. Curious how ${at ?? "your team"} is thinking about it; open to a quick chat?`;
+  }
+}
+
+/**
+ * The short list a rep acts on: outside people with a reason to reach out now. A signal on a competitor's post is a
+ * switching or evaluating moment; on the company's own posts it's a user or a question; a senior person at a big company
+ * qualifies even without a signal. Ranked by the lead score times how actionable the reason is.
+ */
+export function outreach(data: SocialReachData, since: string | null = null): Outreach[] {
+  const ownName = data.accounts.find((a) => a.group === "company")?.name ?? "us";
+  const out: Outreach[] = [];
+  for (const lead of leads(data, since)) {
+    // Only people a rep can identify and reach; brand and bot accounts (1M+ followers) are not leads.
+    if (!lead.person?.title && !lead.company && !lead.person?.employer) continue;
+    if ((lead.person?.followers ?? 0) >= 1_000_000) continue;
+    const touch = lead.touches[0]!;
+    const onCompetitor = touch.account?.group === "competitor";
+    const seniorBig = isEnterprise(lead.tier) && ["exec", "vp", "director", "manager"].includes(lead.seniority);
+    let reason: OutreachReason | null = null;
+    if (lead.kind === "using") reason = "using";
+    else if (lead.kind === "pain") reason = onCompetitor ? "switching" : "asking";
+    else if (lead.kind === "evaluating") reason = onCompetitor ? "evaluating" : "asking";
+    else if (seniorBig) reason = "senior";
+    if (!reason) continue;
+    const xUrl = /^https:\/\/x\.com\//.test(lead.url) ? lead.url : null;
+    out.push({
+      lead,
+      reason,
+      touch,
+      profileUrl: lead.person?.linkedinUrl ?? lead.url,
+      xUrl,
+      opener: openerFor(reason, touch, lead, ownName),
+      priority: Math.round(lead.score * REASON_WEIGHT[reason] * (lead.person?.title || lead.company ? 1.2 : 1) * 10) / 10,
+    });
+  }
+  return out.sort((a, b) => b.priority - a.priority);
 }

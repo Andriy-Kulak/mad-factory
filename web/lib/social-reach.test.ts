@@ -13,6 +13,7 @@ import {
   median,
   seniorityOf,
   topicOf,
+  outreach,
   type ReachPost,
   type SocialReachData,
 } from "./social-reach.ts";
@@ -119,10 +120,12 @@ test("classifyComment: company pages, employer match, questions, long takes and 
   assert.equal(classifyComment(c("Can it run on our own servers?"), undefined, ["Acme"]), "evaluating");
   assert.equal(classifyComment(c("How does it compare to the other tools?"), undefined, ["Acme"]), "evaluating");
   assert.equal(classifyComment(c("Your pricing model is confusing now"), undefined, ["Acme"]), "pain");
+  assert.equal(classifyComment(c("what's the new model's cache pricing?"), undefined, ["Acme"]), "evaluating");
   assert.equal(classifyComment(c("We keep hitting usage limits and switched away"), undefined, ["Acme"]), "pain");
   assert.equal(classifyComment(c("We have been using it for a month and love it"), undefined, ["Acme"]), "using");
   assert.equal(classifyComment(c(`${"A long take about the market. ".repeat(10)}Right?`), undefined, ["Acme"]), "commentary");
   assert.equal(classifyComment(c("Congrats 🎉"), undefined, ["Acme"]), "cheer");
+  assert.equal(classifyComment(c("Sorry about that! It should be resolved now."), undefined, ["Acme"]), "insider");
 });
 
 test("commenterRows joins posts, accounts and people, and the CSV quotes what it must", () => {
@@ -233,4 +236,48 @@ test("leads: tracked team profiles are insiders anywhere, and since keeps only c
     leads(d, "2026-01-05T00:00:00.000Z").map((l) => l.name),
     ["New"],
   );
+});
+
+test("outreach: a reason and an opener per identifiable person, competitor pain first, anonymous and brand accounts left out", () => {
+  const d: SocialReachData = {
+    ...data,
+    accounts: [...data.accounts, { platform: "x", handle: "rival", name: "Rival", url: "https://x.com/rival", group: "competitor", followers: 5000, sample: "recent" }],
+    posts: [...data.posts, post({ id: "20", handle: "rival", url: "https://x.com/rival/status/20", text: "Introducing new pricing" })],
+    comments: [
+      { postId: "20", authorName: "Dana", authorUrl: "https://x.com/dana", text: "This pricing change is a brutal downgrade, cancelling" },
+      { postId: "20", authorName: "Anon", authorUrl: "https://x.com/anon", text: "So expensive now" },
+      { postId: "20", authorName: "Bot", authorUrl: "https://x.com/bot", text: "Pricing is confusing? Here is how it works" },
+      { postId: "1", authorName: "Uma", authorUrl: "https://x.com/uma", text: "We have been using it every day" },
+      { postId: "1", authorName: "Cy", authorUrl: "https://x.com/cy", text: "Congrats!" },
+    ],
+    people: [
+      {
+        url: "https://x.com/dana",
+        found: true,
+        location: null,
+        followers: 300,
+        employer: "BigCo",
+        employerUrl: "company:bigco",
+        title: "Head of Platform",
+        linkedinUrl: "https://www.linkedin.com/in/dana",
+      },
+      { url: "https://x.com/anon", found: true, location: null, followers: 10, employer: null, title: null },
+      { url: "https://x.com/bot", found: true, location: null, followers: 9_000_000, employer: "Rival", title: "Bot" },
+      { url: "https://x.com/uma", found: true, location: null, followers: 50, employer: "Tiny", title: "Engineer" },
+      { url: "https://x.com/cy", found: true, location: null, followers: 50, employer: "Tiny", title: "Engineer" },
+    ],
+    companies: [{ url: "company:bigco", name: "BigCo", domain: null, size: "10,001+ employees", employees: 20000, industry: null, fortune500: null }],
+  };
+  const list = outreach(d);
+  assert.deepEqual(
+    list.map((o) => [o.lead.name, o.reason]),
+    [
+      ["Dana", "switching"],
+      ["Uma", "using"],
+    ],
+  );
+  assert.equal(list[0]!.profileUrl, "https://www.linkedin.com/in/dana");
+  assert.equal(list[0]!.xUrl, "https://x.com/dana");
+  assert.match(list[0]!.opener, /Rival's post/);
+  assert.match(list[0]!.opener, /Acme/);
 });

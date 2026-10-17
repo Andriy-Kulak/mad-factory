@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { DataTable, type Row } from "@/components/data-table";
-import { Badge, ButtonLink, NameCell, Pair, SectionHead, Segmented, Stat, type BadgeTone } from "@/components/ui";
+import { Badge, ButtonLink, buttonClass, Card, Empty, NameCell, Pair, SectionHead, Segmented, Stat, type BadgeTone } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import {
   accountStats,
@@ -13,7 +13,12 @@ import {
   topicOf,
   TOPIC_LABEL,
   COMPANY_TIER_LABEL,
+  isEnterprise,
   isSignal,
+  outreach,
+  OUTREACH_REASON_LABEL,
+  OUTREACH_REASONS,
+  type OutreachReason,
   leadAccounts,
   leads,
   SENIORITIES,
@@ -338,7 +343,7 @@ export function CommentersView({ data, slug }: { data: SocialReachData; slug: st
   );
 }
 
-const TIER_TONE: Record<CompanyTier, BadgeTone> = { fortune500: "green", enterprise: "accent", other: "neutral" };
+const TIER_TONE: Record<CompanyTier, BadgeTone> = { fortune500: "green", enterprise: "accent", yc: "warn", other: "neutral" };
 const SENIORITY_TONE: Record<Seniority, BadgeTone> = { exec: "green", vp: "green", director: "accent", manager: "accent", senior: "neutral", ic: "neutral", unknown: "neutral" };
 // DataTable's first view always holds every row, so the leads tables only get enterprise rows to begin with.
 const TIER_VIEWS = [
@@ -355,8 +360,8 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
   const since = window === "all" ? null : new Date(Date.parse(data.capturedAt) - Number(window) * 86_400_000).toISOString();
   const list = leads(data, since);
   const accounts = leadAccounts(list);
-  const big = list.filter((l) => l.tier !== "other");
-  const bigAccounts = accounts.filter((a) => a.tier !== "other");
+  const big = list.filter((l) => isEnterprise(l.tier));
+  const bigAccounts = accounts.filter((a) => isEnterprise(a.tier));
   const senior = big.filter((l) => ["exec", "vp", "director", "manager"].includes(l.seniority));
 
   // Which topics pull enterprise people into the comments: the content answer that matters for outreach.
@@ -379,15 +384,7 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
   return (
     <>
       <div className="mb-4">
-        <Segmented
-          label="Time window"
-          active={window}
-          items={[
-            { key: "7", label: "Last 7 days", href: `/p/${slug}/reach` },
-            { key: "30", label: "Last 30 days", href: `/p/${slug}/reach?days=30` },
-            { key: "all", label: "All time", href: `/p/${slug}/reach?days=all` },
-          ]}
-        />
+        <WindowToggle slug={slug} view="leads" window={window} />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
         <Stat label="Fortune 500 companies" value={bigAccounts.filter((a) => a.tier === "fortune500").length} hint={`commented in ${windowLabel}`} tone="accent" />
@@ -468,7 +465,7 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
                 node: (
                   <Wrap width="min-w-[150px] max-w-[220px]">
                     {l.company?.name ?? l.person?.employer ?? "–"}
-                    {l.tier !== "other" && (
+                    {isEnterprise(l.tier) && (
                       <>
                         <br />
                         <span className="text-[11.5px] text-fg-3">{l.company?.fortune500 ? `Fortune 500 #${l.company.fortune500}` : COMPANY_TIER_LABEL[l.tier]}</span>
@@ -568,6 +565,112 @@ export function LeadsView({ data, slug, window }: { data: SocialReachData; slug:
           />
         </div>
       </div>
+    </>
+  );
+}
+
+const REASON_TONE: Record<OutreachReason, BadgeTone> = { switching: "red", using: "green", asking: "accent", evaluating: "warn", senior: "neutral" };
+
+function windowSince(data: SocialReachData, window: LeadWindow): string | null {
+  return window === "all" ? null : new Date(Date.parse(data.capturedAt) - Number(window) * 86_400_000).toISOString();
+}
+
+function WindowToggle({ slug, view, window }: { slug: string; view: string; window: LeadWindow }) {
+  const base = `/p/${slug}/reach${view === "outreach" ? "" : `?view=${view}`}`;
+  const join = base.includes("?") ? "&" : "?";
+  return (
+    <Segmented
+      label="Time window"
+      active={window}
+      items={[
+        { key: "7", label: "Last 7 days", href: base },
+        { key: "30", label: "Last 30 days", href: `${base}${join}days=30` },
+        { key: "all", label: "All time", href: `${base}${join}days=all` },
+      ]}
+    />
+  );
+}
+
+/** The main tab: people worth a message now, why, and a first line to send. */
+export function OutreachView({ data, slug, window }: { data: SocialReachData; slug: string; window: LeadWindow }) {
+  const list = outreach(data, windowSince(data, window));
+  const count = (r: OutreachReason) => list.filter((o) => o.reason === r).length;
+  const windowLabel = window === "all" ? "all time" : `the last ${window} days`;
+  return (
+    <>
+      <div className="mb-4">
+        <WindowToggle slug={slug} view="outreach" window={window} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+        <Stat label="People to reach out to" value={list.length} hint={windowLabel} tone="accent" />
+        <Stat label={OUTREACH_REASON_LABEL.switching} value={count("switching")} hint="pain on a competitor's post" />
+        <Stat label={OUTREACH_REASON_LABEL.using} value={count("using")} hint="expansion" />
+        <Stat label="Asking or comparing" value={count("asking") + count("evaluating")} />
+        <Stat label="At Fortune 500 or 10k+" value={list.filter((o) => isEnterprise(o.lead.tier)).length} />
+      </div>
+      <p className="text-fg-3 text-[12.5px] mb-6 max-w-[900px]">
+        Everyone outside the company who replied on X or commented on LinkedIn under the company's, its team's or competitors' posts, kept only when they said something worth answering (already using
+        it, a complaint, a question) or are senior at a big company, and when we know who they are. Ranked by company size, seniority and how actionable the reason is. The opener is a starting point,
+        not a script.
+      </p>
+      {list.length === 0 ? (
+        <Empty>Nobody worth a message in {windowLabel}. Try a longer window.</Empty>
+      ) : (
+        <div className="grid xl:grid-cols-2 gap-3">
+          {list.map((o) => {
+            const { lead, touch } = o;
+            const company = lead.company?.name ?? lead.person?.employer;
+            const tier = lead.company?.fortune500 ? `Fortune 500 #${lead.company.fortune500}` : lead.tier === "enterprise" ? "10k+ employees" : lead.company?.yc ? `YC ${lead.company.yc}` : null;
+            const platform = touch.post?.platform === "x" ? "X" : "LinkedIn";
+            return (
+              <Card key={lead.url} className="p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-[15px]">{lead.name}</span>
+                      <Badge tone={REASON_TONE[o.reason]}>{OUTREACH_REASON_LABEL[o.reason]}</Badge>
+                      {tier && <Badge tone={TIER_TONE[lead.tier]}>{tier}</Badge>}
+                    </div>
+                    <div className="text-[12.5px] text-fg-2 mt-0.5">{[lead.person?.title, company].filter(Boolean).join(" at ") || lead.person?.location || "–"}</div>
+                  </div>
+                  <span className="num text-[12px] text-fg-3 shrink-0" title="Priority">
+                    {o.priority}
+                  </span>
+                </div>
+                <blockquote className="border-l-2 border-line pl-3 text-[13px] leading-snug whitespace-pre-line">{snippet(touch.comment.text, 320)}</blockquote>
+                <div className="text-[12px] text-fg-3">
+                  {platform} {touch.post?.platform === "x" ? "reply" : "comment"} on{" "}
+                  {touch.post ? (
+                    <a href={touch.post.url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline text-fg-2">
+                      {touch.account?.name ?? touch.post.handle}&apos;s post · {fmtDate(touch.post.postedAt)}
+                    </a>
+                  ) : (
+                    "a post"
+                  )}
+                  {touch.account?.group === "competitor" ? " · competitor" : ""}
+                  {lead.touches.length > 1 ? ` · +${lead.touches.length - 1} more` : ""}
+                </div>
+                <div className="rounded-[3px] bg-bg-3 px-3 py-2 text-[12.5px] leading-snug">
+                  <span className="label block mb-1">Suggested opener</span>
+                  {o.opener}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {lead.person?.linkedinUrl || /linkedin\.com\/in\//.test(lead.url) ? (
+                    <a className={buttonClass("secondary", "sm")} href={lead.person?.linkedinUrl ?? lead.url} target="_blank" rel="noopener noreferrer">
+                      LinkedIn
+                    </a>
+                  ) : null}
+                  {o.xUrl && (
+                    <a className={buttonClass("secondary", "sm")} href={o.xUrl} target="_blank" rel="noopener noreferrer">
+                      X profile
+                    </a>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
