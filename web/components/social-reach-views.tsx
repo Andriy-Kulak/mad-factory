@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { DataTable, type Row } from "@/components/data-table";
-import { Badge, ButtonLink, NameCell, Pair, SectionHead, Stat, type BadgeTone } from "@/components/ui";
+import { Badge, ButtonLink, NameCell, Pair, SectionHead, Segmented, Stat, type BadgeTone } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import {
   accountStats,
@@ -13,6 +13,7 @@ import {
   topicOf,
   TOPIC_LABEL,
   COMPANY_TIER_LABEL,
+  isSignal,
   leadAccounts,
   leads,
   SENIORITIES,
@@ -268,7 +269,7 @@ export function LinkedInView({ data }: { data: SocialReachData }) {
   );
 }
 
-const KIND_TONE: Record<CommentKind, BadgeTone> = { signal: "green", insider: "accent", commentary: "neutral", cheer: "neutral", company: "warn" };
+const KIND_TONE: Record<CommentKind, BadgeTone> = { using: "green", pain: "red", evaluating: "green", insider: "accent", commentary: "neutral", cheer: "neutral", company: "warn" };
 
 export function CommentersView({ data, slug }: { data: SocialReachData; slug: string }) {
   const rows = commenterRows(data);
@@ -279,7 +280,7 @@ export function CommentersView({ data, slug }: { data: SocialReachData; slug: st
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
         <Stat label="Comments read" value={rows.length} hint={`${people.size} different people and pages`} />
-        <Stat label="Questions or own use" value={count("signal")} tone="accent" hint="Worth a follow-up" />
+        <Stat label="Signals" value={rows.filter((r) => isSignal(r.kind)).length} tone="accent" hint={`${count("using")} using · ${count("pain")} pain · ${count("evaluating")} evaluating`} />
         <Stat label="Employees and insiders" value={count("insider")} />
         <Stat label="Profiles looked up" value={data.people.length} hint={`${data.people.filter((p) => p.found).length} public`} />
       </div>
@@ -347,8 +348,12 @@ const TIER_VIEWS = [
 ];
 const tierTags = (tier: CompanyTier) => [tier];
 
-export function LeadsView({ data, slug }: { data: SocialReachData; slug: string }) {
-  const list = leads(data);
+export const LEAD_WINDOWS = ["7", "30", "all"] as const;
+export type LeadWindow = (typeof LEAD_WINDOWS)[number];
+
+export function LeadsView({ data, slug, window }: { data: SocialReachData; slug: string; window: LeadWindow }) {
+  const since = window === "all" ? null : new Date(Date.parse(data.capturedAt) - Number(window) * 86_400_000).toISOString();
+  const list = leads(data, since);
   const accounts = leadAccounts(list);
   const big = list.filter((l) => l.tier !== "other");
   const bigAccounts = accounts.filter((a) => a.tier !== "other");
@@ -357,7 +362,9 @@ export function LeadsView({ data, slug }: { data: SocialReachData; slug: string 
   // Which topics pull enterprise people into the comments: the content answer that matters for outreach.
   const byPost = new Map<string, Set<string>>();
   for (const lead of big) for (const t of lead.touches) if (t.post) byPost.set(t.post.id, (byPost.get(t.post.id) ?? new Set()).add(lead.url));
-  const posts = data.posts.filter((p) => p.platform === "linkedin" && p.likes != null);
+  const posts = data.posts.filter((p) => p.platform === "linkedin" && p.likes != null && (!since || (p.postedAt ?? "") >= since));
+  const competitorHandles = new Set(data.accounts.filter((a) => a.group === "competitor").map((a) => a.handle));
+  const windowLabel = window === "all" ? "all time" : `the last ${window} days`;
   const topicRows = [...new Set(posts.map((p) => topicOf(p.text)))].map((topic) => {
     const ps = posts.filter((p) => topicOf(p.text) === topic);
     const people = ps.reduce((n, p) => n + (byPost.get(p.id)?.size ?? 0), 0);
@@ -371,15 +378,27 @@ export function LeadsView({ data, slug }: { data: SocialReachData; slug: string 
 
   return (
     <>
+      <div className="mb-4">
+        <Segmented
+          label="Time window"
+          active={window}
+          items={[
+            { key: "7", label: "Last 7 days", href: `/p/${slug}/reach` },
+            { key: "30", label: "Last 30 days", href: `/p/${slug}/reach?days=30` },
+            { key: "all", label: "All time", href: `/p/${slug}/reach?days=all` },
+          ]}
+        />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-        <Stat label="Fortune 500 companies" value={bigAccounts.filter((a) => a.tier === "fortune500").length} hint="with someone in the comments" tone="accent" />
+        <Stat label="Fortune 500 companies" value={bigAccounts.filter((a) => a.tier === "fortune500").length} hint={`commented in ${windowLabel}`} tone="accent" />
         <Stat label="Other 10k+ companies" value={bigAccounts.filter((a) => a.tier === "enterprise").length} />
         <Stat label="People at these companies" value={big.length} hint={`${senior.length} manager level or above`} />
-        <Stat label="Asked or said they use it" value={big.filter((l) => l.kind === "signal").length} hint="strongest signal" tone="accent" />
+        <Stat label="Signals from them" value={big.filter((l) => isSignal(l.kind)).length} hint={`${list.filter((l) => isSignal(l.kind)).length} from everyone, any company size`} tone="accent" />
       </div>
       <p className="text-fg-3 text-[12.5px] mb-6 max-w-[900px]">
-        Everyone outside the company who commented on the tracked LinkedIn posts, with their employer from their profile, the employer's size from its LinkedIn page, and the 2026 Fortune 500 by
-        website. Titles come from a people-data lookup on enterprise commenters only. Score = company tier × seniority × strongest comment (a question or &quot;we use it&quot; beats a long take, which
+        Everyone outside the company who commented on the tracked LinkedIn posts (the company's, its sales and leadership team's, and competitors') in {windowLabel}. LinkedIn gives no comment dates,
+        so a comment counts from its post's date. Each person comes with their employer from their profile, the employer's size from its LinkedIn page, and its 2026 Fortune 500 rank matched by name.
+        Titles come from a people-data lookup on enterprise commenters only. Score = company tier × seniority × strongest comment (already using, a complaint or a question beats a long take, which
         beats a congrats) × 1.5 if in the last 30 days.
       </p>
 
@@ -475,7 +494,10 @@ export function LeadsView({ data, slug }: { data: SocialReachData; slug: string 
                       {t.account?.name ?? t.post.handle} · {fmtDate(t.post.postedAt)}
                     </a>
                     <br />
-                    <span className="text-fg-3">{TOPIC_LABEL[topicOf(t.post.text)]}</span>
+                    <span className="text-fg-3">
+                      {competitorHandles.has(t.post.handle) ? "Competitor post · " : ""}
+                      {TOPIC_LABEL[topicOf(t.post.text)]}
+                    </span>
                   </Wrap>
                 ) : (
                   "–"

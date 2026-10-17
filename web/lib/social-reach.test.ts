@@ -116,8 +116,11 @@ test("classifyComment: company pages, employer match, questions, long takes and 
   assert.equal(classifyComment(c("Read more", "https://www.linkedin.com/company/acme"), undefined, ["Acme"]), "company");
   assert.equal(classifyComment(c("Nice"), { url: "", found: true, location: null, followers: null, employer: "Acme, Inc." }, ["acme inc"]), "insider");
   assert.equal(classifyComment(c("Insane work by our team!"), undefined, ["Acme"]), "insider");
-  assert.equal(classifyComment(c("Can it run on our own servers?"), undefined, ["Acme"]), "signal");
-  assert.equal(classifyComment(c("We have been using it for a month and love it"), undefined, ["Acme"]), "signal");
+  assert.equal(classifyComment(c("Can it run on our own servers?"), undefined, ["Acme"]), "evaluating");
+  assert.equal(classifyComment(c("How does it compare to the other tools?"), undefined, ["Acme"]), "evaluating");
+  assert.equal(classifyComment(c("Your pricing model is confusing now"), undefined, ["Acme"]), "pain");
+  assert.equal(classifyComment(c("We keep hitting usage limits and switched away"), undefined, ["Acme"]), "pain");
+  assert.equal(classifyComment(c("We have been using it for a month and love it"), undefined, ["Acme"]), "using");
   assert.equal(classifyComment(c(`${"A long take about the market. ".repeat(10)}Right?`), undefined, ["Acme"]), "commentary");
   assert.equal(classifyComment(c("Congrats 🎉"), undefined, ["Acme"]), "cheer");
 });
@@ -126,7 +129,7 @@ test("commenterRows joins posts, accounts and people, and the CSV quotes what it
   const rows = commenterRows(data);
   assert.deepEqual(
     rows.map((r) => r.kind),
-    ["company", "signal", "cheer", "insider"],
+    ["company", "evaluating", "cheer", "insider"],
   );
   assert.equal(rows[1]!.account?.handle, "acme-inc");
   assert.equal(rows[1]!.topic, "launch");
@@ -134,7 +137,7 @@ test("commenterRows joins posts, accounts and people, and the CSV quotes what it
 
   const csv = commentersCsv([{ ...rows[1]!, comment: { ...rows[1]!.comment, text: 'He said "hi", then left' } }]).split("\n");
   assert.equal(csv[0], "kind,commenter,profile_url,title,seniority,employer,company_tier,fortune500_rank,company_linkedin,location,followers,comment,post_account,post_topic,post_date,post_url");
-  assert.equal(csv[1], 'signal,Sam,https://www.linkedin.com/in/sam,,Unknown,,Smaller company,,,,,"He said ""hi"", then left",Acme,Launch,2026-01-01,https://www.linkedin.com/posts/acme-10');
+  assert.equal(csv[1], 'evaluating,Sam,https://www.linkedin.com/in/sam,,Unknown,,Smaller company,,,,,"He said ""hi"", then left",Acme,Launch,2026-01-01,https://www.linkedin.com/posts/acme-10');
 });
 
 test("groupTotals adds up followers per group and only counts recent originals", () => {
@@ -166,6 +169,7 @@ test("companyTier: Fortune 500 rank first, then LinkedIn's 10,001+ bucket", () =
   assert.equal(companyTier({ ...c, size: "10,001+ employees", employees: 5000, fortune500: null }), "enterprise");
   assert.equal(companyTier({ ...c, size: "51-200 employees", employees: 120, fortune500: null }), "other");
   assert.equal(companyTier(undefined), "other");
+  assert.equal(companyTier({ ...c, name: "Self-Employed", size: "10,001+ employees", employees: 90000, fortune500: null }), "other");
 });
 
 test("leads rank senior people at big companies who asked something above cheers, and roll up by company", () => {
@@ -192,8 +196,8 @@ test("leads rank senior people at big companies who asked something above cheers
   assert.deepEqual(
     list.map((l) => [l.name, l.tier, l.seniority, l.kind]),
     [
-      ["Vee", "fortune500", "vp", "signal"],
-      ["Tom", "other", "exec", "signal"],
+      ["Vee", "fortune500", "vp", "evaluating"],
+      ["Tom", "other", "exec", "evaluating"],
       ["Ivy", "fortune500", "ic", "cheer"],
     ],
   );
@@ -204,5 +208,29 @@ test("leads rank senior people at big companies who asked something above cheers
       ["BigCo", 2, 1, "vp"],
       ["Tiny", 1, 1, "exec"],
     ],
+  );
+});
+
+test("leads: tracked team profiles are insiders anywhere, and since keeps only comments on newer posts", () => {
+  const d: SocialReachData = {
+    ...data,
+    accounts: [...data.accounts, { platform: "linkedin", handle: "pat", name: "Pat", url: "https://www.linkedin.com/in/pat", group: "team", followers: 10, sample: "recent" }],
+    posts: [...data.posts, post({ platform: "linkedin", id: "12", handle: "acme-inc", url: "https://www.linkedin.com/posts/acme-12", text: "New", postedAt: "2026-01-09T00:00:00.000Z" })],
+    comments: [
+      { postId: "10", authorName: "Pat", authorUrl: "https://www.linkedin.com/in/pat", text: "Does it work offline?" },
+      { postId: "10", authorName: "Old", authorUrl: "https://www.linkedin.com/in/old", text: "Does it work offline?" },
+      { postId: "12", authorName: "New", authorUrl: "https://www.linkedin.com/in/new", text: "Does it work offline?" },
+    ],
+  };
+  assert.equal(commenterRows(d)[0]!.kind, "insider");
+  assert.deepEqual(
+    leads(d)
+      .map((l) => l.name)
+      .sort(),
+    ["New", "Old"],
+  );
+  assert.deepEqual(
+    leads(d, "2026-01-05T00:00:00.000Z").map((l) => l.name),
+    ["New"],
   );
 });

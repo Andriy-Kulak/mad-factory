@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { CommentersView, LeadsView, LinkedInView, XView } from "@/components/social-reach-views";
+import { CommentersView, LEAD_WINDOWS, LeadsView, LinkedInView, XView, type LeadWindow } from "@/components/social-reach-views";
 import { Empty, Tabs } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import { getProductBySlug } from "@/lib/queries";
@@ -11,11 +11,12 @@ export const dynamic = "force-dynamic";
 const VIEWS = ["leads", "x", "linkedin", "commenters"] as const;
 type View = (typeof VIEWS)[number];
 
-export default async function SocialReachPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ view?: string }> }) {
+export default async function SocialReachPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ view?: string; days?: string }> }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const data = await loadSocialReach(slug);
+  const window: LeadWindow = (LEAD_WINDOWS as readonly string[]).includes(sp.days ?? "") ? (sp.days as LeadWindow) : "7";
   const view: View = (VIEWS as readonly string[]).includes(sp.view ?? "") ? (sp.view as View) : "leads";
   const tabs = (
     <Tabs
@@ -43,7 +44,7 @@ export default async function SocialReachPage({ params, searchParams }: { params
           No snapshot for this product. Save one as <code>local/{slug}/social-reach.json</code> (format in <code>web/lib/social-reach.ts</code>); it stays on this machine.
         </Empty>
       ) : view === "leads" ? (
-        <LeadsView data={data} slug={slug} />
+        <LeadsView data={data} slug={slug} window={window} />
       ) : view === "linkedin" ? (
         <LinkedInView data={data} />
       ) : view === "commenters" ? (

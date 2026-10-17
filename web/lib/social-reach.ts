@@ -247,15 +247,21 @@ export function breakdown(posts: ReachPost[], by: (p: ReachPost) => string): Bre
 }
 
 /**
- * company: a company page commenting (often the poster linking its own blog). insider: works at the poster's company
- * (by looked-up employer) or talks like it ("our team"). signal: asks a question or describes their own use: the
- * comments worth a follow-up. commentary: long takes with no ask. cheer: congrats and emoji.
+ * company: a company page commenting (often the poster linking its own blog). insider: works at the poster's company or
+ * the tracked company (by looked-up employer or a tracked team profile) or talks like it ("our team"). The three signal
+ * kinds are the comments worth a follow-up: using (describes their own use), pain (a complaint about price, limits or
+ * reliability, most useful on a competitor's post) and evaluating (a short question or a comparison). commentary: long
+ * takes with no ask. cheer: congrats and emoji.
  */
-export const COMMENT_KINDS = ["signal", "insider", "commentary", "cheer", "company"] as const;
+export const COMMENT_KINDS = ["using", "pain", "evaluating", "insider", "commentary", "cheer", "company"] as const;
 export type CommentKind = (typeof COMMENT_KINDS)[number];
+export const SIGNAL_KINDS: readonly CommentKind[] = ["using", "pain", "evaluating"];
+export const isSignal = (kind: CommentKind) => SIGNAL_KINDS.includes(kind);
 
 export const COMMENT_KIND_LABEL: Record<CommentKind, string> = {
-  signal: "Question or own use",
+  using: "Already using",
+  pain: "Pain or complaint",
+  evaluating: "Question or evaluating",
   insider: "Employee or insider",
   commentary: "Long take, no ask",
   cheer: "Congrats and emoji",
@@ -263,8 +269,11 @@ export const COMMENT_KIND_LABEL: Record<CommentKind, string> = {
 };
 
 const INSIDER_TEXT = /\b(by our team|work by our|our team!|we('re| are) just getting started|loved working on|proud of (the|our) team|welcome to the team|great to work with)\b/i;
-const OWN_USE =
+const USING =
   /\b(we use|we('ve| have) been using|we('re| are) using|i use|i('ve| have) been using|i('ve| have) applied|i have applied|my team (has|have|is)|our team (has|have|is) (been )?using|at our company|we tried|we switched|upgrade to our|improved our|changed our|in our (workflow|stack|codebase))\b/i;
+const PAIN =
+  /\b(pricing|too expensive|expensive|costly|confusing|rate[- ]limit(s|ed)?|usage limits?|hit (the|my|a) limit|quota|too slow|so slow|broken|buggy|unusable|cancel(l?ed|ling)?|switch(ed|ing)? (to|from|away)|downgrad\w*|frustrat\w*|disappointed|regress\w*|outage|keeps (failing|crashing)|worse than)\b/i;
+const EVALUATING = /\b(compare[ds]?|compared to|vs\.?|versus|alternative to|advantage over|does it (work|support|handle)|can it|any plans|on the roadmap|is there a way|how (does|do|can|is))\b/i;
 /** Long comments with a question mark are usually rhetorical takes; a real question is short. */
 const QUESTION_MAX = 220;
 
@@ -281,7 +290,9 @@ export function classifyComment(comment: ReachComment, person: ReachPerson | und
   if (employer && posterNames.some((n) => n && normalizeName(n) === employer)) return "insider";
   const text = comment.text.trim();
   if (INSIDER_TEXT.test(text) && !text.includes("?")) return "insider";
-  if (OWN_USE.test(text) || (text.includes("?") && text.length <= QUESTION_MAX)) return "signal";
+  if (USING.test(text)) return "using";
+  if (PAIN.test(text)) return "pain";
+  if (EVALUATING.test(text) || (text.includes("?") && text.length <= QUESTION_MAX)) return "evaluating";
   return text.length >= 160 ? "commentary" : "cheer";
 }
 
@@ -299,14 +310,17 @@ export function commenterRows(data: SocialReachData): CommenterRow[] {
   const posts = new Map(data.posts.map((p) => [p.id, p]));
   const accounts = new Map(data.accounts.map((a) => [key(a.platform, a.handle), a]));
   const people = new Map(data.people.map((p) => [p.url, p]));
-  // A team member's post counts as the company's: their colleagues commenting are insiders too.
+  // The tracked company's people never count as leads, wherever they comment, and neither do the poster's colleagues.
   const companyNames = data.accounts.filter((a) => a.group === "company").map((a) => a.name);
+  const teamUrls = new Set(data.accounts.filter((a) => a.group !== "competitor").map((a) => a.url.toLowerCase()));
   return data.comments.map((comment) => {
     const post = posts.get(comment.postId) ?? null;
     const account = post ? (accounts.get(key(post.platform, post.handle)) ?? null) : null;
     const person = comment.authorUrl ? people.get(comment.authorUrl) : undefined;
-    const posterNames = account?.group === "competitor" ? [account.name] : [...companyNames, account?.name ?? ""];
-    return { comment, post, account, person, kind: classifyComment(comment, person, posterNames), topic: post ? topicOf(post.text) : null };
+    const posterNames = [...companyNames, account?.name ?? ""];
+    const ownProfile = comment.authorUrl && /\/in\//.test(comment.authorUrl) && teamUrls.has(comment.authorUrl.toLowerCase());
+    const kind = ownProfile ? "insider" : classifyComment(comment, person, posterNames);
+    return { comment, post, account, person, kind, topic: post ? topicOf(post.text) : null };
   });
 }
 
@@ -396,8 +410,11 @@ export type CompanyTier = "fortune500" | "enterprise" | "other";
 export const COMPANY_TIER_LABEL: Record<CompanyTier, string> = { fortune500: "Fortune 500", enterprise: "10k+ employees", other: "Smaller company" };
 
 /** Fortune 500 by rank; otherwise enterprise when LinkedIn puts it in the 10,001+ bucket or lists 10k+ members. */
+/** LinkedIn's catch-all pages ("Self-Employed" lists 10,001+ employees) are not employers. */
+const NOT_AN_EMPLOYER = /^(self[- ]?employed|freelance\w*|stealth\w*( startup| mode)?|confidential|independent( consultant)?|retired|open to work)$/i;
+
 export function companyTier(company: ReachCompany | undefined): CompanyTier {
-  if (!company) return "other";
+  if (!company || NOT_AN_EMPLOYER.test(company.name.trim())) return "other";
   if (company.fortune500 != null) return "fortune500";
   if (/10,?001\+/.test(company.size ?? "") || (company.employees ?? 0) >= 10_000) return "enterprise";
   return "other";
@@ -405,7 +422,7 @@ export function companyTier(company: ReachCompany | undefined): CompanyTier {
 
 const SENIORITY_WEIGHT: Record<Seniority, number> = { exec: 5, vp: 4, director: 3, manager: 2, senior: 1.5, ic: 1, unknown: 1 };
 const TIER_WEIGHT: Record<CompanyTier, number> = { fortune500: 3, enterprise: 2, other: 1 };
-const KIND_WEIGHT: Record<CommentKind, number> = { signal: 3, commentary: 1.5, cheer: 1, insider: 0, company: 0 };
+const KIND_WEIGHT: Record<CommentKind, number> = { using: 3, pain: 3, evaluating: 2.5, commentary: 1.5, cheer: 1, insider: 0, company: 0 };
 
 export interface Lead {
   url: string;
@@ -424,15 +441,18 @@ export interface Lead {
 
 /**
  * One row per outside person who commented: company tier x seniority x the strongest thing they said, with a bonus for
- * the last 30 days (relative to the snapshot). Insiders and company pages are left out.
+ * the last 30 days (relative to the snapshot). Insiders and company pages are left out. `since` keeps only comments on
+ * posts from that date on.
  */
-export function leads(data: SocialReachData): Lead[] {
+export function leads(data: SocialReachData, since: string | null = null): Lead[] {
   const companies = new Map((data.companies ?? []).map((c) => [c.url, c]));
   const recentSince = new Date(Date.parse(data.capturedAt) - 30 * 86_400_000).toISOString();
   const byPerson = new Map<string, CommenterRow[]>();
   for (const row of commenterRows(data)) {
     const key = row.comment.authorUrl ?? row.comment.authorName;
     if (!key || row.kind === "insider" || row.kind === "company") continue;
+    // LinkedIn gives no comment dates, so the post's date stands in for when they commented.
+    if (since && (row.post?.postedAt ?? "") < since) continue;
     byPerson.set(key, [...(byPerson.get(key) ?? []), row]);
   }
   return [...byPerson.entries()]
@@ -485,7 +505,7 @@ export function leadAccounts(list: Lead[]): AccountRow[] {
       company: people[0]!.company!,
       tier: people[0]!.tier,
       people,
-      signals: people.filter((p) => p.kind === "signal").length,
+      signals: people.filter((p) => isSignal(p.kind)).length,
       topSeniority: SENIORITIES.find((s) => people.some((p) => p.seniority === s)) ?? "unknown",
       score: Math.round(people.reduce((sum, p) => sum + p.score, 0) * 10) / 10,
       lastAt:
