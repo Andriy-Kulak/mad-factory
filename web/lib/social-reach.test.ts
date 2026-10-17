@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accountStats, breakdown, classifyComment, commenterRows, commentersCsv, groupTotals, median, topicOf, type ReachPost, type SocialReachData } from "./social-reach.ts";
+import {
+  accountStats,
+  breakdown,
+  classifyComment,
+  commenterRows,
+  commentersCsv,
+  companyTier,
+  groupTotals,
+  leadAccounts,
+  leads,
+  median,
+  seniorityOf,
+  topicOf,
+  type ReachPost,
+  type SocialReachData,
+} from "./social-reach.ts";
 
 const post = (over: Partial<ReachPost>): ReachPost => ({
   platform: "x",
@@ -118,8 +133,8 @@ test("commenterRows joins posts, accounts and people, and the CSV quotes what it
   assert.equal(rows[3]!.person?.employer, "ACME");
 
   const csv = commentersCsv([{ ...rows[1]!, comment: { ...rows[1]!.comment, text: 'He said "hi", then left' } }]).split("\n");
-  assert.equal(csv[0], "kind,commenter,profile_url,employer,location,followers,comment,post_account,post_topic,post_date,post_url");
-  assert.equal(csv[1], 'signal,Sam,https://www.linkedin.com/in/sam,,,,"He said ""hi"", then left",Acme,Launch,2026-01-01,https://www.linkedin.com/posts/acme-10');
+  assert.equal(csv[0], "kind,commenter,profile_url,title,seniority,employer,company_tier,fortune500_rank,company_linkedin,location,followers,comment,post_account,post_topic,post_date,post_url");
+  assert.equal(csv[1], 'signal,Sam,https://www.linkedin.com/in/sam,,Unknown,,Smaller company,,,,,"He said ""hi"", then left",Acme,Launch,2026-01-01,https://www.linkedin.com/posts/acme-10');
 });
 
 test("groupTotals adds up followers per group and only counts recent originals", () => {
@@ -129,4 +144,65 @@ test("groupTotals adds up followers per group and only counts recent originals",
     { accounts: 1, followers: 1000, active: 1, posts: 1, views: 300, top: "2" },
   );
   assert.deepEqual({ followers: team!.followers, active: team!.active, posts: team!.posts }, { followers: 100, active: 0, posts: 0 });
+});
+
+test("seniorityOf reads the most senior word in a title", () => {
+  assert.equal(seniorityOf("Co-Founder & CEO"), "exec");
+  assert.equal(seniorityOf("Senior Vice President, Engineering"), "vp");
+  assert.equal(seniorityOf("QA Lead - SVP"), "vp");
+  assert.equal(seniorityOf("Head of Platform"), "director");
+  assert.equal(seniorityOf("Senior Director of Engineering"), "director");
+  assert.equal(seniorityOf("Engineering Manager"), "manager");
+  assert.equal(seniorityOf("Technical Product Owner"), "manager");
+  assert.equal(seniorityOf("Principal Software Engineer"), "senior");
+  assert.equal(seniorityOf("Software Engineer"), "ic");
+  assert.equal(seniorityOf("Dreamer"), "unknown");
+  assert.equal(seniorityOf(null), "unknown");
+});
+
+test("companyTier: Fortune 500 rank first, then LinkedIn's 10,001+ bucket", () => {
+  const c = { url: "u", name: "N", domain: null, industry: null };
+  assert.equal(companyTier({ ...c, size: "10,001+ employees", employees: 5000, fortune500: 40 }), "fortune500");
+  assert.equal(companyTier({ ...c, size: "10,001+ employees", employees: 5000, fortune500: null }), "enterprise");
+  assert.equal(companyTier({ ...c, size: "51-200 employees", employees: 120, fortune500: null }), "other");
+  assert.equal(companyTier(undefined), "other");
+});
+
+test("leads rank senior people at big companies who asked something above cheers, and roll up by company", () => {
+  const big = { url: "https://www.linkedin.com/company/bigco", name: "BigCo", domain: "bigco.com", size: "10,001+ employees", employees: 50000, industry: "Banking", fortune500: 12 };
+  const small = { url: "https://www.linkedin.com/company/tiny", name: "Tiny", domain: null, size: "2-10 employees", employees: 4, industry: null, fortune500: null };
+  const person = (url: string, employerUrl: string, title: string) => ({ url, found: true, location: null, followers: null, employer: null, employerUrl, title });
+  const d: SocialReachData = {
+    ...data,
+    comments: [
+      { postId: "10", authorName: "Vee", authorUrl: "https://www.linkedin.com/in/vee", text: "Does it handle our monorepo?" },
+      { postId: "10", authorName: "Ivy", authorUrl: "https://www.linkedin.com/in/ivy", text: "Congrats!" },
+      { postId: "10", authorName: "Tom", authorUrl: "https://www.linkedin.com/in/tom", text: "How much does it cost?" },
+      { postId: "10", authorName: "Lee", authorUrl: "https://www.linkedin.com/in/lee", text: "Great launch" },
+    ],
+    people: [
+      person("https://www.linkedin.com/in/vee", big.url, "VP Engineering"),
+      person("https://www.linkedin.com/in/ivy", big.url, "Software Engineer"),
+      person("https://www.linkedin.com/in/tom", small.url, "Founder"),
+      { url: "https://www.linkedin.com/in/lee", found: true, location: null, followers: null, employer: "Acme", employerUrl: null, title: null },
+    ],
+    companies: [big, small],
+  };
+  const list = leads(d);
+  assert.deepEqual(
+    list.map((l) => [l.name, l.tier, l.seniority, l.kind]),
+    [
+      ["Vee", "fortune500", "vp", "signal"],
+      ["Tom", "other", "exec", "signal"],
+      ["Ivy", "fortune500", "ic", "cheer"],
+    ],
+  );
+  const accounts = leadAccounts(list);
+  assert.deepEqual(
+    accounts.map((a) => [a.company.name, a.people.length, a.signals, a.topSeniority]),
+    [
+      ["BigCo", 2, 1, "vp"],
+      ["Tiny", 1, 1, "exec"],
+    ],
+  );
 });

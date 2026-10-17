@@ -48,13 +48,27 @@ export interface ReachComment {
   text: string;
 }
 
-/** A looked-up commenter profile. Job titles come back masked, so the current employer is the useful field. */
+/** A looked-up commenter profile. LinkedIn masks job titles, so `title` comes from a separate enrichment when present. */
 export interface ReachPerson {
   url: string;
   found: boolean;
   location: string | null;
   followers: number | null;
   employer: string | null;
+  /** The employer's LinkedIn page, the key into `companies`. */
+  employerUrl?: string | null;
+  title?: string | null;
+}
+
+/** An employer's LinkedIn page: size bucket ("10,001+ employees"), members on LinkedIn, and its Fortune 500 rank if any. */
+export interface ReachCompany {
+  url: string;
+  name: string;
+  domain: string | null;
+  size: string | null;
+  employees: number | null;
+  industry: string | null;
+  fortune500: number | null;
 }
 
 export interface SocialReachData {
@@ -64,6 +78,7 @@ export interface SocialReachData {
   posts: ReachPost[];
   comments: ReachComment[];
   people: ReachPerson[];
+  companies?: ReachCompany[];
 }
 
 export function median(values: (number | null)[]): number | null {
@@ -301,14 +316,38 @@ const csvCell = (v: string | number | null | undefined) => {
 };
 
 /** One line per comment, ready for an enrichment tool: who, where they work, what they said, on which post. */
-export function commentersCsv(rows: CommenterRow[]): string {
-  const head = ["kind", "commenter", "profile_url", "employer", "location", "followers", "comment", "post_account", "post_topic", "post_date", "post_url"];
-  const lines = rows.map((r) =>
-    [
+export function commentersCsv(rows: CommenterRow[], companies: ReachCompany[] = []): string {
+  const byUrl = new Map(companies.map((c) => [c.url, c]));
+  const head = [
+    "kind",
+    "commenter",
+    "profile_url",
+    "title",
+    "seniority",
+    "employer",
+    "company_tier",
+    "fortune500_rank",
+    "company_linkedin",
+    "location",
+    "followers",
+    "comment",
+    "post_account",
+    "post_topic",
+    "post_date",
+    "post_url",
+  ];
+  const lines = rows.map((r) => {
+    const company = r.person?.employerUrl ? byUrl.get(r.person.employerUrl) : undefined;
+    return [
       r.kind,
       r.comment.authorName,
       r.comment.authorUrl,
+      r.person?.title,
+      SENIORITY_LABEL[seniorityOf(r.person?.title)],
       r.person?.employer,
+      COMPANY_TIER_LABEL[companyTier(company)],
+      company?.fortune500,
+      company?.url,
       r.person?.location,
       r.person?.followers,
       r.comment.text,
@@ -318,7 +357,142 @@ export function commentersCsv(rows: CommenterRow[]): string {
       r.post?.url,
     ]
       .map(csvCell)
-      .join(","),
-  );
+      .join(",");
+  });
   return `${[head.join(","), ...lines].join("\n")}\n`;
+}
+
+export const SENIORITIES = ["exec", "vp", "director", "manager", "senior", "ic", "unknown"] as const;
+export type Seniority = (typeof SENIORITIES)[number];
+
+export const SENIORITY_LABEL: Record<Seniority, string> = {
+  exec: "C-level or founder",
+  vp: "VP",
+  director: "Director or head",
+  manager: "Manager or lead",
+  senior: "Senior or staff",
+  ic: "Individual contributor",
+  unknown: "Unknown",
+};
+
+const SENIORITY_RULES: [Seniority, RegExp][] = [
+  ["exec", /\b(chief|ceo|cto|cio|ciso|cfo|coo|cpo|cmo|cro|founder|co-founder|cofounder|(?<!vice[ -])president|managing partner|general partner)\b/i],
+  ["vp", /\b(svp|evp|avp|vp|vice president)\b/i],
+  ["director", /\b(director|head of|head,|global head|managing director)\b/i],
+  ["manager", /\b(manager|lead|leader|architect|supervisor|product owner)\b/i],
+  ["senior", /\b(senior|sr\.?|staff|principal|distinguished)\b/i],
+  ["ic", /\b(engineer|developer|analyst|consultant|scientist|designer|specialist|associate|programmer|intern|student)\b/i],
+];
+
+/** First matching rule wins, top-down, so "Senior Director" is a director and "Engineering Lead - SVP" a VP. */
+export function seniorityOf(title: string | null | undefined): Seniority {
+  if (!title) return "unknown";
+  for (const [level, re] of SENIORITY_RULES) if (re.test(title)) return level;
+  return "unknown";
+}
+
+export type CompanyTier = "fortune500" | "enterprise" | "other";
+
+export const COMPANY_TIER_LABEL: Record<CompanyTier, string> = { fortune500: "Fortune 500", enterprise: "10k+ employees", other: "Smaller company" };
+
+/** Fortune 500 by rank; otherwise enterprise when LinkedIn puts it in the 10,001+ bucket or lists 10k+ members. */
+export function companyTier(company: ReachCompany | undefined): CompanyTier {
+  if (!company) return "other";
+  if (company.fortune500 != null) return "fortune500";
+  if (/10,?001\+/.test(company.size ?? "") || (company.employees ?? 0) >= 10_000) return "enterprise";
+  return "other";
+}
+
+const SENIORITY_WEIGHT: Record<Seniority, number> = { exec: 5, vp: 4, director: 3, manager: 2, senior: 1.5, ic: 1, unknown: 1 };
+const TIER_WEIGHT: Record<CompanyTier, number> = { fortune500: 3, enterprise: 2, other: 1 };
+const KIND_WEIGHT: Record<CommentKind, number> = { signal: 3, commentary: 1.5, cheer: 1, insider: 0, company: 0 };
+
+export interface Lead {
+  url: string;
+  name: string;
+  person: ReachPerson | undefined;
+  company: ReachCompany | undefined;
+  tier: CompanyTier;
+  seniority: Seniority;
+  /** Their comments, strongest kind first. */
+  touches: CommenterRow[];
+  /** Highest touch kind. */
+  kind: CommentKind;
+  lastAt: string | null;
+  score: number;
+}
+
+/**
+ * One row per outside person who commented: company tier x seniority x the strongest thing they said, with a bonus for
+ * the last 30 days (relative to the snapshot). Insiders and company pages are left out.
+ */
+export function leads(data: SocialReachData): Lead[] {
+  const companies = new Map((data.companies ?? []).map((c) => [c.url, c]));
+  const recentSince = new Date(Date.parse(data.capturedAt) - 30 * 86_400_000).toISOString();
+  const byPerson = new Map<string, CommenterRow[]>();
+  for (const row of commenterRows(data)) {
+    const key = row.comment.authorUrl ?? row.comment.authorName;
+    if (!key || row.kind === "insider" || row.kind === "company") continue;
+    byPerson.set(key, [...(byPerson.get(key) ?? []), row]);
+  }
+  return [...byPerson.entries()]
+    .map(([url, touches]) => {
+      const sorted = [...touches].sort((a, b) => KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind]);
+      const person = sorted[0]!.person;
+      const company = person?.employerUrl ? companies.get(person.employerUrl) : undefined;
+      const tier = companyTier(company);
+      const seniority = seniorityOf(person?.title);
+      const kind = sorted[0]!.kind;
+      const lastAt =
+        touches
+          .map((t) => t.post?.postedAt ?? "")
+          .sort()
+          .at(-1) || null;
+      const recency = lastAt && lastAt >= recentSince ? 1.5 : 1;
+      const repeat = 1 + 0.25 * (touches.length - 1);
+      return {
+        url,
+        name: sorted[0]!.comment.authorName ?? "Unknown",
+        person,
+        company,
+        tier,
+        seniority,
+        touches: sorted,
+        kind,
+        lastAt,
+        score: Math.round(TIER_WEIGHT[tier] * SENIORITY_WEIGHT[seniority] * KIND_WEIGHT[kind] * recency * repeat * 10) / 10,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+export interface AccountRow {
+  company: ReachCompany;
+  tier: CompanyTier;
+  people: Lead[];
+  signals: number;
+  topSeniority: Seniority;
+  score: number;
+  lastAt: string | null;
+}
+
+/** Leads rolled up to their employer, for account-based outreach. People without a known employer are left out. */
+export function leadAccounts(list: Lead[]): AccountRow[] {
+  const byCompany = new Map<string, Lead[]>();
+  for (const lead of list) if (lead.company) byCompany.set(lead.company.url, [...(byCompany.get(lead.company.url) ?? []), lead]);
+  return [...byCompany.values()]
+    .map((people) => ({
+      company: people[0]!.company!,
+      tier: people[0]!.tier,
+      people,
+      signals: people.filter((p) => p.kind === "signal").length,
+      topSeniority: SENIORITIES.find((s) => people.some((p) => p.seniority === s)) ?? "unknown",
+      score: Math.round(people.reduce((sum, p) => sum + p.score, 0) * 10) / 10,
+      lastAt:
+        people
+          .map((p) => p.lastAt ?? "")
+          .sort()
+          .at(-1) || null,
+    }))
+    .sort((a, b) => b.score - a.score);
 }

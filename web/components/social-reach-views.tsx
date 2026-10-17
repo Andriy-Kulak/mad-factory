@@ -12,10 +12,18 @@ import {
   groupTotals,
   topicOf,
   TOPIC_LABEL,
+  COMPANY_TIER_LABEL,
+  leadAccounts,
+  leads,
+  SENIORITIES,
+  SENIORITY_LABEL,
   type BreakdownRow,
   type CommentKind,
+  type CompanyTier,
+  type Seniority,
   type ReachGroup,
   type ReachPost,
+  median,
   type SocialReachData,
 } from "@/lib/social-reach";
 
@@ -325,6 +333,219 @@ export function CommentersView({ data, slug }: { data: SocialReachData; slug: st
         maxHeight="760px"
         dense
       />
+    </>
+  );
+}
+
+const TIER_TONE: Record<CompanyTier, BadgeTone> = { fortune500: "green", enterprise: "accent", other: "neutral" };
+const SENIORITY_TONE: Record<Seniority, BadgeTone> = { exec: "green", vp: "green", director: "accent", manager: "accent", senior: "neutral", ic: "neutral", unknown: "neutral" };
+// DataTable's first view always holds every row, so the leads tables only get enterprise rows to begin with.
+const TIER_VIEWS = [
+  { key: "enterprise-any", label: "Fortune 500 and 10k+" },
+  { key: "fortune500", label: "Fortune 500" },
+  { key: "enterprise", label: "Other 10k+" },
+];
+const tierTags = (tier: CompanyTier) => [tier];
+
+export function LeadsView({ data, slug }: { data: SocialReachData; slug: string }) {
+  const list = leads(data);
+  const accounts = leadAccounts(list);
+  const big = list.filter((l) => l.tier !== "other");
+  const bigAccounts = accounts.filter((a) => a.tier !== "other");
+  const senior = big.filter((l) => ["exec", "vp", "director", "manager"].includes(l.seniority));
+
+  // Which topics pull enterprise people into the comments: the content answer that matters for outreach.
+  const byPost = new Map<string, Set<string>>();
+  for (const lead of big) for (const t of lead.touches) if (t.post) byPost.set(t.post.id, (byPost.get(t.post.id) ?? new Set()).add(lead.url));
+  const posts = data.posts.filter((p) => p.platform === "linkedin" && p.likes != null);
+  const topicRows = [...new Set(posts.map((p) => topicOf(p.text)))].map((topic) => {
+    const ps = posts.filter((p) => topicOf(p.text) === topic);
+    const people = ps.reduce((n, p) => n + (byPost.get(p.id)?.size ?? 0), 0);
+    return { topic, posts: ps.length, likes: median(ps.map((p) => p.likes)), people, perPost: people / ps.length };
+  });
+  const nameOf = new Map(data.accounts.map((a) => [a.handle, a.name]));
+  const topPosts = posts
+    .filter((p) => byPost.has(p.id))
+    .sort((a, b) => byPost.get(b.id)!.size - byPost.get(a.id)!.size)
+    .slice(0, 10);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <Stat label="Fortune 500 companies" value={bigAccounts.filter((a) => a.tier === "fortune500").length} hint="with someone in the comments" tone="accent" />
+        <Stat label="Other 10k+ companies" value={bigAccounts.filter((a) => a.tier === "enterprise").length} />
+        <Stat label="People at these companies" value={big.length} hint={`${senior.length} manager level or above`} />
+        <Stat label="Asked or said they use it" value={big.filter((l) => l.kind === "signal").length} hint="strongest signal" tone="accent" />
+      </div>
+      <p className="text-fg-3 text-[12.5px] mb-6 max-w-[900px]">
+        Everyone outside the company who commented on the tracked LinkedIn posts, with their employer from their profile, the employer's size from its LinkedIn page, and the 2026 Fortune 500 by
+        website. Titles come from a people-data lookup on enterprise commenters only. Score = company tier × seniority × strongest comment (a question or &quot;we use it&quot; beats a long take, which
+        beats a congrats) × 1.5 if in the last 30 days.
+      </p>
+
+      <SectionHead>Accounts</SectionHead>
+      <DataTable
+        columns={[
+          { label: "Company" },
+          { label: "People", align: "right" },
+          { label: "Signals", align: "right", title: "Questions or own use" },
+          { label: "Most senior" },
+          { label: "Last comment", align: "right" },
+          { label: "Score", align: "right" },
+        ]}
+        rows={bigAccounts.map((a) => ({
+          id: a.company.url,
+          href: a.company.url,
+          tags: tierTags(a.tier),
+          search: `${a.company.name} ${a.company.industry ?? ""} ${a.people.map((p) => p.name).join(" ")}`,
+          cells: [
+            {
+              node: (
+                <NameCell
+                  name={a.company.name}
+                  tone={TIER_TONE[a.tier]}
+                  sub={[a.company.fortune500 ? `Fortune 500 #${a.company.fortune500}` : COMPANY_TIER_LABEL[a.tier], a.company.industry].filter(Boolean).join(" · ")}
+                />
+              ),
+              value: a.company.name,
+            },
+            { node: a.people.length, value: a.people.length },
+            { node: a.signals || "–", value: a.signals, dim: !a.signals },
+            { node: <Badge tone={SENIORITY_TONE[a.topSeniority]}>{SENIORITY_LABEL[a.topSeniority]}</Badge>, value: SENIORITIES.length - SENIORITIES.indexOf(a.topSeniority) },
+            { node: fmtDate(a.lastAt), value: a.lastAt, dim: true },
+            { node: a.score, value: a.score },
+          ],
+        }))}
+        defaultSort={{ col: 5, dir: "desc" }}
+        views={TIER_VIEWS}
+        searchLabel="Search companies"
+        empty="No commenters from Fortune 500 or 10k+ companies yet."
+        maxHeight="520px"
+        dense
+      />
+
+      <SectionHead
+        right={
+          <ButtonLink href={`/p/${slug}/reach/commenters.csv`} primary size="sm">
+            Download CSV for Clay
+          </ButtonLink>
+        }
+      >
+        People
+      </SectionHead>
+      <DataTable
+        columns={[{ label: "Person" }, { label: "Level" }, { label: "Company" }, { label: "What they said" }, { label: "On post" }, { label: "Score", align: "right" }]}
+        rows={big.map((l) => {
+          const t = l.touches[0]!;
+          return {
+            id: l.url,
+            href: l.url.startsWith("http") ? l.url : undefined,
+            tags: tierTags(l.tier),
+            search: `${l.name} ${l.person?.title ?? ""} ${l.company?.name ?? l.person?.employer ?? ""} ${t.comment.text}`,
+            cells: [
+              { node: <NameCell name={l.name} sub={l.person?.title ?? l.person?.location ?? undefined} />, value: l.name },
+              { node: <Badge tone={SENIORITY_TONE[l.seniority]}>{SENIORITY_LABEL[l.seniority]}</Badge>, value: SENIORITIES.length - SENIORITIES.indexOf(l.seniority) },
+              {
+                node: (
+                  <Wrap width="min-w-[150px] max-w-[220px]">
+                    {l.company?.name ?? l.person?.employer ?? "–"}
+                    {l.tier !== "other" && (
+                      <>
+                        <br />
+                        <span className="text-[11.5px] text-fg-3">{l.company?.fortune500 ? `Fortune 500 #${l.company.fortune500}` : COMPANY_TIER_LABEL[l.tier]}</span>
+                      </>
+                    )}
+                  </Wrap>
+                ),
+                value: l.company?.fortune500 ? 1000 - l.company.fortune500 : l.tier === "enterprise" ? 0 : -1,
+              },
+              {
+                node: (
+                  <Wrap>
+                    <Badge tone={KIND_TONE[l.kind]}>{COMMENT_KIND_LABEL[l.kind]}</Badge> {snippet(t.comment.text, 220)}
+                    {l.touches.length > 1 && <span className="text-fg-3"> · +{l.touches.length - 1} more</span>}
+                  </Wrap>
+                ),
+                value: t.comment.text,
+              },
+              {
+                node: t.post ? (
+                  <Wrap width="min-w-[180px] max-w-[260px]">
+                    <a href={t.post.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {t.account?.name ?? t.post.handle} · {fmtDate(t.post.postedAt)}
+                    </a>
+                    <br />
+                    <span className="text-fg-3">{TOPIC_LABEL[topicOf(t.post.text)]}</span>
+                  </Wrap>
+                ) : (
+                  "–"
+                ),
+                value: l.lastAt,
+              },
+              { node: l.score, value: l.score },
+            ],
+          };
+        })}
+        defaultSort={{ col: 5, dir: "desc" }}
+        views={TIER_VIEWS}
+        searchLabel="Search people, titles, companies"
+        empty="No commenters from Fortune 500 or 10k+ companies yet."
+        maxHeight="760px"
+        dense
+      />
+
+      <div className="grid xl:grid-cols-2 gap-x-3">
+        <div>
+          <SectionHead>Which topics bring enterprise people into the comments</SectionHead>
+          <DataTable
+            columns={[
+              { label: "Topic" },
+              { label: "Posts", align: "right" },
+              { label: "Median likes", align: "right" },
+              { label: "Enterprise commenters", align: "right" },
+              { label: "Per post", align: "right" },
+            ]}
+            rows={topicRows.map((r) => ({
+              id: r.topic,
+              cells: [
+                { node: TOPIC_LABEL[r.topic] },
+                { node: r.posts, value: r.posts },
+                { node: num(r.likes), value: r.likes },
+                { node: r.people, value: r.people },
+                { node: r.perPost.toFixed(1), value: r.perPost },
+              ],
+            }))}
+            defaultSort={{ col: 4, dir: "desc" }}
+            dense
+          />
+        </div>
+        <div>
+          <SectionHead>Posts that drew the most</SectionHead>
+          <DataTable
+            columns={[{ label: "Post" }, { label: "Likes", align: "right" }, { label: "Enterprise", align: "right" }]}
+            rows={topPosts.map((p) => ({
+              id: p.id,
+              href: p.url,
+              cells: [
+                {
+                  node: (
+                    <Wrap width="min-w-[260px] max-w-[440px]">
+                      <span className="font-semibold">{nameOf.get(p.handle) ?? p.handle}</span> <span className="text-fg-3">· {fmtDate(p.postedAt)}</span>
+                      <br />
+                      {snippet(p.text, 120)}
+                    </Wrap>
+                  ),
+                  value: p.text,
+                },
+                { node: num(p.likes), value: p.likes },
+                { node: byPost.get(p.id)!.size, value: byPost.get(p.id)!.size },
+              ],
+            }))}
+            defaultSort={{ col: 2, dir: "desc" }}
+            dense
+          />
+        </div>
+      </div>
     </>
   );
 }
