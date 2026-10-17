@@ -149,7 +149,7 @@ test("groupTotals adds up followers per group and only counts recent originals",
 test("seniorityOf reads the most senior word in a title", () => {
   assert.equal(seniorityOf("Co-Founder & CEO"), "exec");
   assert.equal(seniorityOf("Senior Vice President, Engineering"), "vp");
-  assert.equal(seniorityOf("QA Lead - SVP"), "vp");
+  assert.equal(seniorityOf("Platform Lead - SVP"), "vp");
   assert.equal(seniorityOf("Head of Platform"), "director");
   assert.equal(seniorityOf("Senior Director of Engineering"), "director");
   assert.equal(seniorityOf("Engineering Manager"), "manager");

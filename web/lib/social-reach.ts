@@ -384,7 +384,7 @@ const SENIORITY_RULES: [Seniority, RegExp][] = [
   ["ic", /\b(engineer|developer|analyst|consultant|scientist|designer|specialist|associate|programmer|intern|student)\b/i],
 ];
 
-/** First matching rule wins, top-down, so "Senior Director" is a director and "Engineering Lead - SVP" a VP. */
+/** First matching rule wins, top-down, so "Senior Director" is a director and "Platform Lead - SVP" a VP. */
 export function seniorityOf(title: string | null | undefined): Seniority {
   if (!title) return "unknown";
   for (const [level, re] of SENIORITY_RULES) if (re.test(title)) return level;
