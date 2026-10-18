@@ -44,7 +44,8 @@ test("parseNum accepts suffixes and separators, rejects junk", () => {
 test("parseOrganicFilters defaults and repeated channels", () => {
   const f = parseOrganicFilters({ ch: ["a1", "a2"], sort: "bogus", age: "2", unit: "weeks" });
   assert.deepEqual(f.channels, ["a1", "a2"]);
-  assert.equal(f.sort, "outlier");
+  assert.equal(f.sort, "newest");
+  assert.equal(parseOrganicFilters({}).sort, "newest");
   assert.equal(f.view, "grid");
   assert.deepEqual(f.postedWithin, { n: 2, unit: "weeks" });
   assert.equal(parseOrganicFilters({ age: "0" }).postedWithin, null);
@@ -77,10 +78,16 @@ test("applyOrganicFilters narrows by channel, platform, keyword, ranges and age"
 test("organicHref round-trips and omits defaults", () => {
   const f = parseOrganicFilters({ ch: ["a1", "a2"], q: "talk", omin: "3", age: "1", unit: "months", fav: "1", sort: "views" });
   const href = organicHref(f);
-  const back = parseOrganicFilters(Object.fromEntries([...new URLSearchParams(href.slice(1)).keys()].map((k) => [k, new URLSearchParams(href.slice(1)).getAll(k)])));
+  const parseHref = (value: string) => {
+    const params = new URLSearchParams(value.slice(1));
+    return parseOrganicFilters(Object.fromEntries([...params.keys()].map((k) => [k, params.getAll(k)])));
+  };
+  const back = parseHref(href);
   assert.deepEqual(back, f);
   assert.equal(organicHref(parseOrganicFilters({})), "?");
-  assert.equal(organicHref(f, { sort: "outlier", channels: [], q: "", outlier: { min: null, max: null }, postedWithin: null, favorites: false }), "?");
+  assert.equal(organicHref(parseOrganicFilters({ sort: "outlier" })), "?sort=outlier");
+  assert.equal(parseHref(organicHref(parseOrganicFilters({ sort: "outlier" }))).sort, "outlier");
+  assert.equal(organicHref(f, { sort: "newest", channels: [], q: "", outlier: { min: null, max: null }, postedWithin: null, favorites: false }), "?");
   assert.equal(activeFilterCount(f), 5);
 });
 
