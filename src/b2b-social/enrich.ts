@@ -5,19 +5,24 @@ import { existsSync, readFileSync } from "node:fs";
  * YC tags. The public reference lists are committed under reference/ and read when present.
  */
 
-/** Comments are fetched once per post, this long after posting (most replies are in by then). */
-export const COMMENT_DELAY_HOURS = 48;
+/** LinkedIn comments get one follow-up fetch after the early check. */
+export const LINKEDIN_RECHECK_HOURS = 48;
 /** X recent search only reaches 7 days back; LinkedIn has no limit, so stop at 14 to keep costs flat. */
 export const COMMENT_WINDOW_DAYS = { x: 7, linkedin: 14 } as const;
 
-/** Due when the post is old enough, still inside its window, and has not been checked since it got old enough. */
+/** X is incremental; LinkedIn gets an early check and one recheck once the post is 48 hours old. */
 export function commentsDue(post: { platform: "x" | "linkedin"; posted_at: string | null; replies_checked_at: string | null }, now: Date): boolean {
   if (!post.posted_at) return false;
   const posted = Date.parse(post.posted_at);
-  const readyAt = posted + COMMENT_DELAY_HOURS * 3_600_000;
+  if (!Number.isFinite(posted)) return false;
+  const age = now.getTime() - posted;
+  if (age < 0) return false;
   const closesAt = posted + COMMENT_WINDOW_DAYS[post.platform] * 86_400_000;
-  if (now.getTime() < readyAt || now.getTime() > closesAt) return false;
-  return !post.replies_checked_at || Date.parse(post.replies_checked_at) < readyAt;
+  if (now.getTime() > closesAt) return false;
+  if (post.platform === "x") return true;
+  if (!post.replies_checked_at) return true;
+  const recheckAt = posted + LINKEDIN_RECHECK_HOURS * 3_600_000;
+  return now.getTime() >= recheckAt && Date.parse(post.replies_checked_at) < recheckAt;
 }
 
 /** "Head of Platform at Example Labs" or "eng @Sample | …" → title and company; former roles are ignored. */

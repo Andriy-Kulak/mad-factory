@@ -13,9 +13,11 @@ import {
   listB2BPosts,
   listB2BSources,
   updateB2BSource,
+  updateB2BPostComments,
   upsertB2BPeople,
   upsertB2BPosts,
   type B2BAccountConfig,
+  type B2BGroup,
 } from "./db.ts";
 import { COMMENT_WINDOW_DAYS, activityTime, bioJob, canonicalLinkedIn, commentsDue, fortune500Matcher, host, ycMatcher } from "./enrich.ts";
 import { enrichWithExa } from "./exa.ts";
@@ -32,6 +34,8 @@ export interface SyncOptions {
   maxXUsd: number;
   maxExaUsd: number;
   dryRun: boolean;
+  groups?: B2BGroup[];
+  postsOnly?: boolean;
   fortune500Csv: string | null;
   ycCsv: string | null;
   log?: (line: string) => void;
@@ -53,6 +57,46 @@ const rec = (v: unknown): Json => (v && typeof v === "object" && !Array.isArray(
 const str = (v: unknown) => (typeof v === "string" && v ? v : null);
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const configOf = (s: TrackedSourceRow) => rec(s.config) as unknown as B2BAccountConfig;
+const replyLimit = (config: Partial<B2BAccountConfig>) => {
+  const configured = Number.isFinite(config.max_replies) ? Math.trunc(config.max_replies ?? 100) : 100;
+  return Math.min(100, Math.max(10, configured));
+};
+
+export function parseB2BGroupFilter(value: string | undefined): B2BGroup[] | undefined {
+  if (value === undefined) return undefined;
+  const groups = value.split(",").map((group) => group.trim());
+  const allowed: B2BGroup[] = ["company", "team", "competitor"];
+  if (!groups.length || groups.some((group) => !allowed.includes(group as B2BGroup))) {
+    throw new Error("--group must be a comma-separated list of company, team or competitor");
+  }
+  return [...new Set(groups as B2BGroup[])];
+}
+
+export function estimateXReplyUsd(
+  posts: Pick<B2BPostRow, "account_handle" | "comments">[],
+  configByHandle: ReadonlyMap<string, Partial<B2BAccountConfig>>,
+): { perAccount: Map<string, number>; totalUsd: number } {
+  const perAccount = new Map<string, number>();
+  for (const post of posts) {
+    const replies = Math.min(Math.max(0, post.comments ?? 0), replyLimit(configByHandle.get(post.account_handle) ?? {}));
+    const usd = replies * (X_POST_USD + X_USER_USD);
+    perAccount.set(post.account_handle, (perAccount.get(post.account_handle) ?? 0) + usd);
+  }
+  return { perAccount, totalUsd: [...perAccount.values()].reduce((sum, usd) => sum + usd, 0) };
+}
+
+export function xReplyParams(post: Pick<B2BPostRow, "external_id" | "account_handle" | "last_reply_id">, config: Partial<B2BAccountConfig>): Record<string, string> {
+  const params: Record<string, string> = {
+    query: `conversation_id:${post.external_id} -from:${post.account_handle} is:reply`,
+    max_results: String(replyLimit(config)),
+    sort_order: config.reply_order === "relevancy" ? "relevancy" : "recency",
+    expansions: "author_id",
+    "tweet.fields": "created_at",
+    "user.fields": "description,location,public_metrics",
+  };
+  if (post.last_reply_id) params.since_id = post.last_reply_id;
+  return params;
+}
 
 export async function syncB2BSocial(productId: string, opts: SyncOptions): Promise<SyncSummary> {
   const log = opts.log ?? (() => {});
@@ -68,8 +112,10 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
     return r.body;
   };
 
-  const sources = (await listB2BSources(productId)).filter((s) => s.enabled && configOf(s).replies !== false);
+  const sources = (await listB2BSources(productId)).filter((s) => s.enabled && configOf(s).replies !== false && (!opts.groups || opts.groups.includes(configOf(s).group)));
+  const replySources = sources;
   const sourceByHandle = new Map(sources.map((s) => [`${s.kind}:${s.value}`, s]));
+  const replySourceByHandle = new Map(replySources.map((s) => [`${s.kind}:${s.value}`, s]));
   const existing = new Map((await listB2BPosts(productId)).map((p) => [`${p.platform}:${p.external_id}`, p]));
   log(`${sources.length} watched accounts (${sources.filter((s) => s.kind === "x").length} on X), ${existing.size} posts stored`);
   if (!hasXApi) {
@@ -77,15 +123,26 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
     sum.skipped.push(message);
     if (opts.dryRun) log(`skipped: ${message}`);
   }
-  if (!hasExa) {
+  if (!hasExa && !opts.postsOnly) {
     const message = "Exa step skipped (EXA_API_KEY is not configured)";
     sum.skipped.push(message);
     if (opts.dryRun) log(`skipped: ${message}`);
   }
 
   if (opts.dryRun) {
-    const due = [...existing.values()].filter((p) => sourceByHandle.has(`${p.platform}:${p.account_handle}`) && commentsDue({ ...p, platform: p.platform as "x" | "linkedin" }, now));
+    if (opts.postsOnly) {
+      log(`dry run: posts-only; would check new posts on ${sources.length} accounts; comments, LinkedIn profiles and Exa skipped; no API calls made`);
+      return sum;
+    }
+    const due = [...existing.values()].filter((p) => replySourceByHandle.has(`${p.platform}:${p.account_handle}`) && commentsDue({ ...p, platform: p.platform as "x" | "linkedin" }, now));
     log(`dry run: would check new posts on ${sources.length} accounts and comments on ${due.length} posts that are due; no API calls made`);
+    const configByHandle = new Map(replySources.filter((s) => s.kind === "x").map((s) => [s.value, configOf(s)]));
+    const estimate = estimateXReplyUsd(
+      due.filter((p) => p.platform === "x"),
+      configByHandle,
+    );
+    for (const [account, usd] of estimate.perAccount) log(`  X replies for ${account}: at most $${usd.toFixed(2)}`);
+    log(`  X replies total: at most $${estimate.totalUsd.toFixed(2)}`);
     return sum;
   }
 
@@ -98,6 +155,13 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
       } catch (error) {
         sum.skipped.push(`${s.kind} ${s.value}: ${error instanceof Error ? error.message : String(error)}`);
       }
+    }
+    if (opts.postsOnly) {
+      const message = "Comments, LinkedIn profile enrichment and Exa skipped (--posts-only)";
+      sum.skipped.push(message);
+      log(message);
+      await finishScrapeRun(runId, { status: "done", ads_seen: sum.postsChecked, ads_new: sum.newComments, creatives_new: sum.newPeople, credits_used: sum.credits });
+      return sum;
     }
     async function syncPosts(s: TrackedSourceRow): Promise<void> {
       if (s.kind === "x" && !hasXApi) return;
@@ -121,8 +185,15 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
         sum.xUsd += (page.data?.length ?? 0) * X_POST_USD;
         const media = new Map((page.includes?.media ?? []).map((m) => [m.media_key, m.type]));
         for (const t of page.data ?? []) {
-          if (existing.has(`x:${t.id}`)) continue;
           const m = t.public_metrics ?? {};
+          const old = existing.get(`x:${t.id}`);
+          if (old) {
+            if (m.reply_count !== undefined && old.comments !== m.reply_count) {
+              await updateB2BPostComments(old.id, m.reply_count);
+              old.comments = m.reply_count;
+            }
+            continue;
+          }
           fresh.push({
             product_id: productId,
             tracked_source_id: s.id,
@@ -171,8 +242,8 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
       log(`  ${s.kind} ${s.value}: ${fresh.length} new posts`);
     }
 
-    // 2. Comments on posts that are due (once, 48h after posting, inside the window).
-    const posts = (await listB2BPosts(productId)).filter((p) => sourceByHandle.has(`${p.platform}:${p.account_handle}`) && commentsDue({ ...p, platform: p.platform as "x" | "linkedin" }, now));
+    // 2. Comments on posts that are due.
+    const posts = (await listB2BPosts(productId)).filter((p) => replySourceByHandle.has(`${p.platform}:${p.account_handle}`) && commentsDue({ ...p, platform: p.platform as "x" | "linkedin" }, now));
     const known = await knownPeopleUrls(productId);
     const f500 = fortune500Matcher(opts.fortune500Csv);
     // Every person row carries every column, so a batch upsert never nulls a required one.
@@ -214,14 +285,8 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
           sum.skipped.push(`replies on ${p.url} (X budget)`);
           return;
         }
-        const params: Record<string, string> = {
-          query: `conversation_id:${p.external_id} -from:${p.account_handle} is:reply`,
-          max_results: "100",
-          expansions: "author_id",
-          "tweet.fields": "created_at",
-          "user.fields": "description,location,public_metrics",
-        };
-        if (p.last_reply_id) params.since_id = p.last_reply_id;
+        const source = sourceByHandle.get(`x:${p.account_handle}`);
+        const params = xReplyParams(p, source ? configOf(source) : {});
         const page = await xGet<XPage>("/2/tweets/search/recent", params);
         sum.xUsd += (page.data?.length ?? 0) * X_POST_USD + (page.includes?.users?.length ?? 0) * X_USER_USD;
         const users = new Map((page.includes?.users ?? []).map((u) => [u.id, u]));

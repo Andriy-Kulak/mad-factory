@@ -5,15 +5,17 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { activityTime, bioJob, canonicalLinkedIn, commentsDue, fortune500Matcher, ycMatcher } from "./enrich.ts";
 
-test("commentsDue: once, 48 hours after posting, inside the platform's window", () => {
+test("commentsDue: X is incremental; LinkedIn gets an early check and one 48-hour recheck", () => {
   const now = new Date("2026-01-10T12:00:00.000Z");
   const post = (postedAt: string, checked: string | null = null, platform: "x" | "linkedin" = "x") => ({ platform, posted_at: postedAt, replies_checked_at: checked });
-  assert.equal(commentsDue(post("2026-01-09T12:00:00.000Z"), now), false, "too fresh");
-  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z"), now), true, "ready");
-  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z", "2026-01-09T13:00:00.000Z"), now), false, "already checked after 48h");
-  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z", "2026-01-08T00:00:00.000Z"), now), true, "checked too early, check again");
-  assert.equal(commentsDue(post("2026-01-01T12:00:00.000Z"), now), false, "past X's 7 days");
-  assert.equal(commentsDue(post("2026-01-01T12:00:00.000Z", null, "linkedin"), now), true, "LinkedIn keeps 14 days");
+  assert.equal(commentsDue(post("2026-01-10T11:00:00.000Z"), now), true, "fresh X post");
+  assert.equal(commentsDue(post("2026-01-10T11:00:00.000Z", "2026-01-10T11:50:00.000Z"), now), true, "X checks use since_id");
+  assert.equal(commentsDue(post("2026-01-02T12:00:00.000Z"), now), false, "past X's 7 days");
+  assert.equal(commentsDue(post("2026-01-10T11:00:00.000Z", null, "linkedin"), now), true, "fresh LinkedIn post");
+  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z", "2026-01-07T13:00:00.000Z", "linkedin"), now), true, "early check gets one recheck");
+  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z", "2026-01-07T13:00:00.000Z", "linkedin"), new Date("2026-01-08T12:00:00.000Z")), false, "recheck waits until 48 hours");
+  assert.equal(commentsDue(post("2026-01-07T12:00:00.000Z", "2026-01-09T13:00:00.000Z", "linkedin"), now), false, "checked after 48 hours");
+  assert.equal(commentsDue(post("2025-12-26T12:00:00.000Z", null, "linkedin"), now), false, "past LinkedIn's 14 days");
 });
 
 test("bioJob reads a current job and skips former ones", () => {
