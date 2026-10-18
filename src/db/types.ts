@@ -80,6 +80,12 @@ export type SocialPostMediaRow = Row<"social_post_media">;
 export type SocialPostMediaInsert = Insert<"social_post_media">;
 export type SocialPostSnapshotRow = Row<"social_post_snapshots">;
 export type SocialPostSnapshotInsert = Insert<"social_post_snapshots">;
+export type B2BPostRow = Row<"b2b_posts">;
+export type B2BPostInsert = Insert<"b2b_posts">;
+export type B2BPersonRow = Row<"b2b_people">;
+export type B2BPersonInsert = Insert<"b2b_people">;
+export type B2BCommentRow = Row<"b2b_comments">;
+export type B2BCommentInsert = Insert<"b2b_comments">;
 
 export type MetaAdsCampaignRow = Row<"meta_ads_campaigns">;
 export type MetaAdsCampaignInsert = Insert<"meta_ads_campaigns">;

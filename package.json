@@ -28,6 +28,7 @@
     "meta-ads": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/meta-ads.ts",
     "creatives": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/creatives.ts",
     "social": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/social.ts",
+    "b2b-social": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/b2b-social.ts",
     "revenuecat": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/revenuecat.ts",
     "brief": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning --import ./src/cli/errors.ts src/cli/brief.ts",
     "ready": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning scripts/ready.ts",

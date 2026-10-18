@@ -5,7 +5,7 @@
  * No dependencies, so the web app can import it too.
  */
 
-export type IntegrationKey = "supabase" | "migrations" | "scrapecreators" | "r2" | "proxy" | "meta-ads" | "apple-ads" | "revenuecat" | "gemini" | "ai-gateway" | "web-auth";
+export type IntegrationKey = "supabase" | "migrations" | "scrapecreators" | "r2" | "proxy" | "meta-ads" | "apple-ads" | "revenuecat" | "gemini" | "ai-gateway" | "web-auth" | "x-api" | "exa";
 
 export interface Integration {
   key: IntegrationKey;
@@ -60,6 +60,28 @@ export const INTEGRATIONS: Integration[] = [
     enables: "Competitor ads from the Meta Ad Library (`pnpm scrape`) and Instagram, TikTok and Facebook posts (`pnpm social`).",
     without: "`pnpm scrape --collector playwright` still collects Ad Library ads with a local browser; `pnpm social` cannot run.",
     setup: "scrapecreators.com → API key (paid per request)",
+  },
+  {
+    key: "x-api",
+    name: "X API",
+    env: [["X_BEARER_TOKEN"]],
+    required: false,
+    where: "cli",
+    summary: "X posts and replies for B2B Social",
+    enables: "Latest posts of watched X accounts and the replies to them (`pnpm b2b-social sync`).",
+    without: "B2B Social skips X; LinkedIn still syncs.",
+    setup: "console.x.com → an app inside a pay-per-use project → Keys and tokens → Bearer Token (about $0.005 per post read)",
+  },
+  {
+    key: "exa",
+    name: "Exa",
+    env: [["EXA_API_KEY"]],
+    required: false,
+    where: "cli",
+    summary: "Job titles and X-to-LinkedIn matches for B2B Social",
+    enables: "Current title and employer for LinkedIn commenters and a LinkedIn match for X repliers, via Exa Agent with Fiber people data (`pnpm b2b-social sync|enrich`).",
+    without: "B2B Social keeps the employer from LinkedIn and the job from X bios; no titles.",
+    setup: "dashboard.exa.ai → API keys (about $0.04–0.08 per person looked up)",
   },
   {
     key: "r2",
