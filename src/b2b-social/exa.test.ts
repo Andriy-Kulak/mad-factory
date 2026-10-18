@@ -81,6 +81,10 @@ test("applyLinkedInTitle rejects a different profile and replaces changed employ
     applyLinkedInTitle(existing, { linkedin_url: "https://www.linkedin.com/in/someone-else", current_title: "Lead", current_company: "New Org" }, f500, () => null),
     null,
   );
+  assert.equal(
+    applyLinkedInTitle(existing, { linkedin_url: null, current_title: "Lead", current_company: "New Org" }, f500, () => null),
+    null,
+  );
   assert.deepEqual(
     applyLinkedInTitle(existing, { linkedin_url: existing.url, current_title: "Director", current_company: "New Org" }, f500, () => null),
     {
@@ -131,6 +135,22 @@ test("LinkedIn batch outputs apply by canonical profile URL when Exa reorders th
   assert.equal(patches.get(beta.url)?.title, "Beta title");
 });
 
+test("LinkedIn batch skips null profile URLs and still applies valid outputs", () => {
+  const alpha = person("https://www.linkedin.com/in/alpha");
+  const beta = person("https://www.linkedin.com/in/beta");
+  const patches = applyLinkedInBatch(
+    [alpha, beta],
+    [
+      { linkedin_url: null, current_title: "Alpha title", current_company: "" },
+      { linkedin_url: beta.url, current_title: "Beta title", current_company: "" },
+    ],
+    () => null,
+    () => null,
+  );
+  assert.equal(patches.get(alpha.url), null);
+  assert.equal(patches.get(beta.url)?.title, "Beta title");
+});
+
 test("applyXMatch validates confidence and handle, then maps company fields and YC from the list", () => {
   const existing = person("https://x.com/demo");
   const output = {
@@ -155,6 +175,15 @@ test("applyXMatch validates confidence and handle, then maps company fields and 
     applyXMatch(
       existing,
       { ...output, x_handle: "different" },
+      () => 7,
+      () => "W25",
+    ),
+    null,
+  );
+  assert.equal(
+    applyXMatch(
+      existing,
+      { ...output, x_handle: null },
       () => 7,
       () => "W25",
     ),
@@ -207,6 +236,34 @@ test("X batch outputs apply by normalized handle when Exa reorders them", () => 
   assert.equal(patches.get(alpha.url)?.title, "Alpha title");
   assert.equal(patches.get(beta.url)?.linkedin_url, "https://www.linkedin.com/in/beta");
   assert.equal(patches.get(beta.url)?.title, "Beta title");
+});
+
+test("X batch skips null handles and still applies valid outputs", () => {
+  const alpha = person("https://x.com/alpha");
+  const beta = person("https://x.com/beta");
+  const patches = applyXMatchBatch(
+    [alpha, beta],
+    [
+      {
+        x_handle: null,
+        linkedin_url: "https://www.linkedin.com/in/alpha",
+        current_title: "Alpha title",
+        current_employer: "",
+        confidence: "high",
+      },
+      {
+        x_handle: "@beta",
+        linkedin_url: "https://www.linkedin.com/in/beta",
+        current_title: "Beta title",
+        current_employer: "",
+        confidence: "high",
+      },
+    ],
+    () => null,
+    () => null,
+  );
+  assert.equal(patches.get(alpha.url), null);
+  assert.equal(patches.get(beta.url)?.linkedin_url, "https://www.linkedin.com/in/beta");
 });
 
 test("parseEmployees reads the first numeric employee count", () => {
