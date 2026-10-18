@@ -24,6 +24,7 @@ export type SearchParams = Record<string, string | string[] | undefined>;
 /** Posts rendered per page of the grid; more load as the list scrolls. */
 export const PAGE_SIZE = 60;
 const SORTS: OrganicSort[] = ["outlier", "views", "newest", "engagement"];
+export const DEFAULT_ORGANIC_SORT: OrganicSort = "newest";
 const UNITS: AgeUnit[] = ["days", "weeks", "months"];
 const DAY_MS = 86_400_000;
 const UNIT_DAYS: Record<AgeUnit, number> = { days: 1, weeks: 7, months: 30 };
@@ -55,7 +56,7 @@ export function parseOrganicFilters(sp: SearchParams): OrganicFilters {
     engagement: { min: parseNum(sp.emin), max: parseNum(sp.emax) },
     postedWithin: age && age > 0 ? { n: age, unit: UNITS.includes(unit) ? unit : "months" } : null,
     favorites: one(sp.fav) === "1",
-    sort: SORTS.includes(sort) ? sort : "outlier",
+    sort: SORTS.includes(sort) ? sort : DEFAULT_ORGANIC_SORT,
     view: one(sp.view) === "table" ? "table" : "grid",
   };
 }
@@ -126,7 +127,7 @@ export function organicHref(f: OrganicFilters, patch: Partial<OrganicFilters> = 
     s.set("unit", n.postedWithin.unit);
   }
   if (n.favorites) s.set("fav", "1");
-  if (n.sort !== "outlier") s.set("sort", n.sort);
+  if (n.sort !== DEFAULT_ORGANIC_SORT) s.set("sort", n.sort);
   if (n.view !== "grid") s.set("view", n.view);
   const str = s.toString();
   return str ? `?${str}` : "?";
