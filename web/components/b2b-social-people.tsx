@@ -308,7 +308,16 @@ function PersonPanel({ p }: { p: PersonRow }) {
         <h3 className="label">Why now</h3>
         <blockquote className="rounded-[4px] bg-bg-3 px-3.5 py-3 text-[14px] leading-relaxed whitespace-pre-line">&ldquo;{p.quote}&rdquo;</blockquote>
         <p className="text-[12.5px] text-fg-2">
-          {p.platform === "x" ? "X reply" : "LinkedIn comment"} on{" "}
+          {p.commentUrl ? (
+            <a href={p.commentUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+              {p.platform === "x" ? "X reply" : "Comment"}
+            </a>
+          ) : p.platform === "x" ? (
+            "X reply"
+          ) : (
+            "LinkedIn comment"
+          )}
+          {p.commentDate ? ` · ${fmtDate(p.commentDate)}` : ""} on{" "}
           {p.postUrl ? (
             <a href={p.postUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
               {p.accountName}&apos;s post
@@ -353,6 +362,7 @@ function PersonPanel({ p }: { p: PersonRow }) {
         </div>
         <p className="rounded-[4px] border border-line px-3.5 py-3 text-[13.5px] leading-relaxed">{p.opener}</p>
       </section>
+      {p.platform === "linkedin" && <p className="text-[12px] text-fg-3 -mb-3">LinkedIn doesn&apos;t give a link to a single comment; it&apos;s under the post.</p>}
       <div className="flex flex-wrap gap-2">
         {p.linkedinUrl && (
           <a className="btn btn-primary" href={p.linkedinUrl} target="_blank" rel="noopener noreferrer">
@@ -362,6 +372,11 @@ function PersonPanel({ p }: { p: PersonRow }) {
         {p.xUrl && (
           <a className={`btn ${p.linkedinUrl ? "" : "btn-primary"}`} href={p.xUrl} target="_blank" rel="noopener noreferrer">
             Open X
+          </a>
+        )}
+        {p.commentUrl && (
+          <a className="btn" href={p.commentUrl} target="_blank" rel="noopener noreferrer">
+            Open the reply
           </a>
         )}
         {p.postUrl && (

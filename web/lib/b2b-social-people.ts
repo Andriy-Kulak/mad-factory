@@ -33,6 +33,9 @@ export interface PersonRow {
   platform: ReachPlatform;
   postUrl: string | null;
   postDate: string | null;
+  /** The reply itself on X; null on LinkedIn, which only links to the post. */
+  commentUrl: string | null;
+  commentDate: string | null;
   account: string | null;
   accountName: string | null;
   accountGroup: ReachGroup | null;
@@ -69,6 +72,8 @@ export function personRows(data: B2BSocialData): PersonRow[] {
       platform: touch.post?.platform ?? (xUrl ? "x" : "linkedin"),
       postUrl: touch.post?.url ?? null,
       postDate: touch.post?.postedAt ?? null,
+      commentUrl: touch.comment.url ?? null,
+      commentDate: touch.comment.postedAt ?? null,
       account: touch.account?.handle ?? null,
       accountName: touch.account?.name ?? null,
       accountGroup: touch.account?.group ?? null,
@@ -233,6 +238,7 @@ export function peopleCsv(rows: PersonRow[]): string {
     "company_tier",
     "reason",
     "what_they_said",
+    "comment_url",
     "source",
     "on_post_by",
     "post_date",
@@ -252,6 +258,7 @@ export function peopleCsv(rows: PersonRow[]): string {
       r.tierLabel ?? COMPANY_TIER_LABEL[r.tier],
       OUTREACH_REASON_LABEL[r.reason],
       r.quote,
+      r.commentUrl,
       r.platform === "x" ? "X" : "LinkedIn",
       r.accountName,
       r.postDate?.slice(0, 10),

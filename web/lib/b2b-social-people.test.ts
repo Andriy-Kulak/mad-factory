@@ -34,7 +34,7 @@ const data: B2BSocialData = {
     post({ platform: "linkedin", id: "3", handle: "acme-inc", url: "https://www.linkedin.com/posts/acme-3", text: "A customer story", postedAt: "2025-12-01T00:00:00.000Z", likes: 10 }),
   ],
   comments: [
-    { postId: "2", authorName: "Dana", authorUrl: "https://x.com/dana", text: "This is a brutal downgrade, cancelling" },
+    { postId: "2", authorName: "Dana", authorUrl: "https://x.com/dana", text: "This is a brutal downgrade, cancelling", url: "https://x.com/dana/status/9", postedAt: "2026-01-09T12:00:00.000Z" },
     { postId: "1", authorName: "Uma", authorUrl: "https://x.com/uma", text: "We have been using it every day" },
     { postId: "1", authorName: "Cy", authorUrl: "https://x.com/cy", text: "Congrats!" },
     { postId: "3", authorName: "Lee", authorUrl: "https://www.linkedin.com/in/lee", text: "Does it work with our monorepo?" },
@@ -72,6 +72,8 @@ test("personRows: one row per person worth a message, with tier label, source an
   );
   assert.equal(rows[0]!.howWeKnow, "X account matched to their LinkedIn with Exa");
   assert.equal(rows[0]!.linkedinUrl, "https://www.linkedin.com/in/dana");
+  assert.equal(rows[0]!.commentUrl, "https://x.com/dana/status/9");
+  assert.equal(rows[2]!.commentUrl, null);
   assert.equal(rows[1]!.howWeKnow, "From their X bio");
   assert.equal(rows[2]!.howWeKnow, "Employer from their LinkedIn profile");
 });
@@ -118,6 +120,6 @@ test("funnel counts comments and identified authors in the window", () => {
 
 test("peopleCsv has a header and quotes what it must", () => {
   const lines = peopleCsv(personRows(data).slice(0, 1)).trim().split("\n");
-  assert.equal(lines[0], "name,title,level,company,company_tier,reason,what_they_said,source,on_post_by,post_date,post_url,linkedin_url,x_url,location,opener,score");
-  assert.match(lines[1]!, /^Dana,VP Engineering,VP,BigCo,Fortune 500 #12,Unhappy with a competitor,"This is a brutal downgrade, cancelling",X,Rival,2026-01-09,/);
+  assert.equal(lines[0], "name,title,level,company,company_tier,reason,what_they_said,comment_url,source,on_post_by,post_date,post_url,linkedin_url,x_url,location,opener,score");
+  assert.match(lines[1]!, /^Dana,VP Engineering,VP,BigCo,Fortune 500 #12,Unhappy with a competitor,"This is a brutal downgrade, cancelling",https:\/\/x\.com\/dana\/status\/9,X,Rival,2026-01-09,/);
 });

@@ -46,6 +46,10 @@ export interface ReachComment {
   authorName: string | null;
   authorUrl: string | null;
   text: string;
+  /** Link to this comment itself (X replies have one; LinkedIn's data has no comment id, so only the post links). */
+  url?: string | null;
+  /** When it was written, when the source says (X does; LinkedIn does not). */
+  postedAt?: string | null;
 }
 
 /** A looked-up commenter profile. LinkedIn masks job titles, so `title` comes from a separate enrichment when present. */
