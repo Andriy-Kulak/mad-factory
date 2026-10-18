@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accountStats, breakdown, classifyComment, commenterRows, companyTier, groupTotals, leads, median, seniorityOf, topicOf, outreach, type ReachPost, type B2BSocialData } from "./b2b-social.ts";
+import {
+  accountStats,
+  breakdown,
+  classifyComment,
+  commenterRows,
+  companyTier,
+  groupTotals,
+  leads,
+  median,
+  onTopic,
+  seniorityOf,
+  topicOf,
+  outreach,
+  type ReachPost,
+  type B2BSocialData,
+} from "./b2b-social.ts";
 
 const post = (over: Partial<ReachPost>): ReachPost => ({
   platform: "x",
@@ -44,6 +59,50 @@ const data: B2BSocialData = {
   people: [{ url: "https://www.linkedin.com/in/lee", found: true, location: "Somewhere", followers: 10, employer: "ACME" }],
 };
 
+const relevanceCompany = {
+  url: "company:sample",
+  name: "Sample Holdings",
+  domain: null,
+  size: "10,001+ employees",
+  employees: 20_000,
+  industry: null,
+  fortune500: 12,
+};
+
+function relevanceData({
+  group = "team",
+  postText,
+  replyText,
+  personUrl = "https://www.linkedin.com/in/person",
+  personName = "Person",
+  employer = "Sample Holdings",
+  employerUrl = relevanceCompany.url,
+  title = "VP Engineering",
+  postId = "relevance",
+  postDate = "2026-01-09T00:00:00.000Z",
+}: {
+  group?: "team" | "competitor";
+  postText: string;
+  replyText: string;
+  personUrl?: string;
+  personName?: string;
+  employer?: string | null;
+  employerUrl?: string | null;
+  title?: string | null;
+  postId?: string;
+  postDate?: string;
+}): B2BSocialData {
+  const handle = group === "team" ? "jo" : "rival";
+  return {
+    ...data,
+    accounts: group === "team" ? data.accounts : [...data.accounts, { platform: "x", handle, name: "Rival", url: `https://x.com/${handle}`, group, followers: 5000, sample: "recent" }],
+    posts: [post({ id: postId, handle, url: `https://x.com/${handle}/status/${postId}`, text: postText, postedAt: postDate })],
+    comments: [{ postId, authorName: personName, authorUrl: personUrl, text: replyText }],
+    people: [{ url: personUrl, found: true, location: null, followers: 25, employer, employerUrl, title }],
+    companies: [relevanceCompany],
+  };
+}
+
 test("median handles odd, even, empty and nulls", () => {
   assert.equal(median([3, 1, 2]), 2);
   assert.equal(median([1, 2, 3, 4]), 2.5);
@@ -80,6 +139,14 @@ test("topicOf puts company news ahead of the launch words it contains", () => {
   assert.equal(topicOf("How Sample Co 3x'ed its output. Read the full story"), "customer");
   assert.equal(topicOf("A look behind the scenes at our offsite"), "event");
   assert.equal(topicOf("Some thoughts on the future of work"), "other");
+});
+
+test("onTopic matches coding terms and account names as whole words", () => {
+  assert.equal(onTopic("3 g vs 5–6 g", []), false);
+  assert.equal(onTopic("AI agents", []), true);
+  assert.equal(onTopic("Does acme's Widget support this?", ["Acme"]), true);
+  assert.equal(onTopic("Does acmeville support this?", ["Acme"]), false);
+  assert.equal(onTopic("Jo's post", ["Jo"]), false);
 });
 
 test("breakdown groups measured posts only", () => {
@@ -252,4 +319,83 @@ test("outreach: a reason and an opener per identifiable person, competitor pain 
   assert.equal(list[0]!.xUrl, "https://x.com/dana");
   assert.match(list[0]!.opener, /Rival's post/);
   assert.match(list[0]!.opener, /Acme/);
+});
+
+test("unrelated team replies stay listed as C3 nurture while coding posts keep their grade", () => {
+  const replyText = "Is that the north trail?";
+  const unrelated = outreach(relevanceData({ postText: "Sunrise hike at the canyon today", replyText }))[0]!;
+  const onTopic = outreach(relevanceData({ postText: "Shipping our new coding agent", replyText }))[0]!;
+
+  assert.equal(unrelated.relevant, false);
+  assert.deepEqual([unrelated.fit, unrelated.intent, unrelated.route, unrelated.reason], ["C", 3, "nurture", "asking"]);
+  assert.equal(onTopic.relevant, true);
+  assert.equal(onTopic.fit, "A");
+  assert.equal(onTopic.intent, 2);
+  assert.notDeepEqual([onTopic.fit, onTopic.intent], ["C", 3]);
+  assert.equal(unrelated.lead.score, onTopic.lead.score * 0.2);
+});
+
+test("company-name replies and competitor posts are relevant", () => {
+  const companyMention = outreach(relevanceData({ postText: "Sunrise hike at the canyon today", replyText: "Does Acme support this?" }))[0]!;
+  const competitor = outreach(relevanceData({ group: "competitor", postText: "Sunrise hike at the canyon today", replyText: "Is that the north trail?" }))[0]!;
+
+  assert.equal(companyMention.relevant, true);
+  assert.equal(competitor.relevant, true);
+});
+
+test("relevant touches and people sort before unrelated team-post touches", () => {
+  const onTopic = relevanceData({
+    postText: "Shipping a coding tool",
+    replyText: "Is that the north trail?",
+    personUrl: "https://www.linkedin.com/in/on-topic",
+    personName: "On Topic",
+    employer: "Small Studio",
+    employerUrl: null,
+    title: "Software Engineer",
+    postId: "on-topic",
+  });
+  const unrelatedTouch = post({
+    id: "on-topic-unrelated",
+    handle: "jo",
+    url: "https://x.com/jo/status/on-topic-unrelated",
+    text: "Sunrise hike at the canyon today",
+    postedAt: "2026-01-08T00:00:00.000Z",
+  });
+  onTopic.posts.push(unrelatedTouch);
+  onTopic.comments.push({
+    postId: unrelatedTouch.id,
+    authorName: "On Topic",
+    authorUrl: "https://www.linkedin.com/in/on-topic",
+    text: "The trail ticket is too expensive",
+  });
+  const unrelated = relevanceData({
+    postText: "Sunrise hike at the canyon today",
+    replyText: "Is that the north trail?",
+    personUrl: "https://www.linkedin.com/in/unrelated",
+    personName: "Unrelated",
+    postId: "unrelated",
+  });
+  const combined: B2BSocialData = {
+    ...onTopic,
+    posts: [...onTopic.posts, ...unrelated.posts],
+    comments: [...onTopic.comments, ...unrelated.comments],
+    people: [...onTopic.people, ...unrelated.people],
+    companies: [...(onTopic.companies ?? []), ...(unrelated.companies ?? [])],
+  };
+  const rows = outreach(combined);
+  const onTopicRow = rows.find((row) => row.lead.name === "On Topic")!;
+
+  assert.deepEqual(
+    rows.map((row) => [row.lead.name, row.relevant, row.fit, row.intent]),
+    [
+      ["On Topic", true, "C", 2],
+      ["Unrelated", false, "C", 3],
+    ],
+  );
+  assert.deepEqual(
+    onTopicRow.lead.touches.map((touch) => touch.relevant),
+    [true, false],
+  );
+  assert.equal(onTopicRow.lead.kind, "evaluating");
+  assert.equal(onTopicRow.intent, 2);
 });

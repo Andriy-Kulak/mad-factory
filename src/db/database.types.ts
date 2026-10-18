@@ -501,6 +501,7 @@ export type Database = {
           yc_batch: string | null;
           enriched_at: string | null;
           first_seen_at: string;
+          exa_checked_at: string | null;
         };
         Insert: {
           id?: string;
@@ -523,6 +524,7 @@ export type Database = {
           yc_batch?: string | null;
           enriched_at?: string | null;
           first_seen_at?: string;
+          exa_checked_at?: string | null;
         };
         Update: {
           id?: string;
@@ -545,6 +547,7 @@ export type Database = {
           yc_batch?: string | null;
           enriched_at?: string | null;
           first_seen_at?: string;
+          exa_checked_at?: string | null;
         };
         Relationships: [];
       };

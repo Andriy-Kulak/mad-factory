@@ -6,6 +6,10 @@
  */
 
 import { fitOf, gradeRank, intentOf, personaOf, routeOf, type Fit, type Intent, type Persona, type Route } from "./b2b-social-grade.ts";
+import { classifyComment, isSignal, normalizeName, type CommentKind } from "../../src/b2b-social/classify.ts";
+
+export { COMMENT_KINDS, SIGNAL_KINDS, isSignal, normalizeName, classifyComment } from "../../src/b2b-social/classify.ts";
+export type { CommentKind } from "../../src/b2b-social/classify.ts";
 
 export type ReachPlatform = "x" | "linkedin";
 /** company = the product's own account, team = people who work there, competitor = everyone else tracked. */
@@ -232,6 +236,18 @@ export function topicOf(text: string): Topic {
   return "other";
 }
 
+const ON_TOPIC_RE =
+  /\b(code|coding|coder|codebase|programming|programmer|developers?|devs?|engineer(s|ing)?|software|swe|ai|agents?|agentic|llms?|models?|prompts?|tokens?|api|sdk|ide|cli|terminal|repos?|repository|pull requests?|prs?|commits?|deploy\w*|debug\w*|bugs?|benchmarks?|evals?|on-?call|incidents?|devops|open[- ]source|startups?|saas)\b/i;
+
+export function onTopic(text: string, names: string[]): boolean {
+  if (ON_TOPIC_RE.test(text)) return true;
+  const normalizedText = ` ${normalizeName(text)} `;
+  return names.some((name) => {
+    const normalizedName = normalizeName(name);
+    return name.trim().length >= 3 && normalizedName.length >= 3 && normalizedText.includes(` ${normalizedName} `);
+  });
+}
+
 export interface BreakdownRow {
   key: string;
   posts: number;
@@ -264,11 +280,6 @@ export function breakdown(posts: ReachPost[], by: (p: ReachPost) => string): Bre
  * reliability, most useful on a competitor's post) and evaluating (a short question or a comparison). commentary: long
  * takes with no ask. cheer: congrats and emoji.
  */
-export const COMMENT_KINDS = ["using", "pain", "evaluating", "insider", "commentary", "cheer", "company"] as const;
-export type CommentKind = (typeof COMMENT_KINDS)[number];
-export const SIGNAL_KINDS: readonly CommentKind[] = ["using", "pain", "evaluating"];
-export const isSignal = (kind: CommentKind) => SIGNAL_KINDS.includes(kind);
-
 export const COMMENT_KIND_LABEL: Record<CommentKind, string> = {
   using: "Already using",
   pain: "Pain or complaint",
@@ -279,36 +290,6 @@ export const COMMENT_KIND_LABEL: Record<CommentKind, string> = {
   company: "Company page",
 };
 
-const INSIDER_TEXT = /\b(by our team|work by our|our team!|we('re| are) just getting started|loved working on|proud of (the|our) team|welcome to the team|great to work with)\b/i;
-/** A vendor's support staff answering in the thread. */
-const VENDOR_SUPPORT = /\b(sorry about that|should be resolved now|we('re| are) looking into (it|this)|please (dm|email) (us|support)|reach out to (our )?support)\b/i;
-const USING =
-  /\b(we use|we('ve| have) been using|we('re| are) using|i use|i('ve| have) been using|i('ve| have) applied|i have applied|my team (has|have|is)|our team (has|have|is) (been )?using|at our company|we tried|we switched|upgrade to our|improved our|changed our|in our (workflow|stack|codebase))\b/i;
-const PAIN =
-  /\b(price (hike|increase)|nuked|too expensive|expensive|costly|confusing|rate[- ]limit(s|ed)?|usage limits?|hit (the|my|a) limit|quota|too slow|so slow|broken|buggy|unusable|cancel(l?ed|ling)?|switch(ed|ing)? (to|from|away)|downgrad\w*|frustrat\w*|disappointed|regress\w*|outage|keeps (failing|crashing)|worse than)\b/i;
-const EVALUATING = /\b(compare[ds]?|compared to|vs\.?|versus|alternative to|advantage over|does it (work|support|handle)|can it|any plans|on the roadmap|is there a way|how (does|do|can|is))\b/i;
-/** Long comments ending in "?" are usually rhetorical takes; a real question is short. */
-const QUESTION_MAX = 220;
-
-export function normalizeName(value: string | null): string {
-  return (value ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-export function classifyComment(comment: ReachComment, person: ReachPerson | undefined, posterNames: string[]): CommentKind {
-  if (comment.authorUrl && /\/(company|school)\//.test(comment.authorUrl)) return "company";
-  const employer = normalizeName(person?.employer ?? null);
-  if (employer && posterNames.some((n) => n && normalizeName(n) === employer)) return "insider";
-  const text = comment.text.trim();
-  if ((INSIDER_TEXT.test(text) && !text.includes("?")) || VENDOR_SUPPORT.test(text)) return "insider";
-  if (USING.test(text)) return "using";
-  if (PAIN.test(text)) return "pain";
-  if (EVALUATING.test(text) || (text.includes("?") && text.length <= QUESTION_MAX)) return "evaluating";
-  return text.length >= 160 ? "commentary" : "cheer";
-}
-
 export interface CommenterRow {
   comment: ReachComment;
   post: ReachPost | null;
@@ -316,6 +297,7 @@ export interface CommenterRow {
   person: ReachPerson | undefined;
   kind: CommentKind;
   topic: Topic | null;
+  relevant: boolean;
 }
 
 /** Every comment joined to its post, the account that posted it and the commenter's profile when looked up. */
@@ -325,6 +307,7 @@ export function commenterRows(data: B2BSocialData): CommenterRow[] {
   const people = new Map(data.people.map((p) => [p.url, p]));
   // The tracked company's people never count as leads, wherever they comment, and neither do the poster's colleagues.
   const companyNames = data.accounts.filter((a) => a.group === "company").map((a) => a.name);
+  const names = data.accounts.filter((a) => a.group === "company" || a.group === "competitor").map((a) => a.name);
   const teamUrls = new Set(data.accounts.filter((a) => a.group !== "competitor").map((a) => a.url.toLowerCase()));
   return data.comments.map((comment) => {
     const post = posts.get(comment.postId) ?? null;
@@ -333,7 +316,8 @@ export function commenterRows(data: B2BSocialData): CommenterRow[] {
     const posterNames = [...companyNames, account?.name ?? ""];
     const ownProfile = comment.authorUrl && /\/in\//.test(comment.authorUrl) && teamUrls.has(comment.authorUrl.toLowerCase());
     const kind = ownProfile ? "insider" : classifyComment(comment, person, posterNames);
-    return { comment, post, account, person, kind, topic: post ? topicOf(post.text) : null };
+    const relevant = !post || !account || account.group === "company" || account.group === "competitor" || onTopic(post.text, names) || onTopic(comment.text, names);
+    return { comment, post, account, person, kind, topic: post ? topicOf(post.text) : null, relevant };
   });
 }
 
@@ -398,6 +382,7 @@ export interface Lead {
   touches: CommenterRow[];
   /** Highest touch kind. */
   kind: CommentKind;
+  relevant: boolean;
   lastAt: string | null;
   score: number;
 }
@@ -420,12 +405,13 @@ export function leads(data: B2BSocialData, since: string | null = null): Lead[] 
   }
   return [...byPerson.entries()]
     .map(([url, touches]) => {
-      const sorted = [...touches].sort((a, b) => KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind]);
+      const sorted = [...touches].sort((a, b) => Number(b.relevant) - Number(a.relevant) || KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind]);
       const person = sorted[0]!.person;
       const company = person?.employerUrl ? companies.get(person.employerUrl) : undefined;
       const tier = companyTier(company);
       const seniority = seniorityOf(person?.title);
       const kind = sorted[0]!.kind;
+      const relevant = sorted[0]!.relevant;
       const lastAt =
         touches
           .map((t) => t.post?.postedAt ?? "")
@@ -442,8 +428,9 @@ export function leads(data: B2BSocialData, since: string | null = null): Lead[] 
         seniority,
         touches: sorted,
         kind,
+        relevant,
         lastAt,
-        score: Math.round(TIER_WEIGHT[tier] * SENIORITY_WEIGHT[seniority] * KIND_WEIGHT[kind] * recency * repeat * 10) / 10,
+        score: Math.round(TIER_WEIGHT[tier] * SENIORITY_WEIGHT[seniority] * KIND_WEIGHT[kind] * recency * repeat * (relevant ? 1 : 0.2) * 10) / 10,
       };
     })
     .sort((a, b) => b.score - a.score);
@@ -462,6 +449,7 @@ export const OUTREACH_REASON_LABEL: Record<OutreachReason, string> = {
 
 export interface Outreach {
   lead: Lead;
+  relevant: boolean;
   reason: OutreachReason;
   /** The comment that makes it worth reaching out. */
   touch: CommenterRow;
@@ -530,10 +518,19 @@ export function outreach(data: B2BSocialData, since: string | null = null): Outr
       const touch = lead.touches[0]!;
       const persona = personaOf(lead.seniority);
       const colleagues = companyKey(lead) ? (perCompany.get(companyKey(lead)) ?? 1) - 1 : 0;
-      const fit = fitOf(lead.tier, persona, !!(lead.company || lead.person?.employer));
-      const intent = intentOf({ kind: lead.kind, signals: lead.touches.filter((t) => isSignal(t.kind)).length, colleagues: colleagues + 1, lastAt: lead.lastAt, capturedAt: data.capturedAt });
+      const fit = lead.relevant ? fitOf(lead.tier, persona, !!(lead.company || lead.person?.employer)) : "C";
+      const intent = lead.relevant
+        ? intentOf({
+            kind: lead.kind,
+            signals: lead.touches.filter((t) => t.relevant && isSignal(t.kind)).length,
+            colleagues: colleagues + 1,
+            lastAt: lead.lastAt,
+            capturedAt: data.capturedAt,
+          })
+        : 3;
       return {
         lead,
+        relevant: lead.relevant,
         reason,
         touch,
         profileUrl: lead.person?.linkedinUrl ?? lead.url,
@@ -546,5 +543,5 @@ export function outreach(data: B2BSocialData, since: string | null = null): Outr
         colleagues,
       };
     })
-    .sort((a, b) => gradeRank(a.fit, a.intent) - gradeRank(b.fit, b.intent) || (b.lead.lastAt ?? "").localeCompare(a.lead.lastAt ?? ""));
+    .sort((a, b) => Number(b.relevant) - Number(a.relevant) || gradeRank(a.fit, a.intent) - gradeRank(b.fit, b.intent) || (b.lead.lastAt ?? "").localeCompare(a.lead.lastAt ?? ""));
 }

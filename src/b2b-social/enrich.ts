@@ -2,22 +2,27 @@ import { existsSync, readFileSync } from "node:fs";
 
 /**
  * Pure helpers for the B2B Social sync: when a post's comments are due, a job from an X bio, and the Fortune 500 and
- * YC tags. The two lists are public files kept outside the repo (local/reference/), read when present.
+ * YC tags. The public reference lists are committed under reference/ and read when present.
  */
 
-/** Comments are fetched once per post, this long after posting (most replies are in by then). */
-export const COMMENT_DELAY_HOURS = 48;
+/** LinkedIn comments get one follow-up fetch after the early check. */
+export const LINKEDIN_RECHECK_HOURS = 48;
 /** X recent search only reaches 7 days back; LinkedIn has no limit, so stop at 14 to keep costs flat. */
 export const COMMENT_WINDOW_DAYS = { x: 7, linkedin: 14 } as const;
 
-/** Due when the post is old enough, still inside its window, and has not been checked since it got old enough. */
+/** X is incremental; LinkedIn gets an early check and one recheck once the post is 48 hours old. */
 export function commentsDue(post: { platform: "x" | "linkedin"; posted_at: string | null; replies_checked_at: string | null }, now: Date): boolean {
   if (!post.posted_at) return false;
   const posted = Date.parse(post.posted_at);
-  const readyAt = posted + COMMENT_DELAY_HOURS * 3_600_000;
+  if (!Number.isFinite(posted)) return false;
+  const age = now.getTime() - posted;
+  if (age < 0) return false;
   const closesAt = posted + COMMENT_WINDOW_DAYS[post.platform] * 86_400_000;
-  if (now.getTime() < readyAt || now.getTime() > closesAt) return false;
-  return !post.replies_checked_at || Date.parse(post.replies_checked_at) < readyAt;
+  if (now.getTime() > closesAt) return false;
+  if (post.platform === "x") return true;
+  if (!post.replies_checked_at) return true;
+  const recheckAt = posted + LINKEDIN_RECHECK_HOURS * 3_600_000;
+  return now.getTime() >= recheckAt && Date.parse(post.replies_checked_at) < recheckAt;
 }
 
 /** "Head of Platform at Example Labs" or "eng @Sample | …" → title and company; former roles are ignored. */
@@ -81,15 +86,17 @@ export function host(url: string | null | undefined): string | null {
   }
 }
 
-/** YC batch by website domain only (names collide across companies); the yc-oss companies JSON. */
-export function ycMatcher(jsonPath: string | null): (domain: string | null | undefined) => string | null {
-  if (!jsonPath || !existsSync(jsonPath)) return () => null;
+/** YC batch by website domain only (names collide across companies); the public domain,batch CSV. */
+export function ycMatcher(csvPath: string | null): (domain: string | null | undefined) => string | null {
+  if (!csvPath || !existsSync(csvPath)) return () => null;
   const byDomain = new Map<string, string>();
-  for (const c of JSON.parse(readFileSync(jsonPath, "utf8")) as { website?: string; batch?: string }[]) {
-    const d = host(c.website);
-    if (d && c.batch) byDomain.set(d, c.batch);
+  for (const line of readFileSync(csvPath, "utf8").trim().split("\n").slice(1)) {
+    const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g)?.map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')) ?? [];
+    const domain = cells[0]?.toLowerCase();
+    const batch = cells[1];
+    if (domain && batch) byDomain.set(domain, batch);
   }
-  return (domain) => (domain ? (byDomain.get(domain.toLowerCase()) ?? null) : null);
+  return (domain) => (domain ? (byDomain.get(domain.toLowerCase().replace(/^www\./, "")) ?? null) : null);
 }
 
 /** LinkedIn activity ids carry their creation time (ms since epoch) in the top bits. */
