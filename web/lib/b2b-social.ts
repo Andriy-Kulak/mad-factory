@@ -331,58 +331,6 @@ export function commenterRows(data: B2BSocialData): CommenterRow[] {
   });
 }
 
-const csvCell = (v: string | number | null | undefined) => {
-  const s = v == null ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
-/** One line per comment, ready for an enrichment tool: who, where they work, what they said, on which post. */
-export function commentersCsv(rows: CommenterRow[], companies: ReachCompany[] = []): string {
-  const byUrl = new Map(companies.map((c) => [c.url, c]));
-  const head = [
-    "kind",
-    "commenter",
-    "profile_url",
-    "title",
-    "seniority",
-    "employer",
-    "company_tier",
-    "fortune500_rank",
-    "company_linkedin",
-    "location",
-    "followers",
-    "comment",
-    "post_account",
-    "post_topic",
-    "post_date",
-    "post_url",
-  ];
-  const lines = rows.map((r) => {
-    const company = r.person?.employerUrl ? byUrl.get(r.person.employerUrl) : undefined;
-    return [
-      r.kind,
-      r.comment.authorName,
-      r.comment.authorUrl,
-      r.person?.title,
-      SENIORITY_LABEL[seniorityOf(r.person?.title)],
-      r.person?.employer,
-      COMPANY_TIER_LABEL[companyTier(company)],
-      company?.fortune500,
-      company?.url,
-      r.person?.location,
-      r.person?.followers,
-      r.comment.text,
-      r.account?.name,
-      r.topic ? TOPIC_LABEL[r.topic] : null,
-      r.post?.postedAt?.slice(0, 10),
-      r.post?.url,
-    ]
-      .map(csvCell)
-      .join(",");
-  });
-  return `${[head.join(","), ...lines].join("\n")}\n`;
-}
-
 export const SENIORITIES = ["exec", "vp", "director", "manager", "senior", "ic", "unknown"] as const;
 export type Seniority = (typeof SENIORITIES)[number];
 
@@ -492,37 +440,6 @@ export function leads(data: B2BSocialData, since: string | null = null): Lead[] 
         score: Math.round(TIER_WEIGHT[tier] * SENIORITY_WEIGHT[seniority] * KIND_WEIGHT[kind] * recency * repeat * 10) / 10,
       };
     })
-    .sort((a, b) => b.score - a.score);
-}
-
-export interface AccountRow {
-  company: ReachCompany;
-  tier: CompanyTier;
-  people: Lead[];
-  signals: number;
-  topSeniority: Seniority;
-  score: number;
-  lastAt: string | null;
-}
-
-/** Leads rolled up to their employer, for account-based outreach. People without a known employer are left out. */
-export function leadAccounts(list: Lead[]): AccountRow[] {
-  const byCompany = new Map<string, Lead[]>();
-  for (const lead of list) if (lead.company) byCompany.set(lead.company.url, [...(byCompany.get(lead.company.url) ?? []), lead]);
-  return [...byCompany.values()]
-    .map((people) => ({
-      company: people[0]!.company!,
-      tier: people[0]!.tier,
-      people,
-      signals: people.filter((p) => isSignal(p.kind)).length,
-      topSeniority: SENIORITIES.find((s) => people.some((p) => p.seniority === s)) ?? "unknown",
-      score: Math.round(people.reduce((sum, p) => sum + p.score, 0) * 10) / 10,
-      lastAt:
-        people
-          .map((p) => p.lastAt ?? "")
-          .sort()
-          .at(-1) || null,
-    }))
     .sort((a, b) => b.score - a.score);
 }
 

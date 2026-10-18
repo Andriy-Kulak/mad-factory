@@ -1,22 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  accountStats,
-  breakdown,
-  classifyComment,
-  commenterRows,
-  commentersCsv,
-  companyTier,
-  groupTotals,
-  leadAccounts,
-  leads,
-  median,
-  seniorityOf,
-  topicOf,
-  outreach,
-  type ReachPost,
-  type B2BSocialData,
-} from "./b2b-social.ts";
+import { accountStats, breakdown, classifyComment, commenterRows, companyTier, groupTotals, leads, median, seniorityOf, topicOf, outreach, type ReachPost, type B2BSocialData } from "./b2b-social.ts";
 
 const post = (over: Partial<ReachPost>): ReachPost => ({
   platform: "x",
@@ -128,7 +112,7 @@ test("classifyComment: company pages, employer match, questions, long takes and 
   assert.equal(classifyComment(c("Sorry about that! It should be resolved now."), undefined, ["Acme"]), "insider");
 });
 
-test("commenterRows joins posts, accounts and people, and the CSV quotes what it must", () => {
+test("commenterRows joins posts, accounts and people", () => {
   const rows = commenterRows(data);
   assert.deepEqual(
     rows.map((r) => r.kind),
@@ -137,10 +121,6 @@ test("commenterRows joins posts, accounts and people, and the CSV quotes what it
   assert.equal(rows[1]!.account?.handle, "acme-inc");
   assert.equal(rows[1]!.topic, "launch");
   assert.equal(rows[3]!.person?.employer, "ACME");
-
-  const csv = commentersCsv([{ ...rows[1]!, comment: { ...rows[1]!.comment, text: 'He said "hi", then left' } }]).split("\n");
-  assert.equal(csv[0], "kind,commenter,profile_url,title,seniority,employer,company_tier,fortune500_rank,company_linkedin,location,followers,comment,post_account,post_topic,post_date,post_url");
-  assert.equal(csv[1], 'evaluating,Sam,https://www.linkedin.com/in/sam,,Unknown,,Smaller company,,,,,"He said ""hi"", then left",Acme,Launch,2026-01-01,https://www.linkedin.com/posts/acme-10');
 });
 
 test("groupTotals adds up followers per group and only counts recent originals", () => {
@@ -175,7 +155,7 @@ test("companyTier: Fortune 500 rank first, then LinkedIn's 10,001+ bucket", () =
   assert.equal(companyTier({ ...c, name: "Self-Employed", size: "10,001+ employees", employees: 90000, fortune500: null }), "other");
 });
 
-test("leads rank senior people at big companies who asked something above cheers, and roll up by company", () => {
+test("leads rank senior people at big companies who asked something above cheers", () => {
   const big = { url: "https://www.linkedin.com/company/bigco", name: "BigCo", domain: "bigco.com", size: "10,001+ employees", employees: 50000, industry: "Banking", fortune500: 12 };
   const small = { url: "https://www.linkedin.com/company/tiny", name: "Tiny", domain: null, size: "2-10 employees", employees: 4, industry: null, fortune500: null };
   const person = (url: string, employerUrl: string, title: string) => ({ url, found: true, location: null, followers: null, employer: null, employerUrl, title });
@@ -202,14 +182,6 @@ test("leads rank senior people at big companies who asked something above cheers
       ["Vee", "fortune500", "vp", "evaluating"],
       ["Tom", "other", "exec", "evaluating"],
       ["Ivy", "fortune500", "ic", "cheer"],
-    ],
-  );
-  const accounts = leadAccounts(list);
-  assert.deepEqual(
-    accounts.map((a) => [a.company.name, a.people.length, a.signals, a.topSeniority]),
-    [
-      ["BigCo", 2, 1, "vp"],
-      ["Tiny", 1, 1, "exec"],
     ],
   );
 });
