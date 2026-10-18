@@ -29,6 +29,7 @@ export interface PersonRow {
   /** "Fortune 500 #21", "10k+ employees", "YC W24", or null for other companies. */
   tierLabel: string | null;
   seniority: Seniority;
+  relevant: boolean;
   reason: OutreachReason;
   quote: string;
   platform: ReachPlatform;
@@ -65,7 +66,7 @@ function howWeKnow(url: string, linkedinUrl: string | null | undefined, title: s
 }
 
 export function personRows(data: B2BSocialData): PersonRow[] {
-  return outreach(data).map(({ lead, touch, reason, opener, xUrl, persona, fit, intent, route, colleagues }) => {
+  return outreach(data).map(({ lead, touch, relevant, reason, opener, xUrl, persona, fit, intent, route, colleagues }) => {
     const company = lead.company;
     return {
       id: lead.url,
@@ -75,6 +76,7 @@ export function personRows(data: B2BSocialData): PersonRow[] {
       tier: lead.tier,
       tierLabel: company?.fortune500 ? `Fortune 500 #${company.fortune500}` : lead.tier === "enterprise" ? "10k+ employees" : company?.yc ? `YC ${company.yc}` : null,
       seniority: lead.seniority,
+      relevant,
       reason,
       quote: touch.comment.text,
       platform: touch.post?.platform ?? (xUrl ? "x" : "linkedin"),

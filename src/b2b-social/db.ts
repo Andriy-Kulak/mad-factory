@@ -19,6 +19,21 @@ export interface B2BAccountConfig {
   x_user_id?: string;
   /** Newest post id seen; the next run asks only for newer posts. */
   last_post_id?: string;
+  /** Maximum replies fetched per X post on each check; X allows 10–100. */
+  max_replies?: number;
+  /** X reply ordering, defaulting to newest first. */
+  reply_order?: "recency" | "relevancy";
+}
+
+export function mergeB2BAccountConfig(
+  prev: Partial<B2BAccountConfig>,
+  input: { group: B2BGroup; url: string; replies?: boolean; maxReplies?: number; replyOrder?: "recency" | "relevancy"; reset?: boolean },
+): B2BAccountConfig {
+  const config: B2BAccountConfig = { ...prev, group: input.group, url: input.url, followers: prev.followers ?? null, replies: input.replies ?? prev.replies ?? true };
+  if (input.maxReplies !== undefined) config.max_replies = input.maxReplies;
+  if (input.replyOrder !== undefined) config.reply_order = input.replyOrder;
+  if (input.reset) delete config.last_post_id;
+  return config;
 }
 
 const BATCH = 500;
@@ -59,6 +74,11 @@ export async function updateB2BSource(id: string, config: B2BAccountConfig): Pro
     .update({ config: config as unknown as Json, last_scraped_at: new Date().toISOString() })
     .eq("id", id);
   if (res.error) throw new Error(`updateB2BSource: ${res.error.message}`);
+}
+
+export async function updateB2BPostComments(id: string, comments: number): Promise<void> {
+  const res = await getDb().from("b2b_posts").update({ comments }).eq("id", id);
+  if (res.error) throw new Error(`updateB2BPostComments: ${res.error.message}`);
 }
 
 export const upsertB2BPosts = (rows: B2BPostInsert[]) => upsertBatches("b2b_posts", rows, "product_id,platform,external_id");
@@ -167,12 +187,21 @@ export async function unenrichedLinkedIn(productId: string): Promise<{ url: stri
  */
 export async function addB2BSource(
   productId: string,
-  input: { platform: "x" | "linkedin"; handle: string; url: string; name: string | null; group: B2BGroup; replies: boolean; reset: boolean },
+  input: {
+    platform: "x" | "linkedin";
+    handle: string;
+    url: string;
+    name: string | null;
+    group: B2BGroup;
+    replies?: boolean;
+    reset: boolean;
+    maxReplies?: number;
+    replyOrder?: "recency" | "relevancy";
+  },
 ): Promise<{ row: TrackedSourceRow; created: boolean }> {
   const existing = (await listB2BSources(productId)).find((s) => s.kind === input.platform && s.value === input.handle);
   const prev = (existing?.config ?? {}) as unknown as Partial<B2BAccountConfig>;
-  const config: B2BAccountConfig = { ...prev, group: input.group, url: input.url, followers: prev.followers ?? null, replies: input.replies };
-  if (input.reset) delete config.last_post_id;
+  const config = mergeB2BAccountConfig(prev, input);
   const row = await upsertB2BSource(productId, input.platform, input.handle, input.name ?? existing?.label ?? input.handle, config);
   return { row, created: !existing };
 }

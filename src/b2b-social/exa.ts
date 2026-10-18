@@ -160,19 +160,19 @@ export function exaCandidates(people: B2BPersonRow[], comments: ExaComment[], ct
 }
 
 export interface LinkedInTitleOutput {
-  linkedin_url: string;
-  current_title: string;
-  current_company: string;
+  linkedin_url: string | null;
+  current_title: string | null;
+  current_company: string | null;
 }
 
 export interface XMatchOutput {
-  x_handle: string;
-  linkedin_url: string;
-  current_title: string;
-  current_employer: string;
+  x_handle: string | null;
+  linkedin_url: string | null;
+  current_title: string | null;
+  current_employer: string | null;
   confidence: "low" | "medium" | "high";
-  employer_domain?: string;
-  employer_employee_count?: string;
+  employer_domain?: string | null;
+  employer_employee_count?: string | null;
 }
 
 type CompanyRank = (company: string | null | undefined) => number | null;
@@ -181,9 +181,10 @@ type CompanyYc = (domain: string | null | undefined) => string | null;
 export function applyLinkedInTitle(person: B2BPersonRow, out: LinkedInTitleOutput, f500: CompanyRank, _yc: CompanyYc): Partial<B2BPersonRow> | null {
   if (canonicalLinkedIn(out.linkedin_url) !== person.url) return null;
   const patch: Partial<B2BPersonRow> = { title: out.current_title || null };
-  if (out.current_company?.trim() && normalizeCompany(out.current_company) !== normalizeCompany(person.employer)) {
-    patch.employer = out.current_company;
-    patch.fortune500_rank = f500(out.current_company);
+  const currentCompany = out.current_company;
+  if (typeof currentCompany === "string" && currentCompany.trim() && normalizeCompany(currentCompany) !== normalizeCompany(person.employer)) {
+    patch.employer = currentCompany;
+    patch.fortune500_rank = f500(currentCompany);
     patch.employer_url = null;
     patch.company_size = null;
     patch.company_employees = null;
@@ -201,20 +202,22 @@ export function parseEmployees(value: string | null | undefined): number | null 
   return Number.isFinite(count) ? count : null;
 }
 
-function normalizeXHandle(value: string): string {
-  return value.replace(/^@/, "").toLowerCase();
+function normalizeXHandle(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const handle = value.trim().replace(/^@+/, "").toLowerCase();
+  return handle || null;
 }
 
 function xHandleFromUrl(url: string): string | null {
   const handle = url.match(/^https:\/\/x\.com\/([^/?#]+)/i)?.[1];
-  return handle ? normalizeXHandle(handle) : null;
+  return normalizeXHandle(handle);
 }
 
 export function applyXMatch(person: B2BPersonRow, out: XMatchOutput, f500: CompanyRank, yc: CompanyYc): Partial<B2BPersonRow> | null {
   const handle = xHandleFromUrl(person.url);
   const outputHandle = normalizeXHandle(out.x_handle);
   const linkedinUrl = canonicalLinkedIn(out.linkedin_url);
-  if (out.confidence === "low" || !handle || outputHandle !== handle || !linkedinUrl || !/^https:\/\/www\.linkedin\.com\/in\/[^/]+$/.test(linkedinUrl)) return null;
+  if (out.confidence === "low" || !handle || !outputHandle || outputHandle !== handle || !linkedinUrl || !/^https:\/\/www\.linkedin\.com\/in\/[^/]+$/.test(linkedinUrl)) return null;
   const employer = out.current_employer || null;
   const companyDomain = host(out.employer_domain);
   return {

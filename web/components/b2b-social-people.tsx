@@ -151,7 +151,15 @@ export function B2BSocialPeople({
         ),
         value: r.company,
       },
-      { node: <Badge tone={REASON_TONE[r.reason]}>{OUTREACH_REASON_LABEL[r.reason]}</Badge>, value: OUTREACH_REASONS.indexOf(r.reason) },
+      {
+        node: (
+          <span className="inline-flex items-center gap-1.5">
+            <Badge tone={REASON_TONE[r.reason]}>{OUTREACH_REASON_LABEL[r.reason]}</Badge>
+            {!r.relevant && <Badge tone="neutral">Unrelated post</Badge>}
+          </span>
+        ),
+        value: OUTREACH_REASONS.indexOf(r.reason),
+      },
       {
         node: (
           <span className="block whitespace-normal leading-snug min-w-[240px] max-w-[400px]">
@@ -172,7 +180,7 @@ export function B2BSocialPeople({
             <span className="text-[11px] text-fg-3 whitespace-nowrap">{ROUTE_LABEL[r.route]}</span>
           </span>
         ),
-        value: -gradeRank(r.fit, r.intent),
+        value: (r.relevant ? 100 : 0) - gradeRank(r.fit, r.intent),
       },
     ],
   }));
@@ -456,6 +464,7 @@ function PersonPanel({ p }: { p: PersonRow }) {
             {p.grade} · {ROUTE_LABEL[p.route]}
           </Badge>
           <Badge tone={REASON_TONE[p.reason]}>{OUTREACH_REASON_LABEL[p.reason]}</Badge>
+          {!p.relevant && <Badge tone="neutral">Unrelated post</Badge>}
           {p.tierLabel && <Badge tone="green">{p.tierLabel}</Badge>}
           {p.persona !== "unknown" && <Badge>{PERSONA_LABEL[p.persona]}</Badge>}
           {p.seniority !== "unknown" && <Badge>{SENIORITY_LABEL[p.seniority]}</Badge>}
