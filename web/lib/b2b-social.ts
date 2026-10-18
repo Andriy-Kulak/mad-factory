@@ -287,7 +287,7 @@ const USING =
 const PAIN =
   /\b(price (hike|increase)|nuked|too expensive|expensive|costly|confusing|rate[- ]limit(s|ed)?|usage limits?|hit (the|my|a) limit|quota|too slow|so slow|broken|buggy|unusable|cancel(l?ed|ling)?|switch(ed|ing)? (to|from|away)|downgrad\w*|frustrat\w*|disappointed|regress\w*|outage|keeps (failing|crashing)|worse than)\b/i;
 const EVALUATING = /\b(compare[ds]?|compared to|vs\.?|versus|alternative to|advantage over|does it (work|support|handle)|can it|any plans|on the roadmap|is there a way|how (does|do|can|is))\b/i;
-/** Long comments with a question mark are usually rhetorical takes; a real question is short. */
+/** Long comments ending in "?" are usually rhetorical takes; a real question is short. */
 const QUESTION_MAX = 220;
 
 export function normalizeName(value: string | null): string {

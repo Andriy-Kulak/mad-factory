@@ -17,7 +17,7 @@ export default async function B2BSocialPage({ params, searchParams }: { params: 
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const data = await loadB2BSocial(slug);
+  const data = await loadB2BSocial(product.id);
   const viewParam = typeof sp.view === "string" ? sp.view : "";
   const view: View = (VIEWS as readonly string[]).includes(viewParam) ? (viewParam as View) : "people";
   const tabs = (
@@ -40,7 +40,7 @@ export default async function B2BSocialPage({ params, searchParams }: { params: 
     >
       {!data ? (
         <Empty>
-          No snapshot for this product yet. Save one as <code>local/{slug}/b2b-social.json</code> (format in <code>web/lib/b2b-social.ts</code>); it stays on this machine.
+          Nothing watched yet. Add accounts and run <code>pnpm b2b-social sync --product {slug}</code> (see <code>docs/B2B_SOCIAL_MVP.md</code>).
         </Empty>
       ) : view === "x" ? (
         <XView data={data} />

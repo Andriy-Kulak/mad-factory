@@ -5,7 +5,7 @@
  * No dependencies, so the web app can import it too.
  */
 
-export type IntegrationKey = "supabase" | "migrations" | "scrapecreators" | "r2" | "proxy" | "meta-ads" | "apple-ads" | "revenuecat" | "gemini" | "ai-gateway" | "web-auth";
+export type IntegrationKey = "supabase" | "migrations" | "scrapecreators" | "r2" | "proxy" | "meta-ads" | "apple-ads" | "revenuecat" | "gemini" | "ai-gateway" | "web-auth" | "x-api";
 
 export interface Integration {
   key: IntegrationKey;
@@ -60,6 +60,17 @@ export const INTEGRATIONS: Integration[] = [
     enables: "Competitor ads from the Meta Ad Library (`pnpm scrape`) and Instagram, TikTok and Facebook posts (`pnpm social`).",
     without: "`pnpm scrape --collector playwright` still collects Ad Library ads with a local browser; `pnpm social` cannot run.",
     setup: "scrapecreators.com → API key (paid per request)",
+  },
+  {
+    key: "x-api",
+    name: "X API",
+    env: [["X_BEARER_TOKEN"]],
+    required: false,
+    where: "cli",
+    summary: "X posts and replies for B2B Social",
+    enables: "Latest posts of watched X accounts and the replies to them (`pnpm b2b-social sync`).",
+    without: "B2B Social skips X; LinkedIn still syncs.",
+    setup: "console.x.com → an app inside a pay-per-use project → Keys and tokens → Bearer Token (about $0.005 per post read)",
   },
   {
     key: "r2",

@@ -3,8 +3,10 @@
 B2B Social finds people who just showed buying signals on LinkedIn and X, works out who they are, and tells a
 rep why each one is worth a message. It sits under Research at `/p/<slug>/b2b-social`.
 
-This document is generic. The accounts a product watches, the people found and everything they said live in that
-product's data (today a gitignored local snapshot, later the database), never in the repository.
+This document is generic. The accounts a product watches, the people found and everything they said live in the
+database, never in the repository.
+
+Status: Step 1 (UI), Step 2 (tables) and Step 3 (sync command) are built. The daily schedule is the remaining piece.
 
 ## How it works
 
@@ -64,13 +66,14 @@ CRM (customer, open deal, new), and check the grades against which people turned
 | Step | Tool | Cost |
 | --- | --- | --- |
 | LinkedIn posts, comments (up to 10 per post), profiles, company pages | ScrapeCreators | 1 credit per call |
-| X posts of watched accounts | ScrapeCreators or X API | 1 credit per account, or $0.005 per post |
+| X posts of watched accounts | X API user timeline (newest first, `since_id`) | $0.005 per post |
 | X replies (last 7 days, by conversation) | X API, pay per use | $0.005 per reply, about $0.01 per author profile |
 | Job titles (LinkedIn masks them) and X to LinkedIn matching | Exa with Fiber people data | about $0.05 to $0.08 per person, enterprise and signal people only |
 | Fortune 500 tag | 2026 Fortune 500 list, matched by company name | free |
 | YC tag | yc-oss public company list, matched by website domain only (names collide) | free |
 
 Not available from any of these: who liked or reposted a LinkedIn post, and who liked or retweeted on X.
+ScrapeCreators' X endpoint returns an account's most popular tweets, not its latest, so X posts come from the X API.
 
 ## Step 1: the UI
 
@@ -91,33 +94,29 @@ One page, built around one list. Mockups were reviewed before building.
 
 ## Step 2: the database
 
-Reuse what exists and add two tables. Everything the page shows beyond these is worked out from them when the page
-loads (reason, score, tier, opener). That is plain code over stored rows: no API calls, no credits.
+Three tables, all prefixed `b2b_` so B2B Social stays separate from the B2C organic tables and can be removed in one
+step. Watched accounts are `tracked_sources` rows with source `b2b_social` (kind = platform, value = handle,
+`config.group` = company, team or competitor, `config.replies` = whether to collect comments). Everything the page
+shows beyond these (reason, grade, route, opener, tier) is worked out when the page loads: plain code over stored rows,
+no API calls.
 
-Reused:
+- `b2b_posts`: one row per post of a watched account, with its numbers and the tracking fields
+  `replies_open_until`, `last_reply_id`, `replies_checked_at` and `comments_seen`.
+- `b2b_comments`: one row per reply or comment. Unique on post plus the comment's id (the reply id on X, a hash of
+  author and text on LinkedIn), so fetching again never duplicates.
+- `b2b_people`: one row per person per product. Name, LinkedIn URL, location, bio, title, employer, company size,
+  Fortune 500 rank, YC batch, and `enriched_at`.
 
-- `tracked_sources`: the watch list per product. `source` is the platform, `config.relation` is `own`, `team` or
-  `competitor`. `last_scraped_at` already exists.
-- `social_accounts`, `social_posts`, `social_post_snapshots`: watched accounts, their posts and post numbers. The
-  platform list gains `x` and `linkedin`.
-- `scrape_runs`: one row per sync with credits used.
-
-New:
-
-- `social_people`: one row per person. Name, X handle, LinkedIn URL, location, bio, title, company, company size,
-  Fortune 500 rank, YC batch, whether they are an insider, and `enriched_at`.
-- `social_comments`: one row per reply or comment. Post, person, text, date, and its kind (using, pain, question,
-  commentary, cheer, insider, company). Unique on post plus the comment's id (a hash of author and text on
-  LinkedIn), so fetching again never duplicates.
-
-Row-level security on both, like every table. Nothing is ever deleted.
+Row-level security on all three.
 
 ## Step 3: the daily cron
 
 One command per product, run once a day:
 
 ```
-pnpm b2b-social sync --product <slug>
+pnpm b2b-social sync --product <slug>             # one incremental run
+pnpm b2b-social sync --product <slug> --dry-run   # what is due, no API calls
+pnpm b2b-social import --product <slug> --file <snapshot.json>
 ```
 
 Each run only does what is new, so cost tracks new activity, not days.

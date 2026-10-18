@@ -249,6 +249,28 @@ test("social tracking: accounts, posts, snapshots and media are stored with RLS 
   assert.ok(tables.rows.every((row) => row.rowsecurity));
 });
 
+test("b2b social: posts, people and comments are unique per product and cascade, with RLS enabled", async () => {
+  const product = await db.query<{ id: string }>("insert into products (slug, name) values ('b2b-test', 'B2B Test') returning id");
+  const pid = product.rows[0]!.id;
+  const post = await db.query<{ id: string }>("insert into b2b_posts (product_id, platform, external_id, account_handle) values ($1, 'x', '1', 'acme') returning id", [pid]);
+  await assert.rejects(db.query("insert into b2b_posts (product_id, platform, external_id, account_handle) values ($1, 'x', '1', 'acme')", [pid]));
+  await assert.rejects(db.query("insert into b2b_posts (product_id, platform, external_id, account_handle) values ($1, 'mastodon', '2', 'acme')", [pid]));
+  await db.query("insert into b2b_people (product_id, url) values ($1, 'https://x.com/someone')", [pid]);
+  await assert.rejects(db.query("insert into b2b_people (product_id, url) values ($1, 'https://x.com/someone')", [pid]));
+  const insertComment = "insert into b2b_comments (product_id, post_id, external_id, text) values ($1, $2, 'c1', 'Nice') on conflict (post_id, external_id) do nothing";
+  await db.query(insertComment, [pid, post.rows[0]!.id]);
+  await db.query(insertComment, [pid, post.rows[0]!.id]);
+  const n = async (sql: string) => (await db.query<{ n: number }>(sql, [pid])).rows[0]!.n;
+  assert.equal(await n("select count(*)::int n from b2b_comments where product_id = $1"), 1);
+  await db.query("delete from products where id = $1", [pid]);
+  assert.equal(await n("select count(*)::int n from b2b_posts where product_id = $1"), 0);
+  assert.equal(await n("select count(*)::int n from b2b_people where product_id = $1"), 0);
+  assert.equal(await n("select count(*)::int n from b2b_comments where product_id = $1"), 0);
+  const rls = await db.query<{ rowsecurity: boolean }>("select rowsecurity from pg_tables where schemaname = 'public' and tablename like 'b2b_%'");
+  assert.equal(rls.rows.length, 3);
+  assert.ok(rls.rows.every((r) => r.rowsecurity));
+});
+
 test("creative_profiles: keyed by creative sha256 with RLS enabled", async () => {
   await db.query("insert into creatives (sha256, bytes, storage_key) values ('profile-sha', 1, 'videos/profile-sha.mp4')");
   const row = await db.query<{ sha256: string; schema_version: number; media_type: string; profiled_by: string }>(
