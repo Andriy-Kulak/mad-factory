@@ -396,7 +396,7 @@ export async function enrichWithExa(productId: string, opts: EnrichWithExaOption
         const patches = applyLinkedInBatch(linkedinBatch, outputs, opts.f500, opts.yc);
         for (const person of linkedinBatch) {
           const patch = patches.get(person.url) ?? null;
-          if (patch) summary.matched++;
+          if (patch && (patch.title || patch.employer || patch.linkedin_url)) summary.matched++;
           await updateB2BPerson(productId, person.url, { ...(patch ?? {}), exa_checked_at: new Date().toISOString() });
         }
       }
@@ -410,7 +410,7 @@ export async function enrichWithExa(productId: string, opts: EnrichWithExaOption
         const patches = applyXMatchBatch(xBatch, outputs, opts.f500, opts.yc);
         for (const person of xBatch) {
           const patch = patches.get(person.url) ?? null;
-          if (patch) summary.matched++;
+          if (patch && (patch.title || patch.employer || patch.linkedin_url)) summary.matched++;
           await updateB2BPerson(productId, person.url, { ...(patch ?? {}), exa_checked_at: new Date().toISOString() });
         }
       }
