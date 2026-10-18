@@ -123,3 +123,19 @@ export async function unenrichedLinkedIn(productId: string): Promise<{ url: stri
     "unenrichedLinkedIn",
   );
 }
+
+/**
+ * Adds a watched account, or updates one: keeps what the sync learned (X user id, last post seen, followers) unless
+ * `reset` clears the marker, in which case the next sync backfills again (X: the last 7 days; LinkedIn: the latest posts).
+ */
+export async function addB2BSource(
+  productId: string,
+  input: { platform: "x" | "linkedin"; handle: string; url: string; name: string | null; group: B2BGroup; replies: boolean; reset: boolean },
+): Promise<{ row: TrackedSourceRow; created: boolean }> {
+  const existing = (await listB2BSources(productId)).find((s) => s.kind === input.platform && s.value === input.handle);
+  const prev = (existing?.config ?? {}) as unknown as Partial<B2BAccountConfig>;
+  const config: B2BAccountConfig = { ...prev, group: input.group, url: input.url, followers: prev.followers ?? null, replies: input.replies };
+  if (input.reset) delete config.last_post_id;
+  const row = await upsertB2BSource(productId, input.platform, input.handle, input.name ?? existing?.label ?? input.handle, config);
+  return { row, created: !existing };
+}

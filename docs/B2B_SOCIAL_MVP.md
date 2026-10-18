@@ -136,6 +136,30 @@ dollars and Exa dollars, and stops cleanly at a cap.
 Rough cost at about 50 watched accounts: 20 to 40 ScrapeCreators credits, $1 to $3 of X and $0.50 to $1 of Exa a
 day.
 
+## Adding accounts and backfilling
+
+```
+pnpm b2b-social add --product <slug> --x <handle> --group team
+pnpm b2b-social add --product <slug> --linkedin https://www.linkedin.com/company/<slug> --group competitor
+pnpm b2b-social add --product <slug> --linkedin https://www.linkedin.com/in/<slug> --group team --name "<label>"
+pnpm b2b-social sync --product <slug> --dry-run   # check what the next run will do
+pnpm b2b-social sync --product <slug>             # the first sync backfills the new accounts
+```
+
+- `--group` is `company` (the product's own accounts), `team` (people who work there; their comments are never
+  leads) or `competitor`.
+- `add` on an account that is already watched updates its group or name and keeps what the sync learned.
+  `--off` stops collecting its comments (its posts stay); `--reset` clears its marker so the next sync backfills
+  it again.
+- What a backfill reaches: X posts from the last 7 days (the timeline goes further back, but X serves replies for
+  7 days only, so older posts would have no replies to collect); LinkedIn the latest posts on the page or profile
+  (about 7 to 10) with comments for those under 14 days old.
+- Comments are fetched once a post is 48 hours old, so a fresh account's newest posts get theirs on a later run.
+  Run `sync` on later days, or daily, to keep collecting.
+- Cost of adding an X account: about $0.01 to look it up once, $0.005 per post, then about $1 per post that has
+  100 replies (less for quieter posts). A LinkedIn account costs 1 credit per run to list its posts, 1 per post
+  checked, and 1 or 2 per new commenter.
+
 ## Then: expand
 
 - More X accounts: competitors' and the team's, and keyword searches for pain (price changes, rollout problems)
