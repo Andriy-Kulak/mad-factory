@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { finishScrapeRun, startScrapeRun } from "../db/ads.ts";
 import { getDb } from "../db/client.ts";
 import type { B2BCommentInsert, B2BPersonInsert, B2BPostInsert, B2BPostRow, TrackedSourceRow } from "../db/types.ts";
+import { integrationStatus } from "../lib/integrations.ts";
 import { scrapeCreatorsGet } from "../lib/scrapecreators.ts";
 import {
   B2B_SOURCE,
@@ -17,10 +18,11 @@ import {
   type B2BAccountConfig,
 } from "./db.ts";
 import { COMMENT_WINDOW_DAYS, activityTime, bioJob, canonicalLinkedIn, commentsDue, fortune500Matcher, host, ycMatcher } from "./enrich.ts";
+import { enrichWithExa } from "./exa.ts";
 import { POST_FIELDS, X_POST_USD, X_USER_USD, xFormat, xGet, type XPage, type XUser } from "./x-api.ts";
 
 /**
- * One incremental B2B Social run for a product (docs/B2B_SOCIAL_MVP.md, Step 3). Each watched account remembers the
+ * One incremental B2B Social run for a product (docs/B2B_SOCIAL_MVP.md, Steps 1–5). Each watched account remembers the
  * newest post seen and each post when its comments were fetched, so a run only pays for what is new and a missed day
  * is caught up by the next run (X replies within 7 days). Budget caps stop a phase cleanly.
  */
@@ -28,9 +30,10 @@ import { POST_FIELDS, X_POST_USD, X_USER_USD, xFormat, xGet, type XPage, type XU
 export interface SyncOptions {
   maxCredits: number;
   maxXUsd: number;
+  maxExaUsd: number;
   dryRun: boolean;
   fortune500Csv: string | null;
-  ycJson: string | null;
+  ycCsv: string | null;
   log?: (line: string) => void;
 }
 
@@ -41,6 +44,7 @@ export interface SyncSummary {
   newPeople: number;
   credits: number;
   xUsd: number;
+  exaUsd: number;
   skipped: string[];
 }
 
@@ -53,9 +57,11 @@ const configOf = (s: TrackedSourceRow) => rec(s.config) as unknown as B2BAccount
 export async function syncB2BSocial(productId: string, opts: SyncOptions): Promise<SyncSummary> {
   const log = opts.log ?? (() => {});
   const now = new Date();
-  const sum: SyncSummary = { newPosts: 0, postsChecked: 0, newComments: 0, newPeople: 0, credits: 0, xUsd: 0, skipped: [] };
+  const sum: SyncSummary = { newPosts: 0, postsChecked: 0, newComments: 0, newPeople: 0, credits: 0, xUsd: 0, exaUsd: 0, skipped: [] };
   const canSc = () => sum.credits < opts.maxCredits;
   const canX = () => sum.xUsd < opts.maxXUsd;
+  const hasXApi = integrationStatus("x-api").configured;
+  const hasExa = integrationStatus("exa").configured;
   const sc = async (path: string, params: Record<string, string>) => {
     const r = await scrapeCreatorsGet(path, params);
     sum.credits += r.creditsCharged || 1;
@@ -66,6 +72,16 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
   const sourceByHandle = new Map(sources.map((s) => [`${s.kind}:${s.value}`, s]));
   const existing = new Map((await listB2BPosts(productId)).map((p) => [`${p.platform}:${p.external_id}`, p]));
   log(`${sources.length} watched accounts (${sources.filter((s) => s.kind === "x").length} on X), ${existing.size} posts stored`);
+  if (!hasXApi) {
+    const message = "X phases skipped (X_BEARER_TOKEN is not configured)";
+    sum.skipped.push(message);
+    if (opts.dryRun) log(`skipped: ${message}`);
+  }
+  if (!hasExa) {
+    const message = "Exa step skipped (EXA_API_KEY is not configured)";
+    sum.skipped.push(message);
+    if (opts.dryRun) log(`skipped: ${message}`);
+  }
 
   if (opts.dryRun) {
     const due = [...existing.values()].filter((p) => sourceByHandle.has(`${p.platform}:${p.account_handle}`) && commentsDue({ ...p, platform: p.platform as "x" | "linkedin" }, now));
@@ -84,6 +100,7 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
       }
     }
     async function syncPosts(s: TrackedSourceRow): Promise<void> {
+      if (s.kind === "x" && !hasXApi) return;
       const config = configOf(s);
       const fresh: B2BPostInsert[] = [];
       if (s.kind === "x") {
@@ -181,6 +198,7 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
       ...fields,
     });
     for (const p of posts) {
+      if (p.platform === "x" && !hasXApi) continue;
       try {
         await syncComments(p);
       } catch (error) {
@@ -278,7 +296,7 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
     const authors = await commentAuthors(productId);
     const missing = [...authors.entries()].filter(([url]) => url.includes("linkedin.com/in/") && !known.has(url)).map(([url, name]) => person(url, { name }));
     if (missing.length) await upsertB2BPeople(missing);
-    const yc = ycMatcher(opts.ycJson);
+    const yc = ycMatcher(opts.ycCsv);
     const companyCache = new Map<string, Partial<B2BPersonInsert>>();
     const pending = await unenrichedLinkedIn(productId);
     for (const [i, row] of pending.entries()) {
@@ -314,6 +332,22 @@ export async function syncB2BSocial(productId: string, opts: SyncOptions): Promi
         p.found = false;
       }
       await upsertB2BPeople([p]);
+    }
+
+    if (hasExa) {
+      try {
+        const exa = await enrichWithExa(productId, {
+          maxUsd: opts.maxExaUsd,
+          dryRun: false,
+          f500,
+          yc,
+          log,
+        });
+        sum.exaUsd += exa.usd;
+        sum.skipped.push(...exa.skipped);
+      } catch (error) {
+        sum.skipped.push(`Exa enrichment failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     await finishScrapeRun(runId, { status: "done", ads_seen: sum.postsChecked, ads_new: sum.newComments, creatives_new: sum.newPeople, credits_used: sum.credits });

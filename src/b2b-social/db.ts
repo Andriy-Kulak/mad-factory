@@ -1,5 +1,5 @@
 import { getDb, unwrap } from "../db/client.ts";
-import type { B2BCommentInsert, B2BPersonInsert, B2BPostInsert, B2BPostRow, Json, TrackedSourceRow } from "../db/types.ts";
+import type { B2BCommentInsert, B2BCommentRow, B2BPersonInsert, B2BPersonRow, B2BPostInsert, B2BPostRow, Json, TrackedSourceRow } from "../db/types.ts";
 
 /** Watched accounts are tracked_sources rows with this source; kind is the platform, value the handle. */
 export const B2B_SOURCE = "b2b_social";
@@ -80,6 +80,43 @@ export async function listB2BPosts(productId: string): Promise<B2BPostRow[]> {
     out.push(...page);
     if (page.length < 1000) return out;
   }
+}
+
+export async function listB2BPeople(productId: string): Promise<B2BPersonRow[]> {
+  const out: B2BPersonRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const page = unwrap(
+      await getDb()
+        .from("b2b_people")
+        .select("*")
+        .eq("product_id", productId)
+        .range(from, from + 999),
+      "listB2BPeople",
+    );
+    out.push(...page);
+    if (page.length < 1000) return out;
+  }
+}
+
+export async function listB2BComments(productId: string): Promise<B2BCommentRow[]> {
+  const out: B2BCommentRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const page = unwrap(
+      await getDb()
+        .from("b2b_comments")
+        .select("*")
+        .eq("product_id", productId)
+        .range(from, from + 999),
+      "listB2BComments",
+    );
+    out.push(...page);
+    if (page.length < 1000) return out;
+  }
+}
+
+export async function updateB2BPerson(productId: string, url: string, patch: Partial<B2BPersonRow>): Promise<void> {
+  const res = await getDb().from("b2b_people").update(patch).eq("product_id", productId).eq("url", url);
+  if (res.error) throw new Error(`updateB2BPerson: ${res.error.message}`);
 }
 
 export async function knownPeopleUrls(productId: string): Promise<Set<string>> {

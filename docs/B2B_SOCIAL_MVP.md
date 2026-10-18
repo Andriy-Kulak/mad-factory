@@ -68,9 +68,14 @@ CRM (customer, open deal, new), and check the grades against which people turned
 | LinkedIn posts, comments (up to 10 per post), profiles, company pages | ScrapeCreators | 1 credit per call |
 | X posts of watched accounts | X API user timeline (newest first, `since_id`) | $0.005 per post |
 | X replies (last 7 days, by conversation) | X API, pay per use | $0.005 per reply, about $0.01 per author profile |
-| Job titles (LinkedIn masks them) and X to LinkedIn matching | Exa with Fiber people data | about $0.05 to $0.08 per person, enterprise and signal people only |
-| Fortune 500 tag | 2026 Fortune 500 list, matched by company name | free |
-| YC tag | yc-oss public company list, matched by website domain only (names collide) | free |
+| LinkedIn titles | Exa Agent with Fiber people data | about $0.04 per person |
+| X to LinkedIn matching | Exa Agent with Fiber people data | about $0.07 per person |
+| Fortune 500 tag | Public Fortune 500 list, matched by company name | free |
+| YC tag | Public yc-oss companies list, matched by website domain only (names collide) | free |
+
+The public lists are committed in `src/b2b-social/reference/fortune500.csv` and
+`src/b2b-social/reference/yc.csv`, trimmed to the columns the sync reads. A few rows are omitted where they collide
+with private terms. The CLI defaults resolve these files relative to its module, not the current directory.
 
 Not available from any of these: who liked or reposted a LinkedIn post, and who liked or retweeted on X.
 ScrapeCreators' X endpoint returns an account's most popular tweets, not its latest, so X posts come from the X API.
@@ -125,9 +130,24 @@ Each run only does what is new, so cost tracks new activity, not days.
 2. **Comments.** For posts under 7 days old (X only serves replies for 7 days), fetch comments when the comment count
    has gone up since the last fetch. X asks only for replies newer than the last one stored (`since_id`). Posts older
    than 7 days are never fetched again.
-3. **People.** Enrich only commenters with no `enriched_at`: LinkedIn profile and employer page first, then Exa for
-   the title when the person is at a big company or said something worth a message. Each person is paid for once.
-4. **Finish.** Update the timestamps and write the run's credits to `scrape_runs`.
+3. **People.** Enrich new commenters with a LinkedIn profile and employer page first; use the X bio when available.
+4. **Exa.** For unasked people, look up a missing LinkedIn title or match an X replier to LinkedIn only when they are
+   at a Fortune 500 / 10k+ company or have a signal comment (using, pain or evaluating). Skip insiders and commenters
+   whose comments are all insider text. A successful lookup is marked `exa_checked_at`; failed batches remain eligible.
+   Batches contain up to 13 people, with LinkedIn title and X-match batches run in parallel. `--max-exa-usd` caps the
+   spend; batches stop after the completed cost reaches the cap.
+5. **Finish.** Update the timestamps and write the run's credits to `scrape_runs`.
+
+Run Exa by itself to backfill people already stored:
+
+```
+pnpm b2b-social enrich --product <slug> --dry-run
+pnpm b2b-social enrich --product <slug> --max-exa-usd 3 [--limit <n>]
+```
+
+The dry run reports eligible LinkedIn and X people with estimated costs ($0.04 and $0.07 per person respectively)
+without calling Exa. `sync` accepts the same `--max-exa-usd` cap (default $3). The reference CSVs are public lists
+trimmed to the columns used for tags; a few rows are omitted where they collide with private terms.
 
 Per post, two fields track what was fetched: `comments_fetched_at` and `comments_seen`. A run that fails halfway
 picks up from the timestamps, so nothing is lost or paid twice. Each run has caps for ScrapeCreators credits, X
@@ -174,5 +194,5 @@ pnpm b2b-social sync --product <slug>             # the first sync backfills the
 
 ## Keys
 
-`SCRAPECREATORS_API_KEY` (exists), `X_BEARER_TOKEN` (an X app inside a pay-per-use project) and `EXA_API_KEY`. All
-optional, registered in `src/lib/integrations.ts` when the sync is built.
+`SCRAPECREATORS_API_KEY`, `X_BEARER_TOKEN` and `EXA_API_KEY` are optional integrations registered in
+`src/lib/integrations.ts`.
