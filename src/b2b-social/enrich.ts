@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 /**
  * Pure helpers for the B2B Social sync: when a post's comments are due, a job from an X bio, and the Fortune 500 and
- * YC tags. The two lists are public files kept outside the repo (local/reference/), read when present.
+ * YC tags. The public reference lists are committed under reference/ and read when present.
  */
 
 /** Comments are fetched once per post, this long after posting (most replies are in by then). */
@@ -81,15 +81,17 @@ export function host(url: string | null | undefined): string | null {
   }
 }
 
-/** YC batch by website domain only (names collide across companies); the yc-oss companies JSON. */
-export function ycMatcher(jsonPath: string | null): (domain: string | null | undefined) => string | null {
-  if (!jsonPath || !existsSync(jsonPath)) return () => null;
+/** YC batch by website domain only (names collide across companies); the public domain,batch CSV. */
+export function ycMatcher(csvPath: string | null): (domain: string | null | undefined) => string | null {
+  if (!csvPath || !existsSync(csvPath)) return () => null;
   const byDomain = new Map<string, string>();
-  for (const c of JSON.parse(readFileSync(jsonPath, "utf8")) as { website?: string; batch?: string }[]) {
-    const d = host(c.website);
-    if (d && c.batch) byDomain.set(d, c.batch);
+  for (const line of readFileSync(csvPath, "utf8").trim().split("\n").slice(1)) {
+    const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g)?.map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')) ?? [];
+    const domain = cells[0]?.toLowerCase();
+    const batch = cells[1];
+    if (domain && batch) byDomain.set(domain, batch);
   }
-  return (domain) => (domain ? (byDomain.get(domain.toLowerCase()) ?? null) : null);
+  return (domain) => (domain ? (byDomain.get(domain.toLowerCase().replace(/^www\./, "")) ?? null) : null);
 }
 
 /** LinkedIn activity ids carry their creation time (ms since epoch) in the top bits. */

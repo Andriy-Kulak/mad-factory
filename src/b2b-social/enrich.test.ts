@@ -27,13 +27,13 @@ test("bioJob reads a current job and skips former ones", () => {
 test("fortune500Matcher and ycMatcher read the local lists, and are inert without them", () => {
   const dir = mkdtempSync(join(tmpdir(), "b2b-"));
   writeFileSync(join(dir, "f500.csv"), 'Rank,Company Name,Industry\n12,"Example Holdings, Inc.",Retail\n30,JPMorgan Chase,Banks\n');
-  writeFileSync(join(dir, "yc.json"), JSON.stringify([{ website: "https://www.sample.dev", batch: "Winter 2026" }]));
+  writeFileSync(join(dir, "yc.csv"), "domain,batch\nsample.dev,Winter 2026\n");
   const f500 = fortune500Matcher(join(dir, "f500.csv"));
   assert.equal(f500("Example"), 12);
   assert.equal(f500("JPMorgan"), 30);
   assert.equal(f500("Nobody"), null);
   assert.equal(fortune500Matcher(null)("Example"), null);
-  const yc = ycMatcher(join(dir, "yc.json"));
+  const yc = ycMatcher(join(dir, "yc.csv"));
   assert.equal(yc("sample.dev"), "Winter 2026");
   assert.equal(yc("other.dev"), null);
 });
