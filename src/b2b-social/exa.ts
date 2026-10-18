@@ -201,12 +201,18 @@ export function parseEmployees(value: string | null | undefined): number | null 
   return Number.isFinite(count) ? count : null;
 }
 
+function normalizeXHandle(value: string): string {
+  return value.replace(/^@/, "").toLowerCase();
+}
+
+function xHandleFromUrl(url: string): string | null {
+  const handle = url.match(/^https:\/\/x\.com\/([^/?#]+)/i)?.[1];
+  return handle ? normalizeXHandle(handle) : null;
+}
+
 export function applyXMatch(person: B2BPersonRow, out: XMatchOutput, f500: CompanyRank, yc: CompanyYc): Partial<B2BPersonRow> | null {
-  const handle = person.url
-    .match(/^https:\/\/x\.com\/([^/?#]+)/i)?.[1]
-    ?.replace(/^@/, "")
-    .toLowerCase();
-  const outputHandle = out.x_handle.replace(/^@/, "").toLowerCase();
+  const handle = xHandleFromUrl(person.url);
+  const outputHandle = normalizeXHandle(out.x_handle);
   const linkedinUrl = canonicalLinkedIn(out.linkedin_url);
   if (out.confidence === "low" || !handle || outputHandle !== handle || !linkedinUrl || !/^https:\/\/www\.linkedin\.com\/in\/[^/]+$/.test(linkedinUrl)) return null;
   const employer = out.current_employer || null;
@@ -220,6 +226,35 @@ export function applyXMatch(person: B2BPersonRow, out: XMatchOutput, f500: Compa
     fortune500_rank: f500(employer),
     yc_batch: yc(companyDomain),
   };
+}
+
+export function applyLinkedInBatch(people: B2BPersonRow[], outputs: LinkedInTitleOutput[], f500: CompanyRank, yc: CompanyYc): Map<string, Partial<B2BPersonRow> | null> {
+  const outputsByUrl = new Map<string, LinkedInTitleOutput>();
+  for (const output of outputs) {
+    const url = canonicalLinkedIn(output.linkedin_url);
+    if (url) outputsByUrl.set(url, output);
+  }
+  return new Map(
+    people.map((person) => {
+      const output = outputsByUrl.get(person.url);
+      return [person.url, output ? applyLinkedInTitle(person, output, f500, yc) : null] as const;
+    }),
+  );
+}
+
+export function applyXMatchBatch(people: B2BPersonRow[], outputs: XMatchOutput[], f500: CompanyRank, yc: CompanyYc): Map<string, Partial<B2BPersonRow> | null> {
+  const outputsByHandle = new Map<string, XMatchOutput>();
+  for (const output of outputs) {
+    const handle = normalizeXHandle(output.x_handle);
+    if (handle) outputsByHandle.set(handle, output);
+  }
+  return new Map(
+    people.map((person) => {
+      const handle = xHandleFromUrl(person.url);
+      const output = handle ? outputsByHandle.get(handle) : undefined;
+      return [person.url, output ? applyXMatch(person, output, f500, yc) : null] as const;
+    }),
+  );
 }
 
 function linkedinTitleBody(people: B2BPersonRow[]) {
@@ -358,8 +393,9 @@ export async function enrichWithExa(productId: string, opts: EnrichWithExaOption
       } else {
         summary.usd += linkedinResult.value.costUsd;
         const outputs = linkedinResult.value.structured.people ?? [];
-        for (const [i, person] of linkedinBatch.entries()) {
-          const patch = outputs[i] ? applyLinkedInTitle(person, outputs[i]!, opts.f500, opts.yc) : null;
+        const patches = applyLinkedInBatch(linkedinBatch, outputs, opts.f500, opts.yc);
+        for (const person of linkedinBatch) {
+          const patch = patches.get(person.url) ?? null;
           if (patch) summary.matched++;
           await updateB2BPerson(productId, person.url, { ...(patch ?? {}), exa_checked_at: new Date().toISOString() });
         }
@@ -371,8 +407,9 @@ export async function enrichWithExa(productId: string, opts: EnrichWithExaOption
       } else {
         summary.usd += xResult.value.costUsd;
         const outputs = xResult.value.structured.people ?? [];
-        for (const [i, person] of xBatch.entries()) {
-          const patch = outputs[i] ? applyXMatch(person, outputs[i]!, opts.f500, opts.yc) : null;
+        const patches = applyXMatchBatch(xBatch, outputs, opts.f500, opts.yc);
+        for (const person of xBatch) {
+          const patch = patches.get(person.url) ?? null;
           if (patch) summary.matched++;
           await updateB2BPerson(productId, person.url, { ...(patch ?? {}), exa_checked_at: new Date().toISOString() });
         }

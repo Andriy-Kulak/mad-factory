@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { B2BPersonRow } from "../db/types.ts";
-import { applyLinkedInTitle, applyXMatch, exaAgentRun, exaCandidates, parseEmployees } from "./exa.ts";
+import { applyLinkedInBatch, applyLinkedInTitle, applyXMatch, applyXMatchBatch, exaAgentRun, exaCandidates, parseEmployees } from "./exa.ts";
 
 const person = (url: string, patch: Partial<B2BPersonRow> = {}): B2BPersonRow => ({
   id: url,
@@ -115,6 +115,22 @@ test("applyLinkedInTitle keeps company metadata when Fiber confirms the same emp
   );
 });
 
+test("LinkedIn batch outputs apply by canonical profile URL when Exa reorders them", () => {
+  const alpha = person("https://www.linkedin.com/in/alpha");
+  const beta = person("https://www.linkedin.com/in/beta");
+  const patches = applyLinkedInBatch(
+    [alpha, beta],
+    [
+      { linkedin_url: `${beta.url}/`, current_title: "Beta title", current_company: "" },
+      { linkedin_url: alpha.url, current_title: "Alpha title", current_company: "" },
+    ],
+    () => null,
+    () => null,
+  );
+  assert.equal(patches.get(alpha.url)?.title, "Alpha title");
+  assert.equal(patches.get(beta.url)?.title, "Beta title");
+});
+
 test("applyXMatch validates confidence and handle, then maps company fields and YC from the list", () => {
   const existing = person("https://x.com/demo");
   const output = {
@@ -161,6 +177,36 @@ test("applyXMatch validates confidence and handle, then maps company fields and 
       yc_batch: "W25",
     },
   );
+});
+
+test("X batch outputs apply by normalized handle when Exa reorders them", () => {
+  const alpha = person("https://x.com/alpha");
+  const beta = person("https://x.com/beta");
+  const patches = applyXMatchBatch(
+    [alpha, beta],
+    [
+      {
+        x_handle: "@beta",
+        linkedin_url: "https://www.linkedin.com/in/beta",
+        current_title: "Beta title",
+        current_employer: "",
+        confidence: "high",
+      },
+      {
+        x_handle: "alpha",
+        linkedin_url: "https://www.linkedin.com/in/alpha",
+        current_title: "Alpha title",
+        current_employer: "",
+        confidence: "high",
+      },
+    ],
+    () => null,
+    () => null,
+  );
+  assert.equal(patches.get(alpha.url)?.linkedin_url, "https://www.linkedin.com/in/alpha");
+  assert.equal(patches.get(alpha.url)?.title, "Alpha title");
+  assert.equal(patches.get(beta.url)?.linkedin_url, "https://www.linkedin.com/in/beta");
+  assert.equal(patches.get(beta.url)?.title, "Beta title");
 });
 
 test("parseEmployees reads the first numeric employee count", () => {
