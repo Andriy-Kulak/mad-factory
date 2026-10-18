@@ -20,10 +20,10 @@ export interface DailyAmount {
 }
 
 export interface ScorecardData {
-  /** RevenueCat proceeds (after store fees and taxes), summed over every campaign/keyword bucket. */
-  proceeds: DailyAmount[];
+  /** RevenueCat proceeds (after store fees and taxes) per campaign/keyword bucket; `channel` is the ad platform RevenueCat credits, if any. */
+  proceeds: (DailyAmount & { channel?: string })[];
   /** RevenueCat new trials (n) and trial conversions (paid) per day. */
-  trials: { date: string; n: number; paid: number }[];
+  trials: { date: string; n: number; paid: number; channel?: string }[];
   /** Ad spend per channel. A channel with no daily table yet is simply absent. */
   spend: Record<string, DailyAmount[]>;
   /** Latest date each daily table has for this product, null when it has none. */
@@ -55,7 +55,7 @@ export async function loadScorecardData(productId: string, from: string, to: str
     (a, b) =>
       db
         .from("revenuecat_keyword_daily")
-        .select("date,proceeds,new_trials,trial_conversions,currency")
+        .select("date,campaign,proceeds,new_trials,trial_conversions,currency")
         .eq("product_id", productId)
         .gte("date", from)
         .lte("date", to)
@@ -115,15 +115,16 @@ export async function loadScorecardData(productId: string, from: string, to: str
   );
 
   const running = unwrap(await db.from("experiments").select("slug,channel,name").eq("product_id", productId).eq("status", "running").order("channel"), "scorecard experiments");
-  const money = (rows: { date: string; currency: string }[], key: "proceeds" | "spend") =>
-    rows.map((r) => ({ date: r.date, currency: r.currency, amount: Number((r as Record<string, unknown>)[key]) }));
+  const money = (rows: { date: string; currency: string; spend: unknown }[]) => rows.map((r) => ({ date: r.date, currency: r.currency, amount: Number(r.spend) }));
 
+  // RevenueCat sets a campaign only for customers Apple AdServices attributed; everyone else is unattributed.
+  const channel = (r: { campaign: string }) => (r.campaign ? { channel: "apple_ads" } : {});
   return {
-    proceeds: money(rc, "proceeds"),
-    trials: rc.map((r) => ({ date: r.date, n: r.new_trials, paid: r.trial_conversions })),
+    proceeds: rc.map((r) => ({ date: r.date, currency: r.currency, amount: Number(r.proceeds), ...channel(r) })),
+    trials: rc.map((r) => ({ date: r.date, n: r.new_trials, paid: r.trial_conversions, ...channel(r) })),
     spend: {
-      ...(campaignIds.length ? { apple_ads: money([...apple, ...appleAuto], "spend") } : {}),
-      ...(metaLatest ? { meta_ads: money(meta, "spend") } : {}),
+      ...(campaignIds.length ? { apple_ads: money([...apple, ...appleAuto]) } : {}),
+      ...(metaLatest ? { meta_ads: money(meta) } : {}),
     },
     latest: {
       revenuecat: await latestDate("revenuecat_keyword_daily", productId),

@@ -13,23 +13,37 @@ import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 import { OVERVIEW_WINDOWS } from "@/lib/tab-constants";
 
-export function OverviewTab({ product, days, present }: { product: { id: string; slug: string }; days: number; present: boolean }) {
-  const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days) });
+export function OverviewTab({ product, days, present, without }: { product: { id: string; slug: string }; days: number; present: boolean; without?: "apple_ads" }) {
+  const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days), without });
   if (isPending) return <PageSkeleton title="Overview" stats={4} body="table" />;
   if (isError || !data) return <TabLoadError title="Overview" retry={() => void refetch()} />;
   const { overview: o, channels, brief } = data;
   const { slug } = product;
-  const href = (d: number, p: boolean) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}`;
+  const href = (d: number, p: boolean, w = without) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}${w ? `&without=${w}` : ""}`;
+  // Only Apple can be left out: RevenueCat credits its customers, so its revenue leaves with its spend.
+  const hasApple = !!without || o.channels.some((r) => r.key === "apple_ads");
 
   const action = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
+      {hasApple && (
+        <Link
+          href={href(days, present, without ? undefined : "apple_ads")}
+          role="switch"
+          aria-checked={!without}
+          className="switch"
+          title="Turn off to see every number without Apple ads: its spend and the trials and proceeds RevenueCat credits to it"
+        >
+          <span className="switch-track" />
+          Apple ads
+        </Link>
+      )}
       <Segmented label="Window" active={String(days)} items={OVERVIEW_WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: href(d, present) }))} />
       <Link href={href(days, !present)} className="btn" title="Show only the trend and channel numbers, for a demo">
         {present ? "Exit presenting" : "Present"}
       </Link>
     </div>
   );
-  const subtitle = `Numbers through ${fmtDate(o.window.to)} · refreshed ${fmtDateTime(o.generatedAt)}`;
+  const subtitle = `Numbers through ${fmtDate(o.window.to)}${without ? " · without Apple ads" : ""} · refreshed ${fmtDateTime(o.generatedAt)}`;
 
   if (present)
     return (

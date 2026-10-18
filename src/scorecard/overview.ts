@@ -4,7 +4,7 @@
  * so humans and LLMs read the same numbers.
  */
 import type { ScorecardData, WindowData } from "../db/scorecard.ts";
-import { addDays, type Scorecard } from "./scorecard.ts";
+import { addDays, type ExcludableChannel, type Scorecard } from "./scorecard.ts";
 import { discoveryGaps, formatDiscoveryGaps } from "../apple-ads/coverage.ts";
 
 /** Attribution older than this is not trusted (Meta via AppsFlyer and RevenueCat both settle within days). */
@@ -80,6 +80,8 @@ export interface Overview {
   product: string;
   generatedAt: string;
   window: { from: string; to: string; days: number };
+  /** Channels left out of every number on request (see EXCLUDABLE_CHANNELS); empty normally. */
+  excluded: ExcludableChannel[];
   scorecard: Scorecard;
   /** Whether the month projects to a profit (above zero), or no goal is set. */
   status: "profitable" | "not_profitable" | "no_goal";
@@ -124,8 +126,23 @@ export function buildOverview(input: {
   /** Daily rows covering the trend weeks (see weeklyTrend); no trend when absent. */
   trendData?: ScorecardData;
   now?: Date;
+  /** Leave these channels out; pass the scorecard and trendData already built without them (withoutChannels). */
+  exclude?: ExcludableChannel[];
 }): Overview {
-  const { scorecard: sc, data } = input;
+  const { scorecard: sc } = input;
+  const excluded = input.exclude ?? [];
+  const noApple = excluded.includes("apple_ads");
+  // Without Apple: its spend, its coverage warnings, its syncs and follow-ups, and the customers RevenueCat credits to it.
+  const data: WindowData = noApple
+    ? {
+        ...input.data,
+        apple: [],
+        revenuecat: input.data.revenuecat.filter((r) => r.campaign === ""),
+        appleCoverage: { campaigns: [], keywords: [] },
+        runs: input.data.runs.filter((r) => r.source !== "apple_ads"),
+        followUps: input.data.followUps.filter((f) => !f.experiment.startsWith("apple_ads/")),
+      }
+    : input.data;
   const now = input.now ?? new Date();
   const cur = sc.currency;
   const warnings: string[] = formatDiscoveryGaps(data.appleCoverage.campaigns, discoveryGaps(data.appleCoverage.campaigns, data.appleCoverage.keywords));
@@ -151,7 +168,7 @@ export function buildOverview(input: {
   const totalTrials = sum(rc, (r) => r.trials);
   const totalProceeds = sum(rc, (r) => r.proceeds);
 
-  const channels: ChannelRow[] = [
+  const allChannels: ChannelRow[] = [
     {
       key: "meta_ads",
       label: "Meta ads",
@@ -191,7 +208,7 @@ export function buildOverview(input: {
     {
       key: "total",
       label: "Total",
-      attribution: "Spend from both channels; trials, paid and proceeds from RevenueCat",
+      attribution: noApple ? "Meta spend; trials, paid and proceeds from RevenueCat, without Apple's" : "Spend from both channels; trials, paid and proceeds from RevenueCat",
       path: null,
       spend: totalSpend,
       installs: null,
@@ -201,6 +218,8 @@ export function buildOverview(input: {
       costPerTrial: per(totalSpend, totalTrials),
     },
   ];
+
+  const channels = allChannels.filter((r) => !(excluded as string[]).includes(r.key));
 
   const names = new Map(data.metaAds.map((a) => [a.id, a]));
   const byAd = new Map<string, AdLine>();
@@ -239,6 +258,7 @@ export function buildOverview(input: {
     product: input.product,
     generatedAt: now.toISOString(),
     window: input.window,
+    excluded,
     scorecard: sc,
     status: !sc.goal ? "no_goal" : projected > 0 ? "profitable" : "not_profitable",
     channels,
@@ -270,6 +290,7 @@ export function formatBrief(o: Overview): string {
     "",
     goal,
     `Now: **${state}**. This month projects to ${money(projected)} ${c}${sc.gap != null ? ` (gap to goal ${money(sc.gap)})` : ""}; month to date ${money(sc.monthToDate.profit)}.`,
+    ...(o.excluded.length ? [`**Without ${o.excluded.join(", ")}**: every number below leaves out its spend and the trials and proceeds RevenueCat credits to it.`] : []),
     `Decide on the last ${o.window.days} days (${o.window.from} to ${o.window.to}); attribution older than about 10 days is not reliable.`,
     "",
     `## Last ${o.window.days} days`,

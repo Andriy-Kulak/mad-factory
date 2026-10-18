@@ -10,7 +10,7 @@ import { organicOverviewCached } from "./social";
 import { getMetaAdsOverviewCached } from "./meta-ads";
 import { listCreativeItemsCached } from "./creatives";
 import { channelSetup } from "./setup";
-import { DEFAULT_WINDOW_DAYS, formatBrief, overviewForCached } from "./overview";
+import { DEFAULT_WINDOW_DAYS, formatBrief, isExcludable, overviewForCached } from "./overview";
 import { parseRange } from "@/components/meta-ads";
 import { parseAppleRange } from "./apple-ads-math";
 import { APPLE_KEYWORD_RANGES, OVERVIEW_WINDOWS, SHORT_FORM_KINDS } from "./tab-constants";
@@ -19,7 +19,8 @@ export const tabLoaders = {
   overview: async (product: ProductRow, sp: URLSearchParams) => {
     const requested = Number(sp.get("days"));
     const days = OVERVIEW_WINDOWS.includes(requested) ? requested : DEFAULT_WINDOW_DAYS;
-    const [overview, sources] = await Promise.all([overviewForCached(product.id, product, { days }), getTrackedSources(product.id)]);
+    const exclude = (sp.get("without") ?? "").split(",").filter(isExcludable);
+    const [overview, sources] = await Promise.all([overviewForCached(product.id, product, { days, exclude }), getTrackedSources(product.id)]);
     return {
       overview,
       brief: formatBrief(overview),

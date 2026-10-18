@@ -51,6 +51,28 @@ export function scorecardFrom(month: string, through: string): string {
   return week < start ? week : start;
 }
 
+/**
+ * Channels the numbers can be shown without. Only channels whose customers RevenueCat attributes qualify, so their
+ * proceeds and trials leave with their spend; Meta's customers sit in RevenueCat's unattributed bucket, so leaving
+ * Meta out would drop its spend but keep its revenue.
+ */
+export const EXCLUDABLE_CHANNELS = ["apple_ads"] as const;
+export type ExcludableChannel = (typeof EXCLUDABLE_CHANNELS)[number];
+export const isExcludable = (c: string): c is ExcludableChannel => (EXCLUDABLE_CHANNELS as readonly string[]).includes(c);
+
+/** The data as if `channels` never ran: their spend, freshness and experiments, and the proceeds and trials RevenueCat credits to them, are left out. */
+export function withoutChannels(data: ScorecardData, channels: readonly ExcludableChannel[]): ScorecardData {
+  if (!channels.length) return data;
+  const out = (c: string | undefined) => c != null && (channels as readonly string[]).includes(c);
+  return {
+    proceeds: data.proceeds.filter((r) => !out(r.channel)),
+    trials: data.trials.filter((r) => !out(r.channel)),
+    spend: Object.fromEntries(Object.entries(data.spend).filter(([c]) => !out(c))),
+    latest: Object.fromEntries(Object.entries(data.latest).filter(([c]) => !out(c))),
+    running: data.running.filter((e) => !out(e.channel)),
+  };
+}
+
 const round = (n: number) => Math.round(n * 100) / 100;
 
 function totals(proceeds: number, spend: Record<string, number>, fixedCosts: number): Totals {
