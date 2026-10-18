@@ -5,6 +5,8 @@
  * most 10 comments per post.
  */
 
+import { fitOf, gradeRank, intentOf, personaOf, routeOf, type Fit, type Intent, type Persona, type Route } from "./b2b-social-grade.ts";
+
 export type ReachPlatform = "x" | "linkedin";
 /** company = the product's own account, team = people who work there, competitor = everyone else tracked. */
 export type ReachGroup = "company" | "team" | "competitor";
@@ -458,8 +460,6 @@ export const OUTREACH_REASON_LABEL: Record<OutreachReason, string> = {
   senior: "Senior person at a big company",
 };
 
-const REASON_WEIGHT: Record<OutreachReason, number> = { switching: 1.5, using: 1.3, asking: 1.2, evaluating: 1, senior: 1 };
-
 export interface Outreach {
   lead: Lead;
   reason: OutreachReason;
@@ -469,7 +469,12 @@ export interface Outreach {
   profileUrl: string;
   xUrl: string | null;
   opener: string;
-  priority: number;
+  persona: Persona;
+  fit: Fit;
+  intent: Intent;
+  route: Route;
+  /** Other people from the same company in the list. */
+  colleagues: number;
 }
 
 const quote = (text: string, max = 90) => {
@@ -499,34 +504,47 @@ function openerFor(reason: OutreachReason, touch: CommenterRow, lead: Lead, ownN
 /**
  * The short list a rep acts on: outside people with a reason to reach out now. A signal on a competitor's post is a
  * switching or evaluating moment; on the company's own posts it's a user or a question; a senior person at a big company
- * qualifies even without a signal. Ranked by the lead score times how actionable the reason is.
+ * qualifies even without a signal. Each gets a Fit × Intent grade and a route (b2b-social-grade.ts), best grade first.
  */
 export function outreach(data: B2BSocialData, since: string | null = null): Outreach[] {
   const ownName = data.accounts.find((a) => a.group === "company")?.name ?? "us";
-  const out: Outreach[] = [];
+  const picked: { lead: Lead; reason: OutreachReason }[] = [];
   for (const lead of leads(data, since)) {
     // Only people a rep can identify and reach; brand and bot accounts (1M+ followers) are not leads.
     if (!lead.person?.title && !lead.company && !lead.person?.employer) continue;
     if ((lead.person?.followers ?? 0) >= 1_000_000) continue;
-    const touch = lead.touches[0]!;
-    const onCompetitor = touch.account?.group === "competitor";
+    const onCompetitor = lead.touches[0]!.account?.group === "competitor";
     const seniorBig = isEnterprise(lead.tier) && ["exec", "vp", "director", "manager"].includes(lead.seniority);
     let reason: OutreachReason | null = null;
     if (lead.kind === "using") reason = "using";
     else if (lead.kind === "pain") reason = onCompetitor ? "switching" : "asking";
     else if (lead.kind === "evaluating") reason = onCompetitor ? "evaluating" : "asking";
     else if (seniorBig) reason = "senior";
-    if (!reason) continue;
-    const xUrl = /^https:\/\/x\.com\//.test(lead.url) ? lead.url : null;
-    out.push({
-      lead,
-      reason,
-      touch,
-      profileUrl: lead.person?.linkedinUrl ?? lead.url,
-      xUrl,
-      opener: openerFor(reason, touch, lead, ownName),
-      priority: Math.round(lead.score * REASON_WEIGHT[reason] * (lead.person?.title || lead.company ? 1.2 : 1) * 10) / 10,
-    });
+    if (reason) picked.push({ lead, reason });
   }
-  return out.sort((a, b) => b.priority - a.priority);
+  const companyKey = (lead: Lead) => normalizeName(lead.company?.name ?? lead.person?.employer ?? "");
+  const perCompany = new Map<string, number>();
+  for (const { lead } of picked) if (companyKey(lead)) perCompany.set(companyKey(lead), (perCompany.get(companyKey(lead)) ?? 0) + 1);
+  return picked
+    .map(({ lead, reason }) => {
+      const touch = lead.touches[0]!;
+      const persona = personaOf(lead.seniority);
+      const colleagues = companyKey(lead) ? (perCompany.get(companyKey(lead)) ?? 1) - 1 : 0;
+      const fit = fitOf(lead.tier, persona, !!(lead.company || lead.person?.employer));
+      const intent = intentOf({ kind: lead.kind, signals: lead.touches.filter((t) => isSignal(t.kind)).length, colleagues: colleagues + 1, lastAt: lead.lastAt, capturedAt: data.capturedAt });
+      return {
+        lead,
+        reason,
+        touch,
+        profileUrl: lead.person?.linkedinUrl ?? lead.url,
+        xUrl: /^https:\/\/x\.com\//.test(lead.url) ? lead.url : null,
+        opener: openerFor(reason, touch, lead, ownName),
+        persona,
+        fit,
+        intent,
+        route: routeOf(fit, intent),
+        colleagues,
+      };
+    })
+    .sort((a, b) => gradeRank(a.fit, a.intent) - gradeRank(b.fit, b.intent) || (b.lead.lastAt ?? "").localeCompare(a.lead.lastAt ?? ""));
 }

@@ -18,6 +18,7 @@ import {
   type B2BSocialData,
   type Seniority,
 } from "./b2b-social.ts";
+import { PERSONA_LABEL, ROUTE_LABEL, type Fit, type Intent, type Persona, type Route } from "./b2b-social-grade.ts";
 
 export interface PersonRow {
   id: string;
@@ -44,7 +45,14 @@ export interface PersonRow {
   location: string | null;
   howWeKnow: string;
   opener: string;
-  score: number;
+  persona: Persona;
+  fit: Fit;
+  intent: Intent;
+  /** "A1" … "C3". */
+  grade: string;
+  route: Route;
+  /** Other people from the same company in the list. */
+  colleagues: number;
   /** Other comments by the same person. */
   more: number;
 }
@@ -57,7 +65,7 @@ function howWeKnow(url: string, linkedinUrl: string | null | undefined, title: s
 }
 
 export function personRows(data: B2BSocialData): PersonRow[] {
-  return outreach(data).map(({ lead, touch, reason, opener, priority, xUrl }) => {
+  return outreach(data).map(({ lead, touch, reason, opener, xUrl, persona, fit, intent, route, colleagues }) => {
     const company = lead.company;
     return {
       id: lead.url,
@@ -82,7 +90,12 @@ export function personRows(data: B2BSocialData): PersonRow[] {
       location: lead.person?.location ?? null,
       howWeKnow: howWeKnow(lead.url, lead.person?.linkedinUrl, lead.person?.title, lead.person?.employer),
       opener,
-      score: priority,
+      persona,
+      fit,
+      intent,
+      grade: `${fit}${intent}`,
+      route,
+      colleagues,
       more: lead.touches.length - 1,
     };
   });
@@ -97,8 +110,12 @@ export const LEVEL_FILTERS = ["", "manager", "director"] as const;
 export type LevelFilter = (typeof LEVEL_FILTERS)[number];
 export const LEVEL_FILTER_LABEL: Record<LevelFilter, string> = { "": "Any level", manager: "Manager and up", director: "Director and up" };
 
+export const ROUTE_FILTERS = ["", "now", "selfserve", "nurture"] as const;
+export type RouteFilter = (typeof ROUTE_FILTERS)[number];
+
 export interface PeopleFilters {
   window: Window;
+  route: RouteFilter;
   reason: OutreachReason | "";
   company: CompanyFilter;
   level: LevelFilter;
@@ -107,7 +124,7 @@ export interface PeopleFilters {
   q: string;
 }
 
-export const NO_PEOPLE_FILTERS: PeopleFilters = { window: "7", reason: "", company: "", level: "", source: "", account: "", q: "" };
+export const NO_PEOPLE_FILTERS: PeopleFilters = { window: "7", route: "", reason: "", company: "", level: "", source: "", account: "", q: "" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -116,6 +133,7 @@ const pick = <T extends string>(v: string, allowed: readonly T[], fallback: T): 
 export function parsePeopleFilters(sp: SearchParams): PeopleFilters {
   return {
     window: pick(one(sp.days), WINDOWS, "7"),
+    route: pick(one(sp.route), ROUTE_FILTERS, ""),
     reason: pick(one(sp.why), ["", ...OUTREACH_REASONS], ""),
     company: pick(one(sp.co), COMPANY_FILTERS, ""),
     level: pick(one(sp.lvl), LEVEL_FILTERS, ""),
@@ -128,6 +146,7 @@ export function parsePeopleFilters(sp: SearchParams): PeopleFilters {
 export function peopleFiltersHref(f: PeopleFilters): string {
   const s = new URLSearchParams();
   if (f.window !== "7") s.set("days", f.window);
+  if (f.route) s.set("route", f.route);
   if (f.reason) s.set("why", f.reason);
   if (f.company) s.set("co", f.company);
   if (f.level) s.set("lvl", f.level);
@@ -146,6 +165,7 @@ const LEVEL_MIN: Record<Exclude<LevelFilter, "">, number> = { manager: SENIORITI
 /** Everything but the time window and search, for counting quick views inside the current window. */
 export function matchesPeopleFilters(row: PersonRow, f: PeopleFilters, since: string | null): boolean {
   if (since && (row.postDate ?? "") < since) return false;
+  if (f.route && row.route !== f.route) return false;
   if (f.reason && row.reason !== f.reason) return false;
   if (f.company === "enterprise" && !isEnterprise(row.tier)) return false;
   if (f.company && f.company !== "enterprise" && row.tier !== f.company) return false;
@@ -247,7 +267,9 @@ export function peopleCsv(rows: PersonRow[]): string {
     "x_url",
     "location",
     "opener",
-    "score",
+    "grade",
+    "route",
+    "persona",
   ];
   const lines = rows.map((r) =>
     [
@@ -267,7 +289,9 @@ export function peopleCsv(rows: PersonRow[]): string {
       r.xUrl,
       r.location,
       r.opener,
-      r.score,
+      r.grade,
+      ROUTE_LABEL[r.route],
+      PERSONA_LABEL[r.persona],
     ]
       .map(csvCell)
       .join(","),

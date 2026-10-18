@@ -27,8 +27,37 @@ product's data (today a gitignored local snapshot, later the database), never in
 Left out: the product's own team and affiliates, a competitor's support staff answering in its thread, brand and bot
 accounts (1M+ followers), and anyone we can't identify. Comment kinds come from text rules, not an LLM.
 
-Score = company tier (Fortune 500 > 10k+ > YC > other) × seniority (C-level > VP > director > manager > senior > IC)
-× how actionable the reason is × 1.5 if in the last 30 days.
+### How we score
+
+Each person gets a grade: **Fit** (A, B, C: the right company and person) × **Intent** (1, 2, 3: how strong and how
+fresh the signal is), for example A1. The rules live in `web/lib/b2b-social-grade.ts`, and the page's "How we
+score" panel reads the same constants.
+
+| Fit | Rule |
+| --- | --- |
+| A | Fortune 500 or 10k+ company, and we know their role |
+| B | Fortune 500 or 10k+ but role unknown, or a buyer (founder, CTO, VP) at a smaller or YC company |
+| C | Everyone else |
+
+Buyers sign (C-level, founders, VPs, directors, heads). Champions use it and pull it in (managers, leads, engineers).
+
+| Intent | Rule |
+| --- | --- |
+| 1 | Already using it, or complaining about a competitor |
+| 2 | Asking a question or comparing options |
+| 3 | Engaged without a signal |
+
+Intent goes one level stronger with two or more signals from the person, or two or more people from the same
+company; one level weaker when the latest signal is more than 14 days old.
+
+| Route | Grades | What happens |
+| --- | --- | --- |
+| Reach out now | A1, A2, B1 | A rep or SDR sends a personal message |
+| Self-serve or startup program | B2, C1, C2 | High intent at a smaller company |
+| Nurture | A3, B3, C3 | Right company, no signal yet |
+
+The rules are hand-set. Next: define Fit from closed-won accounts (industry, engineering headcount), join with the
+CRM (customer, open deal, new), and check the grades against which people turned into pipeline.
 
 ## Stack and cost
 
@@ -52,8 +81,8 @@ One page, built around one list. Mockups were reviewed before building.
 - **What we watch:** a collapsed bar ("company page, N team members, N competitors, N X accounts") that opens a
   list of every watched account grouped as company, team and competitors, with posts, people found and people worth
   a message per account. Clicking an account filters the list.
-- **The list:** one row per person, with name and title, company and tier tag, the reason, their words and where
-  they said it, and a score. Filters for time window (7, 30, all), reason, company tier, level, source (X or LinkedIn),
+- **The list:** one row per person, with name, title and buyer or champion, company with its tier tag and how many
+  colleagues also engaged, the reason, their words and where they said it, and the grade with its route. Filters for time window (7, 30, all), reason, company tier, level, source (X or LinkedIn),
   whose post, and search. Quick views: everyone, enterprise only, switching from a competitor, startups and YC.
 - **Person panel:** opens on a row. The full quote and post, who they are and how we know (profile, Exa match,
   bio), the suggested opener with a copy button, and links to their LinkedIn, X and the post.

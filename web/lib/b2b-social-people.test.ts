@@ -73,6 +73,7 @@ test("personRows: one row per person worth a message, with tier label, source an
   assert.equal(rows[0]!.howWeKnow, "X account matched to their LinkedIn with Exa");
   assert.equal(rows[0]!.linkedinUrl, "https://www.linkedin.com/in/dana");
   assert.equal(rows[0]!.commentUrl, "https://x.com/dana/status/9");
+  assert.deepEqual([rows[0]!.grade, rows[0]!.route, rows[0]!.persona], ["A1", "now", "buyer"]);
   assert.equal(rows[2]!.commentUrl, null);
   assert.equal(rows[1]!.howWeKnow, "From their X bio");
   assert.equal(rows[2]!.howWeKnow, "Employer from their LinkedIn profile");
@@ -93,9 +94,18 @@ test("filters: window, company, level, source, account and search", () => {
 });
 
 test("filters round-trip through the URL, and unknown values fall back", () => {
-  const f = { window: "30" as const, reason: "switching" as const, company: "enterprise" as const, level: "manager" as const, source: "x" as const, account: "rival", q: "price" };
+  const f = {
+    window: "30" as const,
+    route: "now" as const,
+    reason: "switching" as const,
+    company: "enterprise" as const,
+    level: "manager" as const,
+    source: "x" as const,
+    account: "rival",
+    q: "price",
+  };
   const href = peopleFiltersHref(f);
-  assert.equal(href, "?days=30&why=switching&co=enterprise&lvl=manager&src=x&acct=rival&q=price");
+  assert.equal(href, "?days=30&route=now&why=switching&co=enterprise&lvl=manager&src=x&acct=rival&q=price");
   assert.deepEqual(parsePeopleFilters(Object.fromEntries(new URLSearchParams(href.slice(1)))), f);
   assert.equal(peopleFiltersHref(NO_PEOPLE_FILTERS), "?");
   assert.deepEqual(parsePeopleFilters({ days: "9", why: "nope", co: "huge" }), NO_PEOPLE_FILTERS);
@@ -120,6 +130,6 @@ test("funnel counts comments and identified authors in the window", () => {
 
 test("peopleCsv has a header and quotes what it must", () => {
   const lines = peopleCsv(personRows(data).slice(0, 1)).trim().split("\n");
-  assert.equal(lines[0], "name,title,level,company,company_tier,reason,what_they_said,comment_url,source,on_post_by,post_date,post_url,linkedin_url,x_url,location,opener,score");
+  assert.equal(lines[0], "name,title,level,company,company_tier,reason,what_they_said,comment_url,source,on_post_by,post_date,post_url,linkedin_url,x_url,location,opener,grade,route,persona");
   assert.match(lines[1]!, /^Dana,VP Engineering,VP,BigCo,Fortune 500 #12,Unhappy with a competitor,"This is a brutal downgrade, cancelling",https:\/\/x\.com\/dana\/status\/9,X,Rival,2026-01-09,/);
 });
