@@ -34,6 +34,7 @@ export const SCORING = {
     { grade: 3, rule: "Engaged without a signal (congrats, a long take)" },
   ],
   adjustments: [
+    "A reply on a team member's post that has nothing to do with the product or coding is graded C3 and listed last",
     "One level stronger when they left two or more signals, or when two or more people from the same company engaged",
     `One level weaker when their latest signal is more than ${FADE_DAYS} days old`,
   ],

@@ -79,6 +79,29 @@ test("personRows: one row per person worth a message, with tier label, source an
   assert.equal(rows[2]!.howWeKnow, "Employer from their LinkedIn profile");
 });
 
+test("personRows carries relevance for unrelated team-post replies", () => {
+  const team: B2BSocialData["accounts"][number] = {
+    platform: "x",
+    handle: "teammate",
+    name: "Jo",
+    url: "https://x.com/teammate",
+    group: "team",
+    followers: 100,
+    sample: "recent",
+  };
+  const d: B2BSocialData = {
+    ...data,
+    accounts: [...data.accounts, team],
+    posts: [...data.posts, post({ id: "4", handle: team.handle, url: "https://x.com/teammate/status/4", text: "Sunrise hike at the canyon today", postedAt: "2026-01-09T00:00:00.000Z" })],
+    comments: [...data.comments, { postId: "4", authorName: "Pat", authorUrl: "https://x.com/pat", text: "Is that the north trail?" }],
+    people: [...data.people, { url: "https://x.com/pat", found: true, location: null, followers: 30, employer: "BigCo", employerUrl: "company:bigco", title: "VP Engineering" }],
+  };
+  const row = personRows(d).find((r) => r.id === "https://x.com/pat");
+
+  assert.equal(row?.relevant, false);
+  assert.equal(row?.grade, "C3");
+});
+
 test("filters: window, company, level, source, account and search", () => {
   const rows = personRows(data);
   const names = (patch: Partial<typeof NO_PEOPLE_FILTERS>) => filterPeople(rows, { ...NO_PEOPLE_FILTERS, ...patch }, data.capturedAt).map((r) => r.name);
