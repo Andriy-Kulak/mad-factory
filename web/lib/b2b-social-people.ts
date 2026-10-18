@@ -18,7 +18,7 @@ import {
   type B2BSocialData,
   type Seniority,
 } from "./b2b-social.ts";
-import { PERSONA_LABEL, ROUTE_LABEL, type Fit, type Intent, type Persona, type Route } from "./b2b-social-grade.ts";
+import { PERSONA_LABEL, ROUTE_LABEL, gradeRank, type Fit, type Intent, type Persona, type Route } from "./b2b-social-grade.ts";
 
 export interface PersonRow {
   id: string;
@@ -188,7 +188,10 @@ export function filterPeople(rows: PersonRow[], f: PeopleFilters, capturedAt: st
 
 /** The funnel strip for a window: how many comments were collected, how many of their authors we could identify. */
 export function funnel(data: B2BSocialData, window: Window): { comments: number; identified: number } {
-  const since = windowSince(data.capturedAt, window);
+  return funnelSince(data, windowSince(data.capturedAt, window));
+}
+
+function funnelSince(data: B2BSocialData, since: string | null): { comments: number; identified: number } {
   const people = new Map(data.people.map((p) => [p.url, p]));
   const authors = new Set<string>();
   let comments = 0;
@@ -299,4 +302,50 @@ export function peopleCsv(rows: PersonRow[]): string {
       .join(","),
   );
   return `${[head.join(","), ...lines].join("\n")}\n`;
+}
+
+/** The overview's B2B pipeline: the funnel over the last `days`, qualified leads this month with their pace, and the top leads. */
+export interface Pipeline {
+  capturedAt: string;
+  days: number;
+  /** Comments collected on watched posts in the window. */
+  engaged: number;
+  /** Their authors we could put a name, title or company to. */
+  identified: number;
+  /** People graded fit A or B (right company, right person). */
+  qualified: number;
+  /** Fit A or B with the strongest signal (intent 1). */
+  strong: number;
+  /** Routed "reach out now". */
+  now: number;
+  month: { from: string; qualified: number; daysElapsed: number; daysInMonth: number; projected: number | null };
+  top: Pick<PersonRow, "id" | "name" | "title" | "company" | "tierLabel" | "grade" | "fit" | "quote" | "postDate" | "platform">[];
+}
+
+const qualifiedFit = (r: PersonRow) => r.fit === "A" || r.fit === "B";
+
+/** Days are counted back from the last capture, like the B2B Social page's windows. */
+export function pipeline(data: B2BSocialData, days: number, rows: PersonRow[] = personRows(data)): Pipeline {
+  const since = new Date(Date.parse(data.capturedAt) - days * 86_400_000).toISOString();
+  const inWindow = rows.filter((r) => (r.postDate ?? "") >= since);
+  const qualified = inWindow.filter(qualifiedFit);
+  const monthFrom = `${data.capturedAt.slice(0, 7)}-01`;
+  const daysElapsed = Number(data.capturedAt.slice(8, 10));
+  const daysInMonth = new Date(Date.UTC(Number(data.capturedAt.slice(0, 4)), Number(data.capturedAt.slice(5, 7)), 0)).getUTCDate();
+  const monthQualified = rows.filter((r) => qualifiedFit(r) && (r.postDate ?? "") >= monthFrom).length;
+  const f = funnelSince(data, since);
+  return {
+    capturedAt: data.capturedAt,
+    days,
+    engaged: f.comments,
+    identified: f.identified,
+    qualified: qualified.length,
+    strong: qualified.filter((r) => r.intent === 1).length,
+    now: inWindow.filter((r) => r.route === "now").length,
+    month: { from: monthFrom, qualified: monthQualified, daysElapsed, daysInMonth, projected: daysElapsed ? Math.round((monthQualified / daysElapsed) * daysInMonth) : null },
+    top: [...qualified]
+      .sort((a, b) => gradeRank(a.fit, a.intent) - gradeRank(b.fit, b.intent) || (b.postDate ?? "").localeCompare(a.postDate ?? ""))
+      .slice(0, 6)
+      .map(({ id, name, title, company, tierLabel, grade, fit, quote, postDate, platform }) => ({ id, name, title, company, tierLabel, grade, fit, quote, postDate, platform })),
+  };
 }

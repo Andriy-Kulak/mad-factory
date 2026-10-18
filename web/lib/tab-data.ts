@@ -10,6 +10,8 @@ import { organicOverviewCached } from "./social";
 import { getMetaAdsOverviewCached } from "./meta-ads";
 import { listCreativeItemsCached } from "./creatives";
 import { channelSetup } from "./setup";
+import { loadB2BSocial } from "./b2b-social-data";
+import { pipeline } from "./b2b-social-people";
 import { DEFAULT_WINDOW_DAYS, formatBrief, isExcludable, overviewForCached } from "./overview";
 import { parseRange } from "@/components/meta-ads";
 import { parseAppleRange } from "./apple-ads-math";
@@ -20,11 +22,12 @@ export const tabLoaders = {
     const requested = Number(sp.get("days"));
     const days = OVERVIEW_WINDOWS.includes(requested) ? requested : DEFAULT_WINDOW_DAYS;
     const exclude = (sp.get("without") ?? "").split(",").filter(isExcludable);
-    const [overview, sources] = await Promise.all([overviewForCached(product.id, product, { days, exclude }), getTrackedSources(product.id)]);
+    const [overview, sources, b2b] = await Promise.all([overviewForCached(product.id, product, { days, exclude }), getTrackedSources(product.id), loadB2BSocial(product.id)]);
     return {
       overview,
       brief: formatBrief(overview),
       channels: channelSetup(product.slug, sources),
+      pipeline: b2b ? pipeline(b2b, days) : null,
     };
   },
   insights: async (product: ProductRow) => {

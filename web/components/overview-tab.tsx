@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTab } from "@/lib/use-tab";
 import type { ChannelSetup } from "@/lib/setup";
 import type { Overview } from "@/lib/overview";
+import type { Pipeline } from "@/lib/b2b-social-people";
 import { fmtAgo, fmtDate, fmtDateTime, fmtInt, fmtMoney } from "@/lib/format";
 import { Shell } from "@/components/shell";
 import { TrendChart } from "@/components/trend-chart";
@@ -17,11 +18,14 @@ export function OverviewTab({ product, days, present, without }: { product: { id
   const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days), without });
   if (isPending) return <PageSkeleton title="Overview" stats={4} body="table" />;
   if (isError || !data) return <TabLoadError title="Overview" retry={() => void refetch()} />;
-  const { overview: o, channels, brief } = data;
+  const { overview: o, channels, brief, pipeline } = data;
   const { slug } = product;
+  const connected = (key: ChannelSetup["key"]) => channels.some((c) => c.key === key && c.connected);
+  // A product that sells B2B and runs no paid channel is judged by its lead pipeline, not by profit.
+  const leads = pipeline && !connected("meta-ads") && !connected("apple") && !connected("revenuecat") ? pipeline : null;
   const href = (d: number, p: boolean, w = without) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}${w ? `&without=${w}` : ""}`;
   // Only Apple can be left out: RevenueCat credits its customers, so its revenue leaves with its spend.
-  const hasApple = !!without || o.channels.some((r) => r.key === "apple_ads");
+  const hasApple = !!without || connected("apple");
 
   const action = (
     <div className="flex items-center gap-3">
@@ -43,6 +47,21 @@ export function OverviewTab({ product, days, present, without }: { product: { id
       </Link>
     </div>
   );
+  if (leads) {
+    const leadAction = (
+      <div className="flex items-center gap-2">
+        <Segmented label="Window" active={String(days)} items={OVERVIEW_WINDOWS.map((d) => ({ key: String(d), label: `${d}D`, href: href(d, present) }))} />
+      </div>
+    );
+    return (
+      <Shell title="Overview" subtitle={`Leads through ${fmtDate(leads.capturedAt)} · refreshed ${fmtDateTime(o.generatedAt)}`} action={leadAction}>
+        <LeadGoal p={leads} />
+        <TopLeads p={leads} slug={slug} />
+        {o.organic.posts.length > 0 && <Organic o={o} slug={slug} />}
+      </Shell>
+    );
+  }
+
   const subtitle = `Numbers through ${fmtDate(o.window.to)}${without ? " · without Apple ads" : ""} · refreshed ${fmtDateTime(o.generatedAt)}`;
 
   if (present)
@@ -121,6 +140,101 @@ function Goal({ o }: { o: Overview }) {
         <Stat label="Month to date" value={fmtMoney(sc.monthToDate.profit, c)} hint={`${fmtMoney(sc.monthToDate.proceeds, c)} in, ${fmtMoney(sc.monthToDate.spendTotal, c)} spent`} />
         <Stat label={`Last ${o.window.days} days`} value={fmtMoney(o.windowProfit, c)} hint="proceeds minus ad spend" tone={o.windowProfit < 0 ? "warn" : "neutral"} />
       </div>
+    </section>
+  );
+}
+
+/** The goal for a B2B product: qualified leads this month and their pace, then the funnel over the window. */
+function LeadGoal({ p }: { p: Pipeline }) {
+  const m = p.month;
+  return (
+    <section aria-label="Goal" className="mb-6">
+      <Card className="px-5 py-4 mb-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="label">Goal</span>
+          <span className="text-[20px] leading-tight font-semibold tracking-[-0.01em]">Qualified B2B leads per month</span>
+          <span
+            className="ml-auto text-[12px] text-fg-3 underline decoration-dotted underline-offset-2"
+            title="A qualified lead is someone who engaged with a watched post on LinkedIn or X and is graded fit A or B on B2B Social: the right company (Fortune 500, 10k+ employees, or a buyer at a smaller or YC company) and a known role."
+          >
+            How leads are counted
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="num text-[32px] leading-none font-medium tracking-[-0.02em]">{fmtInt(m.qualified)}</span>
+          <span className="text-[14px] text-fg-2">
+            this month so far
+            {m.projected != null && (
+              <>
+                {" "}
+                · on pace for <span className="num">{fmtInt(m.projected)}</span> by month end
+              </>
+            )}
+          </span>
+        </div>
+      </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Stat label="Comments on watched posts" value={fmtInt(p.engaged)} hint={`LinkedIn and X, last ${p.days} days`} />
+        <Stat label="Identified" value={fmtInt(p.identified)} hint="name, title or company known" />
+        <Stat label="Qualified, fit A or B" value={fmtInt(p.qualified)} hint={`${fmtInt(p.strong)} with the strongest signal`} />
+        <Stat label="Reach out now" value={fmtInt(p.now)} hint="routed to a rep today" />
+      </div>
+    </section>
+  );
+}
+
+function TopLeads({ p, slug }: { p: Pipeline; slug: string }) {
+  return (
+    <section aria-label="Top leads" className="mb-6">
+      <SectionHead
+        right={
+          <Link href={`/p/${slug}/b2b-social`} className="text-[13px] text-fg-2 hover:text-fg">
+            B2B Social →
+          </Link>
+        }
+      >
+        Top leads, last {p.days} days
+      </SectionHead>
+      <DataTable
+        dense
+        className=""
+        empty="No qualified lead in this window."
+        columns={[{ label: "Grade" }, { label: "Person" }, { label: "Company" }, { label: "Why", sortable: false }, { label: "Posted", align: "right" }]}
+        rows={p.top.map((r) => ({
+          id: r.id,
+          href: `/p/${slug}/b2b-social`,
+          cells: [
+            { node: <Badge tone={r.fit === "A" ? "green" : "accent"}>{r.grade}</Badge>, value: r.grade },
+            {
+              node: (
+                <span className="block max-w-[260px] truncate" title={r.title ?? undefined}>
+                  <span className="font-medium">{r.name}</span>
+                  {r.title && <span className="text-fg-3"> · {r.title}</span>}
+                </span>
+              ),
+              value: r.name,
+            },
+            {
+              node: (
+                <span className="block max-w-[200px] truncate">
+                  {r.company ?? "–"}
+                  {r.tierLabel && <span className="text-fg-3"> · {r.tierLabel}</span>}
+                </span>
+              ),
+              value: r.company,
+            },
+            {
+              node: (
+                <span className="block max-w-[420px] truncate text-fg-2" title={r.quote}>
+                  “{r.quote}”
+                </span>
+              ),
+              value: r.quote,
+            },
+            { node: fmtDate(r.postDate), value: r.postDate, dim: true },
+          ],
+        }))}
+      />
     </section>
   );
 }
