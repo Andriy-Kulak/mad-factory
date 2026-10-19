@@ -14,7 +14,6 @@ import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 import { OVERVIEW_WINDOWS } from "@/lib/tab-constants";
 
-/** Apple Ads is left out of the numbers unless `appleOn` (`?apple=on`); a product without Apple Ads is unaffected. */
 export function OverviewTab({ product, days, present, appleOn }: { product: { id: string; slug: string }; days: number; present: boolean; appleOn: boolean }) {
   const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days), without: appleOn ? undefined : "apple_ads" });
   if (isPending) return <PageSkeleton title="Overview" stats={4} body="table" />;
@@ -22,10 +21,8 @@ export function OverviewTab({ product, days, present, appleOn }: { product: { id
   const { overview: o, channels, brief, pipeline } = data;
   const { slug } = product;
   const connected = (key: ChannelSetup["key"]) => channels.some((c) => c.key === key && c.connected);
-  // A product that sells B2B and runs no paid channel is judged by its lead pipeline, not by profit.
   const leads = pipeline && !connected("meta-ads") && !connected("apple") && !connected("revenuecat") ? pipeline : null;
   const href = (d: number, p: boolean, apple = appleOn) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}${apple ? "&apple=on" : ""}`;
-  // Only Apple can be left out: RevenueCat credits its customers, so its revenue leaves with its spend.
   const hasApple = connected("apple");
 
   const action = (
@@ -145,7 +142,6 @@ function Goal({ o }: { o: Overview }) {
   );
 }
 
-/** The goal for a B2B product: qualified leads this month and their pace, then the funnel over the window. */
 function LeadGoal({ p }: { p: Pipeline }) {
   const m = p.month;
   return (

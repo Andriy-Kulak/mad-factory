@@ -20,7 +20,7 @@ export interface DailyAmount {
 }
 
 export interface ScorecardData {
-  /** RevenueCat proceeds (after store fees and taxes) per campaign/keyword bucket; `channel` is the ad platform RevenueCat credits, if any. */
+  /** RevenueCat proceeds (after store fees and taxes). */
   proceeds: (DailyAmount & { channel?: string })[];
   /** RevenueCat new trials (n) and trial conversions (paid) per day. */
   trials: { date: string; n: number; paid: number; channel?: string }[];
@@ -117,7 +117,6 @@ export async function loadScorecardData(productId: string, from: string, to: str
   const running = unwrap(await db.from("experiments").select("slug,channel,name").eq("product_id", productId).eq("status", "running").order("channel"), "scorecard experiments");
   const money = (rows: { date: string; currency: string; spend: unknown }[]) => rows.map((r) => ({ date: r.date, currency: r.currency, amount: Number(r.spend) }));
 
-  // RevenueCat sets a campaign only for customers Apple AdServices attributed; everyone else is unattributed.
   const channel = (r: { campaign: string }) => (r.campaign ? { channel: "apple_ads" } : {});
   return {
     proceeds: rc.map((r) => ({ date: r.date, currency: r.currency, amount: Number(r.proceeds), ...channel(r) })),

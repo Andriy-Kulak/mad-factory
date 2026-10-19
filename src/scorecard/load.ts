@@ -20,7 +20,7 @@ export async function scorecardFor(product: { id: string; slug: string }, opts: 
   return buildScorecard({ product: product.slug, month, through, goal, data });
 }
 
-/** The overview for the last `days` complete days (default 7), with this month's scorecard; `exclude` leaves channels out of every number. */
+/** The overview for the last `days` complete days (default 7), with this month's scorecard. */
 export async function overviewFor(product: { id: string; slug: string }, opts: { days?: number; now?: Date; exclude?: ExcludableChannel[] } = {}): Promise<Overview> {
   const now = opts.now ?? new Date();
   const days = opts.days ?? DEFAULT_WINDOW_DAYS;

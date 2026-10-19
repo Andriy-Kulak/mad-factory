@@ -80,7 +80,6 @@ export interface Overview {
   product: string;
   generatedAt: string;
   window: { from: string; to: string; days: number };
-  /** Channels left out of every number on request (see EXCLUDABLE_CHANNELS); empty normally. */
   excluded: ExcludableChannel[];
   scorecard: Scorecard;
   /** Whether the month projects to a profit (above zero), or no goal is set. */
@@ -126,13 +125,11 @@ export function buildOverview(input: {
   /** Daily rows covering the trend weeks (see weeklyTrend); no trend when absent. */
   trendData?: ScorecardData;
   now?: Date;
-  /** Leave these channels out; pass the scorecard and trendData already built without them (withoutChannels). */
   exclude?: ExcludableChannel[];
 }): Overview {
   const { scorecard: sc } = input;
   const excluded = input.exclude ?? [];
   const noApple = excluded.includes("apple_ads");
-  // Without Apple: its spend, its coverage warnings, its syncs and follow-ups, and the customers RevenueCat credits to it.
   const data: WindowData = noApple
     ? {
         ...input.data,

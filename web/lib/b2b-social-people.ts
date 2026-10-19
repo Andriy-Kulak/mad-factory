@@ -304,19 +304,14 @@ export function peopleCsv(rows: PersonRow[]): string {
   return `${[head.join(","), ...lines].join("\n")}\n`;
 }
 
-/** The overview's B2B pipeline: the funnel over the last `days`, qualified leads this month with their pace, and the top leads. */
+/** The overview's B2B lead summary. */
 export interface Pipeline {
   capturedAt: string;
   days: number;
-  /** Comments collected on watched posts in the window. */
   engaged: number;
-  /** Their authors we could put a name, title or company to. */
   identified: number;
-  /** People graded fit A or B (right company, right person). */
   qualified: number;
-  /** Fit A or B with the strongest signal (intent 1). */
   strong: number;
-  /** Routed "reach out now". */
   now: number;
   month: { from: string; qualified: number; daysElapsed: number; daysInMonth: number; projected: number | null };
   top: Pick<PersonRow, "id" | "name" | "title" | "company" | "tierLabel" | "grade" | "fit" | "quote" | "postDate" | "platform">[];
@@ -324,7 +319,6 @@ export interface Pipeline {
 
 const qualifiedFit = (r: PersonRow) => r.fit === "A" || r.fit === "B";
 
-/** Days are counted back from the last capture, like the B2B Social page's windows. */
 export function pipeline(data: B2BSocialData, days: number, rows: PersonRow[] = personRows(data)): Pipeline {
   const since = new Date(Date.parse(data.capturedAt) - days * 86_400_000).toISOString();
   const inWindow = rows.filter((r) => (r.postDate ?? "") >= since);
