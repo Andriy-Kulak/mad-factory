@@ -1,15 +1,15 @@
 import { access, readFile } from "node:fs/promises";
 import { listTrackedSourcesBySource, requireProduct } from "../db/index.ts";
 import { requirePlanDoc } from "../db/products.ts";
-import { upsertMetaAdsAds, upsertMetaAdsCreatives } from "../db/meta-ads.ts";
-import type { MetaAdsAdInsert, MetaAdsCreativeInsert, ProductRow } from "../db/types.ts";
+import { upsertMetaAdsAds, upsertMetaAdsAdsets, upsertMetaAdsCreatives } from "../db/meta-ads.ts";
+import type { MetaAdsAdInsert, MetaAdsAdsetInsert, MetaAdsCreativeInsert, ProductRow } from "../db/types.ts";
 import type { MetaAdsClient } from "./client.ts";
 import { activateObjects, type ActivateStats } from "./activate.ts";
 import { createAdFromTemplate, type TextMode } from "./create-ad.ts";
-import { adRow, creativeRow } from "./map.ts";
+import { adRow, adsetRow, creativeRow } from "./map.ts";
 import { importMediaFile } from "./media.ts";
 import { defaultDeps as sharedDeps } from "./pause.ts";
-import { AD_FIELDS } from "./sync.ts";
+import { AD_FIELDS, ADSET_FIELDS } from "./sync.ts";
 
 // OWNER RULE — this module only composes the allowlisted writes (create PAUSED
 // ads, upload media, activate). NEVER delete or archive a Meta ad, ad set,
@@ -36,6 +36,23 @@ export interface LaunchSpec {
 
 const MEDIA_EXTS = new Set(["png", "jpg", "jpeg", "mp4", "mov"]);
 
+// A launch either finishes or stops before its first write: a bigger batch is
+// split into several specs, never cut short by the call ceiling halfway through.
+export const MAX_LAUNCH_ADS = 10;
+// The ad set and template GETs, plus headroom.
+const LAUNCH_BASE_CALLS = 10;
+// Worst case per ad is a video file: upload POST, status polls (every 5 s until
+// ready; the client's own 5-minute deadline still applies), thumbnail GET, create
+// POST, activate GET + POST and the mirror GET — 6 calls plus the polls. 12 leaves
+// 6 polls per video, about 25 s of processing; one slow video borrows from the rest.
+const LAUNCH_CALLS_PER_AD = 12;
+
+// The client's call ceiling for a launch of `adCount` ads. Still a hard stop for
+// a runaway loop; sized so a spec within MAX_LAUNCH_ADS never reaches it.
+export function launchCallCeiling(adCount: number): number {
+  return LAUNCH_BASE_CALLS + LAUNCH_CALLS_PER_AD * adCount;
+}
+
 function fieldError(name: string, field: string, problem: string): Error {
   return new Error(`spec ad "${name}" field "${field}": ${problem}`);
 }
@@ -57,6 +74,9 @@ export function parseLaunchSpec(text: string): LaunchSpec {
     throw new Error('spec field "text_mode": must be "feed" or "single"');
   }
   if (!Array.isArray(spec.ads) || !spec.ads.length) throw new Error('spec field "ads": required non-empty array');
+  if (spec.ads.length > MAX_LAUNCH_ADS) {
+    throw new Error(`spec field "ads": ${spec.ads.length} ads is more than ${MAX_LAUNCH_ADS} per launch; split it into specs of at most ${MAX_LAUNCH_ADS} ads`);
+  }
 
   const names = new Set<string>();
   const ads: LaunchAdSpec[] = [];
@@ -108,6 +128,7 @@ export interface LaunchDeps {
     options: Parameters<typeof createAdFromTemplate>[2],
   ): Promise<{ adId: string | null }>;
   activate(client: Pick<MetaAdsClient, "get" | "activate">, slug: string, options: { adIds: string[]; adsetIds: string[]; plan: string; dryRun: boolean }): Promise<ActivateStats>;
+  upsertAdsets(rows: MetaAdsAdsetInsert[]): Promise<number>;
   upsertCreatives(rows: MetaAdsCreativeInsert[]): Promise<number>;
   upsertAds(rows: MetaAdsAdInsert[]): Promise<number>;
   importMedia(productId: string, creativeId: string, filePath: string): Promise<void>;
@@ -131,6 +152,7 @@ export const defaultDeps: LaunchDeps = {
   readFile: (path) => readFile(path, "utf8"),
   createAd: async (client, slug, options) => createAdFromTemplate(client, slug, options),
   activate: activateObjects,
+  upsertAdsets: upsertMetaAdsAdsets,
   upsertCreatives: upsertMetaAdsCreatives,
   upsertAds: upsertMetaAdsAds,
   importMedia: async (productId, creativeId, filePath) => importMediaFile(productId, creativeId, filePath),
@@ -174,8 +196,9 @@ export async function launch(
 
   const accountId = await deps.adAccount(product.id);
   // Fetch the ad set and template once for the whole batch; createAdFromTemplate
-  // still runs the account check on them per ad.
-  const adset = await client.get<ApiObject>(`/${spec.adset_id}`, { fields: "name,account_id" });
+  // still runs the account check on them per ad. The ad set is read with the
+  // sync's fields so the mirror can upsert it too (see below).
+  const adset = await client.get<ApiObject>(`/${spec.adset_id}`, { fields: `${ADSET_FIELDS},account_id` });
   if (`act_${adset.account_id ?? ""}` !== accountId) {
     throw new Error(`ad set ${spec.adset_id} belongs to act_${adset.account_id}, not ${accountId}; refusing to write to another account`);
   }
@@ -246,6 +269,9 @@ export async function launch(
     adRows.push(adRow({ ...ad, campaign_id: ad.campaign_id ?? (adset.campaign_id as string | undefined) }, syncedAt));
   }
   for (const creative of creativeById.values()) creativeRows.push(creativeRow(creative, product.id, accountId, syncedAt));
+  // The ad set goes in first: one just made by `adset-copy` is not in
+  // meta_ads_adsets until the next sync, and meta_ads_ads references it.
+  if (adRows.length) await deps.upsertAdsets([adsetRow({ ...adset, id: adset.id ?? spec.adset_id }, syncedAt)]);
   if (creativeRows.length) await deps.upsertCreatives(creativeRows);
   if (adRows.length) await deps.upsertAds(adRows);
 

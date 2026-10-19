@@ -34,6 +34,12 @@ The owner's approval of the summary is the go. A spec ad uses exactly one of `fi
 `image_hash`; `titles`/`bodies` are optional but come together. `--validate-only` creates nothing and
 validates only ads whose media is already uploaded (uploads are real writes).
 
+A spec holds at most 10 ads; split a bigger batch into several specs. Launch rejects a larger spec before
+any Meta call, so a launch never stops halfway. Its call ceiling is sized from the spec: 10 + 12 per ad
+(130 for 10 ads). A video file costs about 11 Graph calls (upload, ~5 status polls, thumbnail, create,
+activate GET + POST, mirror GET); a `video_id` ad about 5, an `image_hash` ad 4. Launching into an ad set
+just made by `adset-copy` works: launch mirrors the ad set into the DB before its ads.
+
 ## Two campaigns: test and scale
 
 | | Test campaign | Scale campaign |
