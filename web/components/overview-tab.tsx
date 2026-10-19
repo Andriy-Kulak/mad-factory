@@ -148,40 +148,49 @@ function Goal({ o }: { o: Overview }) {
 function LeadGoal({ p }: { p: Pipeline }) {
   const m = p.month;
   return (
-    <section aria-label="Goal" className="mb-6">
-      <Card className="px-5 py-4 mb-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="label">Goal</span>
-          <span className="text-[20px] leading-tight font-semibold tracking-[-0.01em]">Qualified B2B leads per month</span>
-          <span
-            className="ml-auto text-[12px] text-fg-3 underline decoration-dotted underline-offset-2"
-            title="A qualified lead is someone who engaged with a watched post on LinkedIn or X and is graded fit A or B on B2B Social: the right company (Fortune 500, 10k+ employees, or a buyer at a smaller or YC company) and a known role."
-          >
-            How leads are counted
-          </span>
+    <>
+      <section aria-label="Goal" className="mb-6">
+        <Card className="px-5 py-4 mb-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="label">Goal</span>
+            <span className="text-[20px] leading-tight font-semibold tracking-[-0.01em]">Qualified B2B leads per month</span>
+            <span
+              className="ml-auto text-[12px] text-fg-3 underline decoration-dotted underline-offset-2"
+              title="Graded fit A or B on B2B Social: a Fortune 500 or 10k+ company with a known role, or a founder, CTO or VP at a smaller or YC company."
+            >
+              How leads are counted
+            </span>
+          </div>
+          <p className="mt-1.5 text-[13px] text-fg-3">A qualified lead is someone at a target company who commented on a watched post on LinkedIn or X.</p>
+        </Card>
+        <div className="grid grid-cols-3 gap-3">
+          <Stat label="Projected this month" value={m.projected == null ? "–" : fmtInt(m.projected)} hint={`at the pace of ${m.daysElapsed} day(s) so far`} />
+          <Stat label="Month to date" value={fmtInt(m.qualified)} hint={`qualified leads since ${fmtDate(m.from)}`} />
+          <Stat label={`Last ${p.days} days`} value={fmtInt(p.qualified)} hint={`${fmtInt(p.strong)} with the strongest buying signal`} />
         </div>
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="num text-[32px] leading-none font-medium tracking-[-0.02em]">{fmtInt(m.qualified)}</span>
-          <span className="text-[14px] text-fg-2">
-            this month so far
-            {m.projected != null && (
-              <>
-                {" "}
-                · on pace for <span className="num">{fmtInt(m.projected)}</span> by month end
-              </>
-            )}
-          </span>
+      </section>
+      <section aria-label="Funnel" className="mb-6">
+        <SectionHead
+          right={
+            <span className="text-[13px] text-fg-3">
+              {fmtDate(new Date(Date.parse(p.capturedAt) - p.days * 86_400_000).toISOString())} – {fmtDate(p.capturedAt)}
+            </span>
+          }
+        >
+          Funnel, last {p.days} days
+        </SectionHead>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Stat label="Comments on watched posts" value={fmtInt(p.engaged)} hint="LinkedIn and X" />
+          <Stat label="Identified" value={fmtInt(p.identified)} hint={`${pct(p.identified, p.engaged)} of comments · name, title or company known`} />
+          <Stat label="Qualified" value={fmtInt(p.qualified)} hint={`${pct(p.qualified, p.identified)} of identified · target company and role`} />
+          <Stat label="Reach out now" value={fmtInt(p.now)} hint={`${pct(p.now, p.qualified)} of qualified`} />
         </div>
-      </Card>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat label="Comments on watched posts" value={fmtInt(p.engaged)} hint={`LinkedIn and X, last ${p.days} days`} />
-        <Stat label="Identified" value={fmtInt(p.identified)} hint="name, title or company known" />
-        <Stat label="Qualified, fit A or B" value={fmtInt(p.qualified)} hint={`${fmtInt(p.strong)} with the strongest signal`} />
-        <Stat label="Reach out now" value={fmtInt(p.now)} hint="routed to a rep today" />
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
+
+const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "–");
 
 function TopLeads({ p, slug }: { p: Pipeline; slug: string }) {
   return (
