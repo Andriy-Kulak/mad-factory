@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { B2BSocialData, ReachPost } from "./b2b-social.ts";
-import { NO_PEOPLE_FILTERS, filterPeople, funnel, parsePeopleFilters, peopleCsv, peopleFiltersHref, personRows, watchedAccounts } from "./b2b-social-people.ts";
+import { NO_PEOPLE_FILTERS, filterPeople, funnel, parsePeopleFilters, peopleCsv, peopleFiltersHref, personRows, pipeline, watchedAccounts } from "./b2b-social-people.ts";
 
 const post = (over: Partial<ReachPost>): ReachPost => ({
   platform: "x",
@@ -155,4 +155,19 @@ test("peopleCsv has a header and quotes what it must", () => {
   const lines = peopleCsv(personRows(data).slice(0, 1)).trim().split("\n");
   assert.equal(lines[0], "name,title,level,company,company_tier,reason,what_they_said,comment_url,source,on_post_by,post_date,post_url,linkedin_url,x_url,location,opener,grade,route,persona");
   assert.match(lines[1]!, /^Dana,VP Engineering,VP,BigCo,Fortune 500 #12,Unhappy with a competitor,"This is a brutal downgrade, cancelling",https:\/\/x\.com\/dana\/status\/9,X,Rival,2026-01-09,/);
+});
+
+test("pipeline: funnel over the window, fit A or B leads this month with their pace, best grades first", () => {
+  const rows = personRows(data);
+  const p = pipeline(data, 7, rows);
+  const qualified = rows.filter((r) => (r.fit === "A" || r.fit === "B") && (r.postDate ?? "") >= "2026-01-03");
+  assert.equal(p.qualified, qualified.length);
+  assert.deepEqual(funnel(data, "7"), { comments: p.engaged, identified: p.identified });
+  assert.equal(p.month.from, "2026-01-01");
+  assert.equal(p.month.projected, Math.round((p.month.qualified / 10) * 31));
+  assert.ok(p.top.every((r) => r.fit === "A" || r.fit === "B"));
+  assert.deepEqual(
+    p.top.map((r) => r.grade),
+    [...p.top.map((r) => r.grade)].sort(),
+  );
 });

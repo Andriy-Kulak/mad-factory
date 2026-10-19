@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildOverview, formatBrief } from "./overview.ts";
-import { buildScorecard } from "./scorecard.ts";
+import { buildScorecard, withoutChannels } from "./scorecard.ts";
 import type { ScorecardData, WindowData } from "../db/scorecard.ts";
 
 const NOW = new Date("2026-10-06T12:00:00Z");
@@ -51,6 +51,37 @@ test("channels: Meta by its own attribution, Apple and the rest by RevenueCat, t
   assert.deepEqual([ch.total!.spend, ch.total!.trials, ch.total!.costPerTrial], [150, 20, 7.5]);
   assert.equal(o.windowProfit, -50);
   assert.equal(o.proceedsPerTrial, 5);
+});
+
+test("without Apple: its row, spend, attributed customers and syncs leave every number", () => {
+  const month: ScorecardData = {
+    ...emptyMonth,
+    proceeds: [
+      { date: "2026-10-01", amount: 10, currency: "USD", channel: "apple_ads" },
+      { date: "2026-10-01", amount: 90, currency: "USD" },
+    ],
+    trials: [
+      { date: "2026-10-01", n: 2, paid: 1, channel: "apple_ads" },
+      { date: "2026-10-01", n: 18, paid: 6 },
+    ],
+    spend: { apple_ads: [{ date: "2026-10-01", amount: 20, currency: "USD" }], meta_ads: [{ date: "2026-10-01", amount: 130, currency: "USD" }] },
+    latest: { apple_ads: "2026-10-01" },
+  };
+  const without = withoutChannels(month, ["apple_ads"]);
+  const sc = buildScorecard({ product: "p", month: "2026-10", through: "2026-10-05", goal: { target: 1000, currency: "USD", monthlyFixedCosts: 0 }, data: without });
+  assert.deepEqual([sc.monthToDate.proceeds, sc.monthToDate.spendTotal, sc.trials], [90, 130, 18]);
+  assert.ok(!sc.warnings.some((w) => w.startsWith("apple_ads")));
+
+  const o = buildOverview({ product: "p", window, scorecard: sc, data: data(), trendData: without, now: NOW, exclude: ["apple_ads"] });
+  const ch = Object.fromEntries(o.channels.map((c) => [c.key, c]));
+  assert.equal(ch.apple_ads, undefined);
+  assert.deepEqual([ch.total!.spend, ch.total!.trials, ch.total!.proceeds], [130, 18, 90]);
+  assert.equal(o.windowProfit, -40);
+  assert.deepEqual(
+    o.freshness.map((f) => f.source),
+    ["meta_ads"],
+  );
+  assert.match(formatBrief(o), /Without apple_ads/);
 });
 
 test("Meta ads roll up per ad, sorted by spend; posts by views; stale sources flagged", () => {

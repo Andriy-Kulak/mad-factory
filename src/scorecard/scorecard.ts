@@ -51,6 +51,23 @@ export function scorecardFrom(month: string, through: string): string {
   return week < start ? week : start;
 }
 
+/** Channels whose revenue RevenueCat attributes, so they can be left out. */
+export const EXCLUDABLE_CHANNELS = ["apple_ads"] as const;
+export type ExcludableChannel = (typeof EXCLUDABLE_CHANNELS)[number];
+export const isExcludable = (c: string): c is ExcludableChannel => (EXCLUDABLE_CHANNELS as readonly string[]).includes(c);
+
+export function withoutChannels(data: ScorecardData, channels: readonly ExcludableChannel[]): ScorecardData {
+  if (!channels.length) return data;
+  const out = (c: string | undefined) => c != null && (channels as readonly string[]).includes(c);
+  return {
+    proceeds: data.proceeds.filter((r) => !out(r.channel)),
+    trials: data.trials.filter((r) => !out(r.channel)),
+    spend: Object.fromEntries(Object.entries(data.spend).filter(([c]) => !out(c))),
+    latest: Object.fromEntries(Object.entries(data.latest).filter(([c]) => !out(c))),
+    running: data.running.filter((e) => !out(e.channel)),
+  };
+}
+
 const round = (n: number) => Math.round(n * 100) / 100;
 
 function totals(proceeds: number, spend: Record<string, number>, fixedCosts: number): Totals {
