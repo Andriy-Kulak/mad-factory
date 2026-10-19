@@ -14,8 +14,9 @@ import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
 import { OVERVIEW_WINDOWS } from "@/lib/tab-constants";
 
-export function OverviewTab({ product, days, present, without }: { product: { id: string; slug: string }; days: number; present: boolean; without?: "apple_ads" }) {
-  const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days), without });
+/** Apple Ads is left out of the numbers unless `appleOn` (`?apple=on`); a product without Apple Ads is unaffected. */
+export function OverviewTab({ product, days, present, appleOn }: { product: { id: string; slug: string }; days: number; present: boolean; appleOn: boolean }) {
+  const { data, isPending, isError, refetch } = useTab(product, "overview", { days: String(days), without: appleOn ? undefined : "apple_ads" });
   if (isPending) return <PageSkeleton title="Overview" stats={4} body="table" />;
   if (isError || !data) return <TabLoadError title="Overview" retry={() => void refetch()} />;
   const { overview: o, channels, brief, pipeline } = data;
@@ -23,19 +24,19 @@ export function OverviewTab({ product, days, present, without }: { product: { id
   const connected = (key: ChannelSetup["key"]) => channels.some((c) => c.key === key && c.connected);
   // A product that sells B2B and runs no paid channel is judged by its lead pipeline, not by profit.
   const leads = pipeline && !connected("meta-ads") && !connected("apple") && !connected("revenuecat") ? pipeline : null;
-  const href = (d: number, p: boolean, w = without) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}${w ? `&without=${w}` : ""}`;
+  const href = (d: number, p: boolean, apple = appleOn) => `/p/${slug}?days=${d}${p ? "&present=1" : ""}${apple ? "&apple=on" : ""}`;
   // Only Apple can be left out: RevenueCat credits its customers, so its revenue leaves with its spend.
-  const hasApple = !!without || connected("apple");
+  const hasApple = connected("apple");
 
   const action = (
     <div className="flex items-center gap-3">
       {hasApple && (
         <Link
-          href={href(days, present, without ? undefined : "apple_ads")}
+          href={href(days, present, !appleOn)}
           role="switch"
-          aria-checked={!without}
+          aria-checked={appleOn}
           className="switch"
-          title="Turn off to see every number without Apple ads: its spend and the trials and proceeds RevenueCat credits to it"
+          title="Off: every number leaves out Apple ads, its spend and the trials and proceeds RevenueCat credits to it. On: Apple ads counts like any channel."
         >
           <span className="switch-track" />
           Apple ads
@@ -62,7 +63,7 @@ export function OverviewTab({ product, days, present, without }: { product: { id
     );
   }
 
-  const subtitle = `Numbers through ${fmtDate(o.window.to)}${without ? " · without Apple ads" : ""} · refreshed ${fmtDateTime(o.generatedAt)}`;
+  const subtitle = `Numbers through ${fmtDate(o.window.to)}${hasApple && !appleOn ? " · without Apple ads" : ""} · refreshed ${fmtDateTime(o.generatedAt)}`;
 
   if (present)
     return (
