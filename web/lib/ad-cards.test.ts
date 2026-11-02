@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  adCardsPage,
   activeAdFilterCount,
   adFiltersHref,
   applyAdFilters,
@@ -8,7 +9,9 @@ import {
   hookOf,
   isWinner,
   landingOf,
+  NO_AD_FILTERS,
   parseAdFilters,
+  searchParamsOf,
   signalOf,
   sortAdCards,
   type AdSourceRow,
@@ -188,4 +191,41 @@ test("landingOf strips protocol, www, query and trailing slash; by/v filters on 
   // Profile dimensions only match profiled cards.
   assert.deepEqual(applyAdFilters(cards, parseAdFilters({ by: "angle", v: "none" }), NOW), []);
   assert.equal(parseAdFilters({ by: "bogus", v: "x" }).by, null);
+});
+
+test("adCardsPage pages the filtered, sorted cards and counts over all of them", () => {
+  const cards = groupAdCards(
+    [row("a", { startDate: daysAgo(3) }), row("b", { startDate: daysAgo(2), isActive: false }), row("c", { startDate: daysAgo(1), advertiserId: "p2", advertiserName: "Page two" })],
+    new Map([["a", rank(1)]]),
+    NOW,
+  );
+  const f = { ...NO_AD_FILTERS, sort: "newest" as const, view: "cards" as const };
+  const page = adCardsPage(cards, f, new Set(["b"]), 1, 1, NOW);
+  assert.deepEqual(
+    page.ads.map((c) => c.id),
+    ["b"],
+  );
+  assert.equal(page.matched, 3);
+  assert.equal(page.total, 3);
+  assert.equal(page.stats.running, 2);
+  assert.equal(page.favCount, 1);
+  assert.deepEqual(
+    page.advertisers.map((a) => [a.id, a.ads, a.running]),
+    [
+      ["p1", 2, 1],
+      ["p2", 1, 1],
+    ],
+  );
+  const running = adCardsPage(cards, { ...f, status: "active" }, new Set(), 0, 36, NOW);
+  assert.deepEqual(
+    running.ads.map((c) => c.id),
+    ["c", "a"],
+  );
+  assert.equal(running.total, 3);
+});
+
+test("searchParamsOf keeps repeated keys as arrays", () => {
+  const sp = searchParamsOf(new URLSearchParams("adv=1&adv=2&sort=newest"));
+  assert.deepEqual(sp, { adv: ["1", "2"], sort: "newest" });
+  assert.deepEqual(parseAdFilters(sp).advertisers, ["1", "2"]);
 });

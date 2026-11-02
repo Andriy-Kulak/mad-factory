@@ -3,7 +3,7 @@ import { deflateSync, inflateSync } from "node:zlib";
 import { cache } from "react";
 import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
-import { groupAdCards, type AdCard, type AdSourceRow, type ImpressionRank } from "./ad-cards.ts";
+import { groupAdCards, type AdCard, type AdSourceRow, type CardProfile, type ImpressionRank } from "./ad-cards.ts";
 import { mergeAdRelations } from "../../src/lib/tracked-source-input.ts";
 import { adSourceRelations } from "./tracked-sources";
 import { loadSlimProfiles } from "./creatives";
@@ -121,23 +121,19 @@ export async function impressionRanks(productId: string): Promise<Map<string, Im
 /** Longest primary text sent to the browser per card; Ad Library copy rarely runs past it. */
 const BODY_MAX = 2000;
 
-/**
- * Every Ad Library ad a product tracks, one card per collation, ranked by the latest impressions scrape. One
- * paged, embedded query (ad + first creative + a few raw payload fields) runs alongside the rank lookup; each card
- * then gets its media file's slim creative profile (angle, persona, hook…) when one exists.
- */
-export async function competitorAds(productId: string): Promise<AdCard[]> {
-  const db = getDb();
+/** product_ads rows per cached chunk; each chunk is cached on its own so it stays under Next's 2MB cache-entry limit. */
+const AD_PAGE_ROWS = 1000;
+
+/** One chunk of a product's Ad Library ads (product_ads rows from ad_id `start` up to the next chunk's) plus their media files' slim profiles. */
+interface AdPage {
+  links: { trackedSourceId: string | null; row: Omit<AdSourceRow, "relation"> }[];
+  profiles: [sha256: string, profile: CardProfile][];
+}
+
+async function adPage(productId: string, start: string, end: string | null): Promise<AdPage> {
   const cols = `tracked_source_id,ad:ads(id,external_id,advertiser_id,advertiser_name,body_text,title,cta_text,link_url,start_date,end_date,is_active,platforms,collation_id,collation_count,first_seen_at,
     avatar:raw->snapshot->>page_profile_picture_url,caption:raw->snapshot->>caption,format:raw->snapshot->>display_format,
     ad_creatives(position,creatives(sha256,public_url,media_type)))`;
-  const page = (from: number) =>
-    db
-      .from("product_ads")
-      .select(cols)
-      .eq("product_id", productId)
-      .order("ad_id")
-      .range(from, from + 999);
   type Row = {
     id: string;
     external_id: string;
@@ -159,26 +155,18 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
     format: string | null;
     ad_creatives: { position: number; creatives: { sha256: string; public_url: string | null; media_type: string } | null }[];
   };
-  const [count, ranks, relations] = await Promise.all([
-    db.from("product_ads").select("ad_id", { count: "exact", head: true }).eq("product_id", productId),
-    impressionRanks(productId),
-    adSourceRelations(productId),
-  ]);
-  if (count.error) fail("product_ads count", count.error);
-  const pages = await Promise.all(Array.from({ length: Math.ceil((count.count ?? 0) / 1000) }, (_, i) => page(i * 1000)));
-  const rows = new Map<string, AdSourceRow>();
-  for (const res of pages) {
-    if (res.error) fail("product_ads", res.error);
-    for (const { tracked_source_id, ad } of (res.data ?? []) as unknown as { tracked_source_id: string | null; ad: Row | null }[]) {
-      if (!ad) continue;
-      const relation = relations.get(tracked_source_id ?? "") ?? "competitor";
-      const seen = rows.get(ad.id);
-      if (seen) {
-        seen.relation = mergeAdRelations(seen.relation, relation);
-        continue;
-      }
-      const media = [...ad.ad_creatives].sort((x, y) => x.position - y.position).find((c) => c.creatives?.public_url)?.creatives;
-      rows.set(ad.id, {
+  // Keyset bounds, not an offset: deep offsets over this embedded join hit the database statement timeout.
+  let q = getDb().from("product_ads").select(cols).eq("product_id", productId).gte("ad_id", start);
+  if (end) q = q.lt("ad_id", end);
+  const res = await q.order("ad_id");
+  if (res.error) fail("product_ads", res.error);
+  const links: AdPage["links"] = [];
+  for (const { tracked_source_id, ad } of (res.data ?? []) as unknown as { tracked_source_id: string | null; ad: Row | null }[]) {
+    if (!ad) continue;
+    const media = [...ad.ad_creatives].sort((x, y) => x.position - y.position).find((c) => c.creatives?.public_url)?.creatives;
+    links.push({
+      trackedSourceId: tracked_source_id,
+      row: {
         id: ad.id,
         externalId: ad.external_id,
         advertiserId: ad.advertiser_id,
@@ -198,23 +186,81 @@ export async function competitorAds(productId: string): Promise<AdCard[]> {
         collationCount: ad.collation_count,
         firstSeenAt: ad.first_seen_at,
         media: media?.public_url ? { url: media.public_url, type: media.media_type, sha256: media.sha256 } : null,
-        relation,
-      });
+      },
+    });
+  }
+  const profiles = await loadSlimProfiles(links.flatMap((l) => (l.row.media ? [l.row.media.sha256] : [])));
+  return { links, profiles: [...profiles].map(([sha, p]) => [sha, { fields: p.fields, hook: p.hook.spoken ?? p.hook.onscreen }]) };
+}
+
+/** The first ad_id of each AD_PAGE_ROWS-row chunk of the product's product_ads, in ad_id order. */
+async function adPageStarts(productId: string): Promise<string[]> {
+  const db = getDb();
+  const count = await db.from("product_ads").select("ad_id", { count: "exact", head: true }).eq("product_id", productId);
+  if (count.error) fail("product_ads count", count.error);
+  const starts = await Promise.all(
+    Array.from({ length: Math.ceil((count.count ?? 0) / AD_PAGE_ROWS) }, async (_, i) => {
+      const res = await db
+        .from("product_ads")
+        .select("ad_id")
+        .eq("product_id", productId)
+        .order("ad_id")
+        .range(i * AD_PAGE_ROWS, i * AD_PAGE_ROWS);
+      if (res.error) fail("product_ads", res.error);
+      return res.data?.[0]?.ad_id ?? null;
+    }),
+  );
+  return starts.filter((s): s is string => s != null);
+}
+
+interface AdLoaders {
+  starts: (productId: string) => Promise<string[]>;
+  page: (productId: string, start: string, end: string | null) => Promise<AdPage>;
+  ranks: (productId: string) => Promise<Map<string, ImpressionRank>>;
+}
+
+async function buildCompetitorAds(productId: string, load: AdLoaders): Promise<AdCard[]> {
+  const [starts, ranks, relations] = await Promise.all([load.starts(productId), load.ranks(productId), adSourceRelations(productId)]);
+  const pages = await Promise.all(starts.map((start, i) => load.page(productId, start, starts[i + 1] ?? null)));
+  const rows = new Map<string, AdSourceRow>();
+  const profiles = new Map<string, CardProfile>();
+  for (const page of pages) {
+    for (const [sha, p] of page.profiles) profiles.set(sha, p);
+    for (const { trackedSourceId, row } of page.links) {
+      const relation = relations.get(trackedSourceId ?? "") ?? "competitor";
+      const seen = rows.get(row.id);
+      if (seen) seen.relation = mergeAdRelations(seen.relation, relation);
+      else rows.set(row.id, { ...row, relation });
     }
   }
-  const cards = groupAdCards([...rows.values()], ranks);
-  const profiles = await loadSlimProfiles(cards.flatMap((c) => (c.media ? [c.media.sha256] : [])));
-  return cards.map((c) => {
+  return groupAdCards([...rows.values()], ranks).map((c) => {
     const p = c.media ? profiles.get(c.media.sha256) : undefined;
-    return p ? { ...c, profile: { fields: p.fields, hook: p.hook.spoken ?? p.hook.onscreen } } : c;
+    return p ? { ...c, profile: p } : c;
   });
 }
 
-const competitorAdsPayloadCached = cachedByProduct("competitorAds", async (productId: string) => deflateSync(JSON.stringify(await competitorAds(productId))).toString("base64"));
+/**
+ * Every Ad Library ad a product tracks, one card per collation, ranked by the latest impressions scrape. Paged,
+ * embedded queries (ad + first creative + a few raw payload fields) run alongside the rank lookup; each card
+ * then gets its media file's slim creative profile (angle, persona, hook…) when one exists.
+ */
+export function competitorAds(productId: string): Promise<AdCard[]> {
+  return buildCompetitorAds(productId, { starts: adPageStarts, page: adPage, ranks: impressionRanks });
+}
 
-export async function competitorAdsCached(productId: string): Promise<AdCard[]> {
-  const payload = await competitorAdsPayloadCached(productId);
-  return JSON.parse(inflateSync(Buffer.from(payload, "base64")).toString("utf8")) as AdCard[];
+const pack = (v: unknown) => deflateSync(JSON.stringify(v)).toString("base64");
+const unpack = <T>(payload: string) => JSON.parse(inflateSync(Buffer.from(payload, "base64")).toString("utf8")) as T;
+const adPageStartsCached = cachedByProduct("competitorAdPageStarts", adPageStarts);
+const adPageCached = cachedByProduct("competitorAdPage", async (productId: string, start: string, end: string | null) => pack(await adPage(productId, start, end)));
+const impressionRanksCached = cachedByProduct("impressionRanks", async (productId: string) => pack([...(await impressionRanks(productId))]));
+
+/** competitorAds from the per-product cache, stored in chunks (one cache entry for everything went over 2MB and was never cached). */
+export function competitorAdsCached(productId: string): Promise<AdCard[]> {
+  return buildCompetitorAds(productId, {
+    starts: adPageStartsCached,
+    page: async (id, start, end) => unpack<AdPage>(await adPageCached(id, start, end)),
+    ranks: async (id) => new Map(unpack<[string, ImpressionRank][]>(await impressionRanksCached(id))),
+  });
 }
 
 async function creativesForAds(adIds: string[]): Promise<Map<string, CreativeRow[]>> {

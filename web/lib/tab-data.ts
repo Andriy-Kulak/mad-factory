@@ -5,6 +5,7 @@ import { docName } from "../../src/lib/product-docs.ts";
 import { getAppleAdsExperimentsCached, getAppleAdsOverviewCached } from "./apple-ads";
 import { getAppleKeywordsCached } from "./apple-keywords";
 import { competitorAdsCached, getTrackedSources } from "./queries";
+import { adCardsPage, parseAdFilters, searchParamsOf } from "./ad-cards";
 import { favoriteIds, favoriteStars } from "./favorites";
 import { organicOverviewCached } from "./social";
 import { getMetaAdsOverviewCached } from "./meta-ads";
@@ -34,17 +35,19 @@ export const tabLoaders = {
     const [cards, favorites] = await Promise.all([competitorAdsCached(product.id), favoriteIds(product.id, "ad")]);
     return { cards, favorites };
   },
-  ads: async (product: ProductRow) => {
-    const [ads, favorites] = await Promise.all([competitorAdsCached(product.id), favoriteIds(product.id, "ad")]);
-    return { ads, favorites };
+  ads: async (product: ProductRow, sp: URLSearchParams) => {
+    const [cards, favorites] = await Promise.all([competitorAdsCached(product.id), favoriteIds(product.id, "ad")]);
+    const offset = Math.max(0, Math.floor(Number(sp.get("offset")) || 0));
+    return { ...adCardsPage(cards, parseAdFilters(searchParamsOf(sp)), new Set(favorites), offset), favorites };
   },
   favorites: async (product: ProductRow) => {
-    const [{ accounts, posts }, ads, adStarredAt, postStarredAt] = await Promise.all([
+    const [{ accounts, posts }, cards, adStarredAt, postStarredAt] = await Promise.all([
       organicOverviewCached(product.id),
       competitorAdsCached(product.id),
       favoriteStars(product.id, "ad"),
       favoriteStars(product.id, "post"),
     ]);
+    const ads = cards.filter((a) => a.memberIds.some((id) => Object.hasOwn(adStarredAt, id)));
     return { accounts, posts, ads, adStarredAt, postStarredAt };
   },
   organic: async (product: ProductRow) => {

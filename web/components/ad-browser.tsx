@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { activeAdFilterCount, adFiltersHref, applyAdFilters, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, sortAdCards, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { AD_PAGE_SIZE, activeAdFilterCount, adFiltersHref, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
+import type { TabData } from "@/lib/tab-data";
 import { AdGrid, AdPreview, AdTable, PageAvatar, type Favorites } from "@/components/ad-card";
 import { setFavorite } from "@/lib/favorite-actions";
 import { useInvalidateProduct } from "@/lib/use-tab";
@@ -23,8 +24,8 @@ import {
 } from "@/components/controls";
 
 /*
- * Competitor ads browser. Every tracked ad arrives once from the server as a card; filters and sorts run here so
- * changes are instant, and the URL follows along.
+ * Competitor ads browser. The server filters, sorts and sends one page of cards at a time (AD_PAGE_SIZE); the next
+ * page loads as you scroll, and the URL follows the filters.
  */
 
 export const AD_SORTS: { key: AdSort; label: string }[] = [
@@ -39,55 +40,61 @@ const VIEWS: { key: AdView; label: string }[] = [
 ];
 const LAUNCHED = [7, 30, 90];
 const MIN_DAYS = [7, 30, 90];
-const PAGE_SIZE = 36;
 
-export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads: AdCard[]; slug: string; productId: string; favoriteIds: string[]; initial: AdFilters }) {
+export function AdBrowser({
+  ads,
+  summary,
+  slug,
+  productId,
+  f,
+  setF,
+  loading,
+  hasMore,
+  loadMore,
+}: {
+  /** The pages fetched so far, already filtered and sorted by the server. */
+  ads: AdCard[];
+  summary: Pick<TabData<"ads">, "matched" | "total" | "advertisers" | "adjacent" | "favCount" | "favorites">;
+  slug: string;
+  productId: string;
+  f: AdFilters;
+  setF: Dispatch<SetStateAction<AdFilters>>;
+  loading: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+}) {
   const invalidateProduct = useInvalidateProduct();
-  const [f, setF] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [favs, setFavs] = useFavoriteSet(favoriteIds, async (ids, on) => {
+  const [favs, setFavs] = useFavoriteSet(summary.favorites, async (ids, on) => {
     await setFavorite(productId, "ad", ids, on);
     await invalidateProduct(productId);
   });
-  // The favorites filter uses the set as of when it was applied, so unstarring a card doesn't make it vanish mid-browse.
-  const [filterFavs, setFilterFavs] = useState(favs);
-  const matched = useMemo(() => sortAdCards(applyAdFilters(ads, f, Date.now(), filterFavs), f.sort), [ads, f, filterFavs]);
+  const { matched, advertisers, adjacent, favCount } = summary;
   const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
   const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
-  const favCount = useMemo(() => ads.filter((a) => a.memberIds.some((id) => favs.has(id))).length, [ads, favs]);
-  const list = useInfiniteList(matched.length, PAGE_SIZE);
-  const shown = useMemo(() => matched.slice(0, list.limit), [matched, list.limit]);
+  const list = useInfiniteList(matched, AD_PAGE_SIZE);
+  useEffect(() => {
+    if (list.limit > ads.length && hasMore) loadMore();
+  }, [list.limit, ads.length, hasMore, loadMore]);
+  const shown = useMemo(() => ads.slice(0, list.limit), [ads, list.limit]);
   const count = activeAdFilterCount(f);
   useUrlState(adFiltersHref(f));
 
   const update = (patch: Partial<AdFilters>) => {
     setF((cur) => ({ ...cur, ...patch }));
-    setFilterFavs(favs);
     list.reset();
   };
   const clear = () => update(NO_AD_FILTERS);
 
-  const advertisers = useMemo(() => {
-    const by = new Map<string, { id: string; name: string; avatar: string | null; ads: number; running: number }>();
-    for (const a of ads) {
-      const id = a.advertiserId ?? "";
-      const cur = by.get(id) ?? { id, name: a.advertiserName ?? "Unknown advertiser", avatar: a.avatarUrl, ads: 0, running: 0 };
-      cur.ads++;
-      if (a.isActive) cur.running++;
-      by.set(id, cur);
-    }
-    return [...by.values()].sort((x, y) => y.ads - x.ads);
-  }, [ads]);
   const advertiserById = new Map(advertisers.map((a) => [a.id, a]));
-  const adjacent = useMemo(() => ads.filter((a) => a.relation === "inspiration").length, [ads]);
 
-  const openIndex = openId ? matched.findIndex((a) => a.id === openId) : -1;
-  const openAd = openIndex >= 0 ? matched[openIndex]! : null;
+  const openIndex = openId ? ads.findIndex((a) => a.id === openId) : -1;
+  const openAd = openIndex >= 0 ? ads[openIndex]! : null;
   const step = (d: number) => {
-    const next = matched[openIndex + d];
+    const next = ads[openIndex + d];
     if (!next) return;
     setOpenId(next.id);
-    if (openIndex + d >= list.limit) list.showMore();
+    if (openIndex + d + 1 >= list.limit) list.showMore();
   };
 
   const filters = (
@@ -245,27 +252,27 @@ export function AdBrowser({ ads, slug, productId, favoriteIds, initial }: { ads:
 
   return (
     <BrowseLayout filters={filters} count={count} onReset={clear}>
-      <ResultsBar shown={matched.length} total={ads.length} noun={["ad", "ads"]}>
+      <ResultsBar shown={matched} total={summary.total} noun={["ad", "ads"]}>
         <Toggle label="Sort" items={AD_SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
         <Toggle label="View" items={VIEWS} active={f.view} onChange={(view) => setF((cur) => ({ ...cur, view }))} />
       </ResultsBar>
       <ActiveFilters filters={chips} onClear={clear} />
-      {shown.length === 0 ? (
+      {shown.length === 0 && !loading ? (
         <NoMatches onClear={count > 0 ? clear : undefined}>No ads match these filters.</NoMatches>
       ) : f.view === "table" ? (
         <AdTable ads={shown} slug={slug} onOpen={setOpenId} />
       ) : (
         <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} />
       )}
-      <LoadMore list={list} total={matched.length} noun="ads" />
+      <LoadMore list={list} total={matched} noun="ads" />
       <AdPreview
         ad={openAd}
         slug={slug}
         fav={fav}
-        position={openAd ? `${openIndex + 1} / ${matched.length}` : ""}
+        position={openAd ? `${openIndex + 1} / ${matched}` : ""}
         onClose={() => setOpenId(null)}
         onPrev={openIndex > 0 ? () => step(-1) : null}
-        onNext={openIndex >= 0 && openIndex < matched.length - 1 ? () => step(1) : null}
+        onNext={openIndex >= 0 && openIndex < ads.length - 1 ? () => step(1) : null}
       />
     </BrowseLayout>
   );
