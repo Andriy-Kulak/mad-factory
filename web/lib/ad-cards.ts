@@ -314,3 +314,63 @@ export function hookOf(ad: { title: string | null; body: string | null; advertis
 
 /** Meta templates ({{product.name}}) aren't real copy. */
 export const cleanText = (v: string | null) => (v && !v.includes("{{") ? v.trim() : null);
+
+/** Cards per Competitor ads page; the browser fetches the next page as you scroll. */
+export const AD_PAGE_SIZE = 36;
+
+export interface AdAdvertiser {
+  id: string;
+  name: string;
+  avatar: string | null;
+  ads: number;
+  running: number;
+}
+
+/** URLSearchParams as the SearchParams parseAdFilters reads (repeated keys become arrays). */
+export function searchParamsOf(sp: URLSearchParams): SearchParams {
+  const out: SearchParams = {};
+  for (const key of new Set(sp.keys())) {
+    const all = sp.getAll(key);
+    out[key] = all.length > 1 ? all : all[0];
+  }
+  return out;
+}
+
+/**
+ * One page of the Competitor ads browser, filtered and sorted on the server so the browser never holds every ad,
+ * plus the page-wide numbers (stats, advertiser list) that are computed over all cards.
+ */
+export function adCardsPage(cards: AdCard[], f: AdFilters, favorites: ReadonlySet<string>, offset: number, limit = AD_PAGE_SIZE, now = Date.now()) {
+  const matched = sortAdCards(applyAdFilters(cards, f, now, favorites), f.sort);
+  const weekAgo = new Date(now - 7 * DAY_MS).toISOString().slice(0, 10);
+  const advertisers = new Map<string, AdAdvertiser>();
+  let running = 0;
+  let longest = 0;
+  for (const a of cards) {
+    const id = a.advertiserId ?? "";
+    const cur = advertisers.get(id) ?? { id, name: a.advertiserName ?? "Unknown advertiser", avatar: a.avatarUrl, ads: 0, running: 0 };
+    cur.ads++;
+    if (a.isActive) {
+      cur.running++;
+      running++;
+      longest = Math.max(longest, a.days ?? 0);
+    }
+    advertisers.set(id, cur);
+  }
+  return {
+    ads: matched.slice(offset, offset + limit),
+    offset,
+    matched: matched.length,
+    total: cards.length,
+    stats: {
+      running,
+      winners: cards.filter((a) => a.winner).length,
+      launched7: cards.filter((a) => (a.startDate ?? "") >= weekAgo).length,
+      ranked: cards.filter((a) => a.rank).length,
+      longest,
+    },
+    advertisers: [...advertisers.values()].sort((x, y) => y.ads - x.ads),
+    adjacent: cards.filter((a) => a.relation === "inspiration").length,
+    favCount: cards.filter((a) => a.memberIds.some((id) => favorites.has(id))).length,
+  };
+}
