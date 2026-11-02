@@ -72,7 +72,9 @@ export function AdBrowser({
   const { matched, advertisers, adjacent, favCount } = summary;
   const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
   const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
-  const list = useInfiniteList(matched, AD_PAGE_SIZE);
+  // Cap the list one page past what has loaded, so a sentinel that stays in view while a page is fetching can't
+  // keep raising the limit and queue hundreds of cards.
+  const list = useInfiniteList(Math.min(matched, ads.length + AD_PAGE_SIZE), AD_PAGE_SIZE);
   useEffect(() => {
     if (list.limit > ads.length && hasMore) loadMore();
   }, [list.limit, ads.length, hasMore, loadMore]);
