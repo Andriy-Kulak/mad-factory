@@ -148,7 +148,7 @@ export function groupAdCards(rows: AdSourceRow[], ranks: Map<string, ImpressionR
       rank,
       winner: isWinner(rep, rank, now),
       versions,
-      days: rep.startDate ? (daysBetween(rep.startDate, rep.isActive ? null : rep.endDate) ?? null) : null,
+      days: rep.startDate ? daysBetween(rep.startDate, (rep.isActive ? null : rep.endDate) ?? new Date(now).toISOString()) : null,
       memberIds: g.map((r) => r.id),
       signal: signalOf({ ...rep, rank, versions }, now),
       profile: null,
