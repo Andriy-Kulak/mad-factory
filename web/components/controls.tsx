@@ -529,16 +529,22 @@ export function FilterSection({ label, hint, children }: { label: string; hint?:
   );
 }
 
-/** Results header: count on the left, controls (Toggle sort/view) on the right. */
-export function ResultsBar({ shown, total, noun, children }: { shown: number; total: number; noun: [string, string]; children?: ReactNode }) {
+/** Results header: count on the left, controls (Toggle sort/view) on the right. `updating` replaces a count that no longer matches the filters. */
+export function ResultsBar({ shown, total, noun, updating = false, children }: { shown: number; total: number; noun: [string, string]; updating?: boolean; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
-      <div className="text-[13px] text-fg-2 mr-auto">
-        <span className="num font-medium text-fg">{shown.toLocaleString("en-US")}</span> {shown === 1 ? noun[0] : noun[1]}
-        {shown !== total && (
+      <div className="text-[13px] text-fg-2 mr-auto" aria-live="polite">
+        {updating ? (
+          <span className="animate-pulse">Updating…</span>
+        ) : (
           <>
-            {" "}
-            of <span className="num">{total.toLocaleString("en-US")}</span>
+            <span className="num font-medium text-fg">{shown.toLocaleString("en-US")}</span> {shown === 1 ? noun[0] : noun[1]}
+            {shown !== total && (
+              <>
+                {" "}
+                of <span className="num">{total.toLocaleString("en-US")}</span>
+              </>
+            )}
           </>
         )}
       </div>

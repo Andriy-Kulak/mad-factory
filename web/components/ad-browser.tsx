@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { AD_PAGE_SIZE, activeAdFilterCount, adFiltersHref, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
+import { AD_PAGE_SIZE, activeAdFilterCount, adFiltersHref, applyAdFilters, dimValueLabel, INSIGHT_DIMS, NO_AD_FILTERS, type AdCard, type AdFilters, type AdSort, type AdView } from "@/lib/ad-cards";
 import type { TabData } from "@/lib/tab-data";
 import { AdGrid, AdPreview, AdTable, PageAvatar, type Favorites } from "@/components/ad-card";
+import { GridSkeleton } from "@/components/skeleton";
 import { setFavorite } from "@/lib/favorite-actions";
 import { useInvalidateProduct } from "@/lib/use-tab";
 import {
@@ -48,7 +49,7 @@ export function AdBrowser({
   productId,
   f,
   setF,
-  loading,
+  updating,
   hasMore,
   loadMore,
 }: {
@@ -59,7 +60,8 @@ export function AdBrowser({
   productId: string;
   f: AdFilters;
   setF: Dispatch<SetStateAction<AdFilters>>;
-  loading: boolean;
+  /** True while `ads` and `summary` are still the previous filters' results. */
+  updating: boolean;
   hasMore: boolean;
   loadMore: () => void;
 }) {
@@ -72,11 +74,13 @@ export function AdBrowser({
   const { matched, advertisers, adjacent, favCount } = summary;
   const isFav = (a: AdCard) => a.memberIds.some((id) => favs.has(id));
   const fav: Favorites<AdCard> = { has: isFav, toggle: (a) => (isFav(a) ? setFavs(a.memberIds, false) : setFavs([a.id], true)) };
-  const list = useInfiniteList(matched, AD_PAGE_SIZE);
+  // Until the server answers, keep only the cards already here that match the new filters, so none the filters exclude stay on screen.
+  const visible = useMemo(() => (updating ? applyAdFilters(ads, f, Date.now(), favs) : ads), [updating, ads, f, favs]);
+  const list = useInfiniteList(updating ? visible.length : matched, AD_PAGE_SIZE);
   useEffect(() => {
-    if (list.limit > ads.length && hasMore) loadMore();
-  }, [list.limit, ads.length, hasMore, loadMore]);
-  const shown = useMemo(() => ads.slice(0, list.limit), [ads, list.limit]);
+    if (!updating && list.limit > ads.length && hasMore) loadMore();
+  }, [updating, list.limit, ads.length, hasMore, loadMore]);
+  const shown = useMemo(() => visible.slice(0, list.limit), [visible, list.limit]);
   const count = activeAdFilterCount(f);
   useUrlState(adFiltersHref(f));
 
@@ -252,17 +256,19 @@ export function AdBrowser({
 
   return (
     <BrowseLayout filters={filters} count={count} onReset={clear}>
-      <ResultsBar shown={matched} total={summary.total} noun={["ad", "ads"]}>
+      <ResultsBar shown={matched} total={summary.total} noun={["ad", "ads"]} updating={updating}>
         <Toggle label="Sort" items={AD_SORTS} active={f.sort} onChange={(sort) => update({ sort })} />
         <Toggle label="View" items={VIEWS} active={f.view} onChange={(view) => setF((cur) => ({ ...cur, view }))} />
       </ResultsBar>
       <ActiveFilters filters={chips} onClear={clear} />
-      {shown.length === 0 && !loading ? (
-        <NoMatches onClear={count > 0 ? clear : undefined}>No ads match these filters.</NoMatches>
-      ) : f.view === "table" ? (
-        <AdTable ads={shown} slug={slug} onOpen={setOpenId} />
+      {shown.length > 0 ? (
+        <div aria-busy={updating} className={`transition-opacity duration-150 ${updating ? "opacity-60" : ""}`}>
+          {f.view === "table" ? <AdTable ads={shown} slug={slug} onOpen={setOpenId} /> : <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} />}
+        </div>
+      ) : updating ? (
+        <GridSkeleton body="cards" />
       ) : (
-        <AdGrid ads={shown} slug={slug} onOpen={setOpenId} fav={fav} />
+        <NoMatches onClear={count > 0 ? clear : undefined}>No ads match these filters.</NoMatches>
       )}
       <LoadMore list={list} total={matched} noun="ads" />
       <AdPreview

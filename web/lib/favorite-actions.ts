@@ -13,7 +13,8 @@ export async function setFavorite(productId: string, kind: FavoriteKind, ids: st
   await requireOwner();
   await writeFavorites(productId, kind, ids, favorited);
   if (favorited) after(() => profileStarred(productId).catch((e) => console.error("profileStarred", productId, e)));
-  if (ids.length) updateTag(productTag(productId));
+  // Only the cached organic data includes stars. Ad cards don't, and rebuilding them after every star takes many seconds.
+  if (ids.length && kind === "post") updateTag(productTag(productId));
 }
 
 /** Saves one Ad Library ad or social post by link and stars it (about 1 ScrapeCreators credit when it isn't stored yet). */

@@ -7,6 +7,21 @@ import { Shell } from "./shell";
 
 const BLOCK = "bg-line-2 rounded-[3px] animate-pulse";
 
+/** Placeholder for a grid of media tiles; also shown while a filter change finds nothing to keep on screen. */
+export function GridSkeleton({ body }: { body: "grid" | "cards" }) {
+  return (
+    <div className={`grid gap-4 ${body === "grid" ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"}`}>
+      {Array.from({ length: body === "grid" ? 10 : 6 }, (_, i) => (
+        <div key={i} className={body === "cards" ? "card p-3" : ""}>
+          <div className={`${BLOCK} ${body === "grid" ? "aspect-[9/16] rounded-[6px]" : "aspect-[4/5]"}`} style={{ animationDelay: `${i * 60}ms` }} />
+          <div className={`${BLOCK} h-3.5 w-4/5 mt-2.5`} />
+          <div className={`${BLOCK} h-3 w-1/2 mt-2`} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PageSkeleton({ title, stats = 4, body = "table", sidebar = false }: { title: string; stats?: number; body?: "table" | "grid" | "cards" | "chart"; sidebar?: boolean }) {
   const content =
     body === "table" ? (
@@ -20,15 +35,7 @@ export function PageSkeleton({ title, stats = 4, body = "table", sidebar = false
         <div className={`${BLOCK} h-full`} />
       </div>
     ) : (
-      <div className={`grid gap-4 ${body === "grid" ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"}`}>
-        {Array.from({ length: body === "grid" ? 10 : 6 }, (_, i) => (
-          <div key={i} className={body === "cards" ? "card p-3" : ""}>
-            <div className={`${BLOCK} ${body === "grid" ? "aspect-[9/16] rounded-[6px]" : "aspect-[4/5]"}`} style={{ animationDelay: `${i * 60}ms` }} />
-            <div className={`${BLOCK} h-3.5 w-4/5 mt-2.5`} />
-            <div className={`${BLOCK} h-3 w-1/2 mt-2`} />
-          </div>
-        ))}
-      </div>
+      <GridSkeleton body={body} />
     );
   return (
     <Shell title={title} subtitle="Loading…">

@@ -76,7 +76,7 @@ export function AdsTab({ product, initial, panel }: { product: { id: string; slu
           setF={setF}
           ads={data.pages.flatMap((p) => p.ads)}
           summary={first}
-          loading={pages.isFetching && !pages.isFetchingNextPage}
+          updating={pages.isPlaceholderData}
           hasMore={pages.hasNextPage}
           loadMore={() => {
             if (!pages.isFetchingNextPage) void pages.fetchNextPage();
