@@ -23,6 +23,8 @@ export interface ChannelRow {
   spend: number | null;
   installs: number | null;
   trials: number;
+  /** Meta-reported purchases (app or website pixel); null for channels Meta does not report. */
+  purchases: number | null;
   paid: number | null;
   proceeds: number | null;
   costPerTrial: number | null;
@@ -35,7 +37,9 @@ export interface AdLine {
   spend: number;
   installs: number;
   trials: number;
+  purchases: number;
   costPerTrial: number | null;
+  costPerPurchase: number | null;
 }
 
 export interface PostLine {
@@ -169,11 +173,12 @@ export function buildOverview(input: {
     {
       key: "meta_ads",
       label: "Meta ads",
-      attribution: "Meta-reported (AppsFlyer)",
+      attribution: "Meta-reported (AppsFlyer, website pixel)",
       path: "/meta-ads",
       spend: metaSpend,
       installs: sum(meta, (r) => r.installs),
       trials: metaTrials,
+      purchases: sum(meta, (r) => r.purchases),
       paid: null,
       proceeds: null,
       costPerTrial: per(metaSpend, metaTrials),
@@ -186,6 +191,7 @@ export function buildOverview(input: {
       spend: appleSpend,
       installs: sum(apple, (r) => r.installs),
       trials: appleTrials,
+      purchases: null,
       paid: sum(rcApple, (r) => r.paid),
       proceeds: sum(rcApple, (r) => r.proceeds),
       costPerTrial: per(appleSpend, appleTrials),
@@ -198,6 +204,7 @@ export function buildOverview(input: {
       spend: null,
       installs: null,
       trials: noneTrials,
+      purchases: null,
       paid: sum(rcNone, (r) => r.paid),
       proceeds: sum(rcNone, (r) => r.proceeds),
       costPerTrial: null,
@@ -210,6 +217,7 @@ export function buildOverview(input: {
       spend: totalSpend,
       installs: null,
       trials: totalTrials,
+      purchases: null,
       paid: sum(rc, (r) => r.paid),
       proceeds: totalProceeds,
       costPerTrial: per(totalSpend, totalTrials),
@@ -222,15 +230,16 @@ export function buildOverview(input: {
   const byAd = new Map<string, AdLine>();
   for (const r of meta) {
     const a = names.get(r.ad_id);
-    const line = byAd.get(r.ad_id) ?? { id: r.ad_id, name: a?.name ?? r.ad_id, status: a?.status ?? "", spend: 0, installs: 0, trials: 0, costPerTrial: null };
+    const line = byAd.get(r.ad_id) ?? { id: r.ad_id, name: a?.name ?? r.ad_id, status: a?.status ?? "", spend: 0, installs: 0, trials: 0, purchases: 0, costPerTrial: null, costPerPurchase: null };
     line.spend += r.spend;
     line.installs += r.installs;
     line.trials += r.trials;
+    line.purchases += r.purchases;
     byAd.set(r.ad_id, line);
   }
   const ads = [...byAd.values()]
-    .map((l) => ({ ...l, spend: round(l.spend), costPerTrial: per(l.spend, l.trials) }))
-    .filter((l) => l.spend > 0 || l.trials > 0)
+    .map((l) => ({ ...l, spend: round(l.spend), costPerTrial: per(l.spend, l.trials), costPerPurchase: per(l.spend, l.purchases) }))
+    .filter((l) => l.spend > 0 || l.trials > 0 || l.purchases > 0)
     .sort((a, b) => b.spend - a.spend);
 
   const posts = data.ownPosts.map((p) => ({ platform: p.platform, handle: p.handle, url: p.url, postedAt: p.posted_at, views: p.views })).sort((a, b) => (b.views ?? -1) - (a.views ?? -1));
@@ -293,11 +302,14 @@ export function formatBrief(o: Overview): string {
     `## Last ${o.window.days} days`,
     `Profit before fixed costs ${money(o.windowProfit)} ${c}. Proceeds per trial ${money(o.proceedsPerTrial)}: a channel whose cost per trial is above this loses money on first payments.`,
     "",
-    "| Channel | Attribution | Spend | Installs | Trials | Paid | Proceeds | Cost per trial |",
-    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-    ...o.channels.map((r) => `| ${r.label} | ${r.attribution} | ${money(r.spend)} | ${whole(r.installs)} | ${whole(r.trials)} | ${whole(r.paid)} | ${money(r.proceeds)} | ${money(r.costPerTrial)} |`),
+    "| Channel | Attribution | Spend | Installs | Trials | Purchases | Paid | Proceeds | Cost per trial |",
+    "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ...o.channels.map(
+      (r) =>
+        `| ${r.label} | ${r.attribution} | ${money(r.spend)} | ${whole(r.installs)} | ${whole(r.trials)} | ${whole(r.purchases)} | ${whole(r.paid)} | ${money(r.proceeds)} | ${money(r.costPerTrial)} |`,
+    ),
     "",
-    "Meta's trials also appear in RevenueCat's \"Not attributed\" row, so channel trials do not add up to the total.",
+    "Meta's trials also appear in RevenueCat's \"Not attributed\" row, so channel trials do not add up to the total. Meta's purchases include website (web-to-app) checkouts, which report purchases rather than trials: judge those ads by cost per purchase.",
   ];
   if (o.trend.length) {
     const spendChannels = Object.keys(o.trend[0]!.spendByChannel);
@@ -309,8 +321,9 @@ export function formatBrief(o: Overview): string {
     }
   }
   if (o.ads.length) {
-    lines.push("", "## Meta ads by spend", "| Ad | Status | Spend | Trials | Cost per trial |", "| --- | --- | ---: | ---: | ---: |");
-    for (const a of o.ads.slice(0, 10)) lines.push(`| ${a.name} | ${a.status} | ${money(a.spend)} | ${whole(a.trials)} | ${money(a.costPerTrial)} |`);
+    lines.push("", "## Meta ads by spend", "| Ad | Status | Spend | Trials | Cost per trial | Purchases | Cost per purchase |", "| --- | --- | ---: | ---: | ---: | ---: | ---: |");
+    for (const a of o.ads.slice(0, 10))
+      lines.push(`| ${a.name} | ${a.status} | ${money(a.spend)} | ${whole(a.trials)} | ${money(a.costPerTrial)} | ${whole(a.purchases)} | ${money(a.costPerPurchase)} |`);
   }
   lines.push("", "## Own short-form posts", `${o.organic.posts.length} posted in the window across ${o.organic.accounts} account(s), ${whole(o.organic.views)} views so far.`);
   for (const p of o.organic.posts.slice(0, 5)) lines.push(`- ${p.platform} @${p.handle} ${p.postedAt.slice(0, 10)}: ${whole(p.views)} views ${p.url ?? ""}`.trimEnd());
@@ -334,7 +347,7 @@ export function formatBrief(o: Overview): string {
   lines.push(
     "",
     "## How to act",
-    "Double down on what gets trials below the proceeds-per-trial line; cut what spends without trials. Changes to an ad account go through an owner-approved plan document in product_docs. Read it with `pnpm product docs show <product> <plan-name>`. Code changes go through a PR with the Goal check (`pnpm ready`).",
+    "Double down on what gets trials below the proceeds-per-trial line; cut what spends without trials (or, for website-checkout ads, without purchases). Changes to an ad account go through an owner-approved plan document in product_docs. Read it with `pnpm product docs show <product> <plan-name>`. Code changes go through a PR with the Goal check (`pnpm ready`).",
   );
   return lines.join("\n");
 }

@@ -136,7 +136,7 @@ export async function loadScorecardData(productId: string, from: string, to: str
 
 /** Raw rows for one window of the overview (see src/scorecard/overview.ts). */
 export interface WindowData {
-  meta: { ad_id: string; spend: number; installs: number; trials: number; currency: string }[];
+  meta: { ad_id: string; spend: number; installs: number; trials: number; purchases: number; currency: string }[];
   metaAds: { id: string; name: string; status: string }[];
   /** Apple keyword rows plus Search Match rows. */
   apple: { spend: number; installs: number; currency: string }[];
@@ -155,7 +155,8 @@ const SOCIAL = ["instagram", "tiktok", "facebook"];
 export async function loadWindowData(productId: string, from: string, to: string): Promise<WindowData> {
   const db = getDb();
   const meta = await all(
-    (a, b) => db.from("meta_ads_ad_daily").select("ad_id,spend,installs,trials,currency").eq("product_id", productId).gte("date", from).lte("date", to).order("date").order("ad_id").range(a, b),
+    (a, b) =>
+      db.from("meta_ads_ad_daily").select("ad_id,spend,installs,trials,purchases,currency").eq("product_id", productId).gte("date", from).lte("date", to).order("date").order("ad_id").range(a, b),
     "overview meta",
   );
   const adIds = [...new Set(meta.map((m) => m.ad_id))];
@@ -299,7 +300,7 @@ export async function loadWindowData(productId: string, from: string, to: string
     : [];
 
   return {
-    meta: meta.map((m) => ({ ad_id: m.ad_id, spend: Number(m.spend), installs: m.installs ?? 0, trials: m.trials ?? 0, currency: m.currency })),
+    meta: meta.map((m) => ({ ad_id: m.ad_id, spend: Number(m.spend), installs: m.installs ?? 0, trials: m.trials ?? 0, purchases: m.purchases ?? 0, currency: m.currency })),
     metaAds: metaAds.map((a) => ({ id: a.id, name: a.name, status: a.effective_status ?? a.status })),
     apple: apple.map((r) => ({ spend: Number(r.spend), installs: r.tap_installs, currency: r.currency })),
     revenuecat: rc.map((r) => ({ campaign: r.campaign, trials: r.new_trials, paid: r.trial_conversions, proceeds: Number(r.proceeds), currency: r.currency })),
