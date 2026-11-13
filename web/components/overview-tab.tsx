@@ -396,6 +396,8 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
   const c = o.scorecard.currency;
   const total = o.channels.find((r) => r.key === "total")!;
   const rows = o.channels.filter((r) => r.key !== "total");
+  // Website-checkout Meta campaigns report purchases instead of trials; the column appears once any exist.
+  const purchases = rows.some((r) => r.purchases);
   return (
     <section aria-label="Channels" className="mb-6">
       <SectionHead
@@ -423,6 +425,7 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
           { label: "Spend", align: "right" },
           { label: "Installs", align: "right" },
           { label: "Trials", align: "right" },
+          ...(purchases ? [{ label: "Purchases", align: "right" as const, title: "Meta-reported purchases, including website checkouts" }] : []),
           { label: "Paid", align: "right", title: "Trial conversions (RevenueCat)" },
           { label: "Proceeds", align: "right" },
           { label: "Cost per trial", align: "right", firstDir: "asc" },
@@ -444,19 +447,23 @@ function Window({ o, slug }: { o: Overview; slug: string }) {
             { node: fmtMoney(r.spend, c), value: r.spend },
             { node: fmtInt(r.installs), value: r.installs },
             { node: fmtInt(r.trials), value: r.trials },
+            ...(purchases ? [{ node: fmtInt(r.purchases), value: r.purchases }] : []),
             { node: fmtInt(r.paid), value: r.paid },
             { node: fmtMoney(r.proceeds, c), value: r.proceeds },
             { node: fmtMoney(r.costPerTrial, c, true), value: r.costPerTrial },
           ],
         }))}
       />
-      <p className="text-xs text-fg-3">Meta reports its own trials (AppsFlyer); RevenueCat does not attribute them, so they also sit in “Not attributed”.</p>
+      <p className="text-xs text-fg-3">
+        Meta reports its own trials (AppsFlyer) and purchases (including website checkouts); RevenueCat does not attribute them, so they also sit in “Not attributed”.
+      </p>
     </section>
   );
 }
 
 function MetaAds({ o, slug }: { o: Overview; slug: string }) {
   const c = o.scorecard.currency;
+  const purchases = o.ads.some((a) => a.purchases);
   return (
     <section aria-label="Meta ads" className="mb-6 min-w-0">
       <SectionHead
@@ -476,7 +483,19 @@ function MetaAds({ o, slug }: { o: Overview; slug: string }) {
           className=""
           maxHeight="420px"
           defaultSort={{ col: 2, dir: "desc" }}
-          columns={[{ label: "Ad" }, { label: "Status" }, { label: "Spend", align: "right" }, { label: "Trials", align: "right" }, { label: "Cost per trial", align: "right", firstDir: "asc" }]}
+          columns={[
+            { label: "Ad" },
+            { label: "Status" },
+            { label: "Spend", align: "right" },
+            { label: "Trials", align: "right" },
+            { label: "Cost per trial", align: "right", firstDir: "asc" },
+            ...(purchases
+              ? [
+                  { label: "Purchases", align: "right" as const },
+                  { label: "Cost per purchase", align: "right" as const, firstDir: "asc" as const },
+                ]
+              : []),
+          ]}
           rows={o.ads.map((a) => ({
             id: a.id,
             href: `/p/${slug}/meta-ads?days=${o.window.days}`,
@@ -493,6 +512,12 @@ function MetaAds({ o, slug }: { o: Overview; slug: string }) {
               { node: fmtMoney(a.spend, c, true), value: a.spend },
               { node: fmtInt(a.trials), value: a.trials },
               { node: fmtMoney(a.costPerTrial, c, true), value: a.costPerTrial },
+              ...(purchases
+                ? [
+                    { node: fmtInt(a.purchases), value: a.purchases },
+                    { node: fmtMoney(a.costPerPurchase, c, true), value: a.costPerPurchase },
+                  ]
+                : []),
             ],
           }))}
         />

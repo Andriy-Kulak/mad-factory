@@ -13,9 +13,9 @@ const scorecard = (target = 1000) => buildScorecard({ product: "p", month: "2026
 function data(over: Partial<WindowData> = {}): WindowData {
   return {
     meta: [
-      { ad_id: "a", spend: 60, installs: 10, trials: 6, currency: "USD" },
-      { ad_id: "a", spend: 40, installs: 5, trials: 4, currency: "USD" },
-      { ad_id: "b", spend: 30, installs: 2, trials: 0, currency: "USD" },
+      { ad_id: "a", spend: 60, installs: 10, trials: 6, purchases: 0, currency: "USD" },
+      { ad_id: "a", spend: 40, installs: 5, trials: 4, purchases: 0, currency: "USD" },
+      { ad_id: "b", spend: 30, installs: 2, trials: 0, purchases: 0, currency: "USD" },
     ],
     metaAds: [
       { id: "a", name: "Ad A", status: "ACTIVE" },
@@ -51,6 +51,17 @@ test("channels: Meta by its own attribution, Apple and the rest by RevenueCat, t
   assert.deepEqual([ch.total!.spend, ch.total!.trials, ch.total!.costPerTrial], [150, 20, 7.5]);
   assert.equal(o.windowProfit, -50);
   assert.equal(o.proceedsPerTrial, 5);
+});
+
+test("website-checkout Meta ads count by purchases: no trials, still listed with a cost per purchase", () => {
+  const meta = [...data().meta, { ad_id: "w", spend: 0, installs: 0, trials: 0, purchases: 2, currency: "USD" }, { ad_id: "w", spend: 50, installs: 0, trials: 0, purchases: 3, currency: "USD" }];
+  const o = buildOverview({ product: "p", window, scorecard: scorecard(), data: data({ meta, metaAds: [...data().metaAds, { id: "w", name: "Web", status: "ACTIVE" }] }), now: NOW });
+  const ch = Object.fromEntries(o.channels.map((c) => [c.key, c]));
+  assert.deepEqual([ch.meta_ads!.spend, ch.meta_ads!.trials, ch.meta_ads!.purchases, ch.meta_ads!.costPerTrial], [180, 10, 5, 18]);
+  assert.equal(ch.total!.purchases, null);
+  const web = o.ads.find((a) => a.id === "w")!;
+  assert.deepEqual([web.trials, web.costPerTrial, web.purchases, web.costPerPurchase], [0, null, 5, 10]);
+  assert.match(formatBrief(o), /\| Web \| ACTIVE \| 50\.00 \| 0 \| — \| 5 \| 10\.00 \|/);
 });
 
 test("without Apple: its row, spend, attributed customers and syncs leave every number", () => {
@@ -126,7 +137,7 @@ test("status follows the projection; other currencies are left out with a warnin
 test("the brief leads with the goal and names stale data", () => {
   const text = formatBrief(buildOverview({ product: "p", window, scorecard: scorecard(), data: data(), now: NOW }));
   assert.match(text.split("\n").slice(0, 4).join("\n"), /Goal: 1,000\.00 USD profit per month/);
-  assert.match(text, /\| Meta ads \| Meta-reported \(AppsFlyer\) \| 130\.00 \| 17 \| 10 \|/);
+  assert.match(text, /\| Meta ads \| Meta-reported \(AppsFlyer, website pixel\) \| 130\.00 \| 17 \| 10 \|/);
   assert.match(text, /apple_ads: last successful sync 2026-10-03T08:05:00Z \(latest run error\)/);
   assert.match(text, /meta_ads\/x: X test/);
 });
