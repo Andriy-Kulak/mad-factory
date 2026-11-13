@@ -8,7 +8,7 @@ import { activateObjects, defaultDeps as activateDeps } from "../meta-ads/activa
 import { createAdFromTemplate, defaultDeps as createAdDeps, type TextMode } from "../meta-ads/create-ad.ts";
 import { copyAdset, defaultDeps as updateAdsetDeps, updateAdset } from "../meta-ads/update-adset.ts";
 import { defaultDeps as adTextDeps, updateAdText } from "../meta-ads/update-ad-text.ts";
-import { defaultDeps as launchDeps, launch } from "../meta-ads/launch.ts";
+import { defaultDeps as launchDeps, launch, launchCallCeiling, MAX_LAUNCH_ADS, parseLaunchSpec } from "../meta-ads/launch.ts";
 import { defaultDeps as verifyDeps, formatVerifyTable, verifyPlan } from "../meta-ads/verify.ts";
 import { addMetaAdsChange, getDb, listTrackedSourcesBySource, requireProduct } from "../db/index.ts";
 import type { Json, TrackedSourceRow } from "../db/types.ts";
@@ -51,6 +51,7 @@ Commands:
   launch --product <id|slug> --spec <file.json> [--validate-only]
                                        Create every ad in the spec PAUSED, activate them (paced), then mirror
                                        them into the DB. Keep the spec in local/; its plan field is a document name.
+                                       At most ${MAX_LAUNCH_ADS} ads per spec; the call ceiling is sized from it (${launchCallCeiling(MAX_LAUNCH_ADS)} for ${MAX_LAUNCH_ADS}).
   ad-text --product <id|slug> --ad <id> --title <t> ... --body <b> ... --plan <name>
             [--validate-only] [--text-mode feed|single]
                                        Swap an ad's headlines/primary text (rebuilds the inline creative; the ad
@@ -470,7 +471,9 @@ async function createAdCommand(): Promise<void> {
 async function launchCommand(): Promise<void> {
   if (!values.product) throw new Error("launch needs --product <id|slug>");
   if (!values.spec) throw new Error("launch needs --spec <file.json>");
-  const client = metaClient();
+  // Parse first: a spec over MAX_LAUNCH_ADS stops here, and the call ceiling is sized from the spec.
+  const spec = parseLaunchSpec(await launchDeps.readFile(values.spec));
+  const client = metaClient({ maxCalls: launchCallCeiling(spec.ads.length) });
   await launch(client, values.product, { specPath: values.spec, validateOnly: values["validate-only"] }, launchDeps);
 }
 
