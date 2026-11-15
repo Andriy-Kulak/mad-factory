@@ -83,6 +83,9 @@ export type Database = {
           raw: Json;
           first_seen_at: string;
           last_seen_at: string;
+          page_avatar_url: string | null;
+          caption: string | null;
+          display_format: string | null;
         };
         Insert: {
           id?: string;
@@ -107,6 +110,9 @@ export type Database = {
           raw: Json;
           first_seen_at?: string;
           last_seen_at?: string;
+          page_avatar_url?: string | null;
+          caption?: string | null;
+          display_format?: string | null;
         };
         Update: {
           id?: string;
@@ -131,6 +137,9 @@ export type Database = {
           raw?: Json;
           first_seen_at?: string;
           last_seen_at?: string;
+          page_avatar_url?: string | null;
+          caption?: string | null;
+          display_format?: string | null;
         };
         Relationships: [];
       };
