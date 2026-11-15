@@ -9,13 +9,28 @@ function messageFrom(body: Record<string, unknown>, fallback: string, apiKey: st
   return apiKey ? message.split(apiKey).join("[redacted]") : message;
 }
 
-export async function scrapeCreatorsGet(path: string, params: Record<string, string>): Promise<{ body: Record<string, unknown>; creditsCharged: number }> {
+/** A dropped connection or a 5xx is usually a blip on the provider's side; the same request tends to work a moment later. */
+async function fetchWithRetry(url: URL, apiKey: string, retries: number, delayMs: number): Promise<{ response: Response; text: string }> {
+  for (let attempt = 0; ; attempt++) {
+    const last = attempt >= retries;
+    try {
+      const response = await fetch(url, { headers: { "x-api-key": apiKey } });
+      const text = await response.text();
+      if (response.status < 500 || last) return { response, text };
+    } catch (err) {
+      if (last) throw err;
+    }
+    await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+  }
+}
+
+/** GET a ScrapeCreators endpoint. Network errors and 5xx responses are retried (twice by default); other errors throw at once. */
+export async function scrapeCreatorsGet(path: string, params: Record<string, string>, { retries = 2, delayMs = 1500 } = {}): Promise<{ body: Record<string, unknown>; creditsCharged: number }> {
   const apiKey = requireEnv("SCRAPECREATORS_API_KEY");
   const url = new URL(path, BASE_URL);
   url.search = new URLSearchParams(params).toString();
 
-  const response = await fetch(url, { headers: { "x-api-key": apiKey } });
-  const text = await response.text();
+  const { response, text } = await fetchWithRetry(url, apiKey, retries, delayMs);
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
