@@ -143,7 +143,7 @@ interface AdPage {
 
 async function adPage(productId: string, start: string, end: string | null): Promise<AdPage> {
   const cols = `tracked_source_id,ad:ads(id,external_id,advertiser_id,advertiser_name,body_text,title,cta_text,link_url,start_date,end_date,is_active,platforms,collation_id,collation_count,first_seen_at,
-    avatar:raw->snapshot->>page_profile_picture_url,caption:raw->snapshot->>caption,format:raw->snapshot->>display_format,
+    avatar:page_avatar_url,caption,format:display_format,
     ad_creatives(position,creatives(sha256,public_url,media_type)))`;
   type Row = {
     id: string;
