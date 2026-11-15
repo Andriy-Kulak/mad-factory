@@ -1,10 +1,11 @@
 import "server-only";
 import { deflateSync, inflateSync } from "node:zlib";
 import { cache } from "react";
-import { cachedByProduct } from "./cache";
+import { unstable_cache } from "next/cache";
+import { DATA_TTL_SECONDS, cachedByProduct } from "./cache";
 import { getDb } from "./db";
 import { RANK_MAX_AGE_DAYS, currentRanks, groupAdCards, pickRankRuns, type AdCard, type AdSourceRow, type CardProfile, type ImpressionRank, type RankObservation } from "./ad-cards.ts";
-import { mergeAdRelations } from "../../src/lib/tracked-source-input.ts";
+import { mergeAdRelations, type AdRelation } from "../../src/lib/tracked-source-input.ts";
 import { adSourceRelations } from "./tracked-sources";
 import { loadSlimProfiles } from "./creatives";
 import type { AdRow, CreativeRow, ProductRow, ScrapeRunRow, TrackedSourceRow } from "@db/types";
@@ -44,6 +45,13 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductRow |
   if (res.error) fail("product", res.error);
   return res.data;
 });
+
+const productBySlugCached = unstable_cache((slug: string) => getProductBySlug(slug), ["productBySlug"], { revalidate: DATA_TTL_SECONDS });
+
+/** getProductBySlug from the data cache, for the tab API that every filter change calls; an unknown slug is looked up fresh. */
+export async function getProductBySlugCached(slug: string): Promise<ProductRow | null> {
+  return (await productBySlugCached(slug)) ?? getProductBySlug(slug);
+}
 
 /** Slug and name of every product, for the product switcher. */
 export async function listProductNames(): Promise<Pick<ProductRow, "slug" | "name">[]> {
@@ -108,6 +116,25 @@ const BODY_MAX = 2000;
 /** product_ads rows per cached chunk; each chunk is cached on its own so it stays under Next's 2MB cache-entry limit. */
 const AD_PAGE_ROWS = 1000;
 
+/*
+ * A chunk query reads each ad's raw payload and is heavy. All chunks at once hit the statement timeout and hold up
+ * every other query, so only a few run at a time.
+ */
+const AD_PAGE_CONCURRENCY = 3;
+let adPagesRunning = 0;
+const adPagesWaiting: (() => void)[] = [];
+async function adPageSlot<T>(run: () => PromiseLike<T>): Promise<T> {
+  if (adPagesRunning >= AD_PAGE_CONCURRENCY) await new Promise<void>((go) => adPagesWaiting.push(go));
+  else adPagesRunning++;
+  try {
+    return await run();
+  } finally {
+    const next = adPagesWaiting.shift();
+    if (next) next();
+    else adPagesRunning--;
+  }
+}
+
 /** One chunk of a product's Ad Library ads (product_ads rows from ad_id `start` up to the next chunk's) plus their media files' slim profiles. */
 interface AdPage {
   links: { trackedSourceId: string | null; row: Omit<AdSourceRow, "relation"> }[];
@@ -142,7 +169,7 @@ async function adPage(productId: string, start: string, end: string | null): Pro
   // Keyset bounds, not an offset: deep offsets over this embedded join hit the database statement timeout.
   let q = getDb().from("product_ads").select(cols).eq("product_id", productId).gte("ad_id", start);
   if (end) q = q.lt("ad_id", end);
-  const res = await q.order("ad_id");
+  const res = await adPageSlot(() => q.order("ad_id"));
   if (res.error) fail("product_ads", res.error);
   const links: AdPage["links"] = [];
   for (const { tracked_source_id, ad } of (res.data ?? []) as unknown as { tracked_source_id: string | null; ad: Row | null }[]) {
@@ -201,10 +228,11 @@ interface AdLoaders {
   starts: (productId: string) => Promise<string[]>;
   page: (productId: string, start: string, end: string | null) => Promise<AdPage>;
   ranks: (productId: string) => Promise<Map<string, ImpressionRank>>;
+  relations: (productId: string) => Promise<Map<string, AdRelation>>;
 }
 
 async function buildCompetitorAds(productId: string, load: AdLoaders): Promise<AdCard[]> {
-  const [starts, ranks, relations] = await Promise.all([load.starts(productId), load.ranks(productId), adSourceRelations(productId)]);
+  const [starts, ranks, relations] = await Promise.all([load.starts(productId), load.ranks(productId), load.relations(productId)]);
   const pages = await Promise.all(starts.map((start, i) => load.page(productId, start, starts[i + 1] ?? null)));
   const rows = new Map<string, AdSourceRow>();
   const profiles = new Map<string, CardProfile>();
@@ -229,14 +257,20 @@ async function buildCompetitorAds(productId: string, load: AdLoaders): Promise<A
  * then gets its media file's slim creative profile (angle, persona, hook…) when one exists.
  */
 export function competitorAds(productId: string): Promise<AdCard[]> {
-  return buildCompetitorAds(productId, { starts: adPageStarts, page: adPage, ranks: impressionRanks });
+  return buildCompetitorAds(productId, { starts: adPageStarts, page: adPage, ranks: impressionRanks, relations: adSourceRelations });
 }
 
 const pack = (v: unknown) => deflateSync(JSON.stringify(v)).toString("base64");
 const unpack = <T>(payload: string) => JSON.parse(inflateSync(Buffer.from(payload, "base64")).toString("utf8")) as T;
-const adPageStartsCached = cachedByProduct("competitorAdPageStarts", adPageStarts);
-const adPageCached = cachedByProduct("competitorAdPage", async (productId: string, start: string, end: string | null) => pack(await adPage(productId, start, end)));
-const impressionRanksCached = cachedByProduct("impressionRanks", async (productId: string) => pack([...(await impressionRanks(productId))]));
+/*
+ * Ads and ranks change when a scrape runs, about once a day, and a rebuild is heavy, so they are kept longer than
+ * other data. Source changes made in the app clear them at once through the product tag.
+ */
+const AD_DATA_TTL_SECONDS = 15 * 60;
+const adPageStartsCached = cachedByProduct("competitorAdPageStarts", adPageStarts, AD_DATA_TTL_SECONDS);
+const adPageCached = cachedByProduct("competitorAdPage", async (productId: string, start: string, end: string | null) => pack(await adPage(productId, start, end)), AD_DATA_TTL_SECONDS);
+const impressionRanksCached = cachedByProduct("impressionRanks", async (productId: string) => pack([...(await impressionRanks(productId))]), AD_DATA_TTL_SECONDS);
+const adSourceRelationsCached = cachedByProduct("adSourceRelations", async (productId: string) => [...(await adSourceRelations(productId))]);
 
 /** competitorAds from the per-product cache, stored in chunks (one cache entry for everything went over 2MB and was never cached). */
 export function competitorAdsCached(productId: string): Promise<AdCard[]> {
@@ -244,6 +278,7 @@ export function competitorAdsCached(productId: string): Promise<AdCard[]> {
     starts: adPageStartsCached,
     page: async (id, start, end) => unpack<AdPage>(await adPageCached(id, start, end)),
     ranks: async (id) => new Map(unpack<[string, ImpressionRank][]>(await impressionRanksCached(id))),
+    relations: async (id) => new Map(await adSourceRelationsCached(id)),
   });
 }
 

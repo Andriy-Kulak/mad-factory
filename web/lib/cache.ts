@@ -16,6 +16,10 @@ export type JsonSafe<T, Depth extends unknown[] = []> = T extends Map<unknown, u
         : T;
 
 /** Per-product server data cache: a hit returns at once; past the TTL the old copy is served while a fresh one loads in the background. The first argument must be the product id. */
-export function cachedByProduct<A extends [productId: string, ...rest: unknown[]], R>(name: string, fn: (...args: A) => Promise<R & JsonSafe<R>>): (...args: A) => Promise<R> {
-  return (...args) => unstable_cache(fn, [name], { revalidate: DATA_TTL_SECONDS, tags: [productTag(args[0])] })(...args);
+export function cachedByProduct<A extends [productId: string, ...rest: unknown[]], R>(
+  name: string,
+  fn: (...args: A) => Promise<R & JsonSafe<R>>,
+  ttlSeconds = DATA_TTL_SECONDS,
+): (...args: A) => Promise<R> {
+  return (...args) => unstable_cache(fn, [name], { revalidate: ttlSeconds, tags: [productTag(args[0])] })(...args);
 }
