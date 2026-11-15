@@ -13,6 +13,88 @@ export interface ImpressionRank {
   observedAt: string;
 }
 
+const DAY_MS = 86_400_000;
+
+/** One scrape run of one tracked source, as far as ranking cares. `adsSeen` is how deep into the sorted list it got. */
+export interface RankRun {
+  id: string;
+  trackedSourceId: string;
+  startedAt: string;
+  status: string;
+  adsSeen: number;
+}
+
+/** A rank older than this says nothing about what is on top now, so it is not shown. */
+export const RANK_MAX_AGE_DAYS = 7;
+
+/**
+ * The runs that make up each tracked source's current ranking, newest first, and the run to compare it with.
+ * A run that failed partway still read the top of the list, so the newest run counts for the ranks it reached
+ * and an older run only fills in the ranks below that, back to the last run that finished. `previous` is the
+ * newest usable run from an earlier day. Runs older than RANK_MAX_AGE_DAYS are ignored.
+ */
+export function pickRankRuns(runs: RankRun[], now = Date.now()): { current: RankRun[]; previous: RankRun | null }[] {
+  const cutoff = new Date(now - RANK_MAX_AGE_DAYS * DAY_MS).toISOString();
+  const bySource = new Map<string, RankRun[]>();
+  for (const r of runs) {
+    if (r.startedAt < cutoff) continue;
+    bySource.set(r.trackedSourceId, [...(bySource.get(r.trackedSourceId) ?? []), r]);
+  }
+  return [...bySource.values()].flatMap((list) => {
+    const sorted = [...list].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    const current: RankRun[] = [];
+    let depth = 0;
+    for (const r of sorted) {
+      const done = r.status === "done";
+      if (!done && r.adsSeen <= depth) continue;
+      current.push(r);
+      depth = Math.max(depth, r.adsSeen);
+      if (done) break;
+    }
+    if (!current.length) return [];
+    const day = current[0]!.startedAt.slice(0, 10);
+    const previous = sorted.find((r) => r.startedAt.slice(0, 10) < day && (r.status === "done" || r.adsSeen > 0)) ?? null;
+    return [{ current, previous }];
+  });
+}
+
+export interface RankObservation {
+  runId: string;
+  adId: string;
+  rank: number;
+  observedAt: string;
+}
+
+/**
+ * Current rank per ad from the runs pickRankRuns chose. An ad the newest run did not see, at a rank that run
+ * did reach, has left the top of the list and gets no rank. An ad surfaced by several sources keeps its best rank.
+ */
+export function currentRanks(picked: { current: RankRun[]; previous: RankRun | null }[], observations: RankObservation[]): Map<string, ImpressionRank> {
+  const byRun = new Map<string, RankObservation[]>();
+  for (const o of observations) byRun.set(o.runId, [...(byRun.get(o.runId) ?? []), o]);
+  const out = new Map<string, ImpressionRank>();
+  for (const { current, previous } of picked) {
+    const source = new Map<string, ImpressionRank>();
+    let depth = 0;
+    for (const run of current) {
+      const obs = byRun.get(run.id) ?? [];
+      for (const o of obs) {
+        if (o.rank > depth && !source.has(o.adId)) source.set(o.adId, { rank: o.rank, prevRank: null, observedAt: o.observedAt });
+      }
+      depth = Math.max(depth, ...obs.map((o) => o.rank));
+    }
+    for (const o of previous ? (byRun.get(previous.id) ?? []) : []) {
+      const r = source.get(o.adId);
+      if (r) r.prevRank = Math.min(r.prevRank ?? Infinity, o.rank);
+    }
+    for (const [adId, r] of source) {
+      const cur = out.get(adId);
+      if (!cur || r.rank < cur.rank) out.set(adId, r);
+    }
+  }
+  return out;
+}
+
 export const WINNER_MAX_RANK = 10;
 export const WINNER_MIN_DAYS = 21;
 /** Working = still running 21+ days and top 10 by impressions or scaled to this many versions. */
@@ -22,7 +104,6 @@ export const WORKING_MIN_VERSIONS = 5;
  * count here: advertisers often launch a creative straight into many versions (languages, ad sets).
  */
 export const EARLY_MAX_AGE_DAYS = 14;
-const DAY_MS = 86_400_000;
 
 /**
  * What an ad card's longevity, rank and versions suggest. `working`: Meta and the advertiser have kept it alive for
@@ -337,6 +418,22 @@ export function searchParamsOf(sp: URLSearchParams): SearchParams {
 }
 
 /**
+ * When the ranks on these cards were read from the Ad Library. Each advertiser's ranking is as fresh as its newest
+ * observation; `oldest` is the stalest advertiser's, which is what the page can promise, `newest` the freshest.
+ */
+export function ranksAsOf(cards: AdCard[]): { oldest: string; newest: string } | null {
+  const byAdvertiser = new Map<string, string>();
+  for (const c of cards) {
+    if (!c.rank) continue;
+    const id = c.advertiserId ?? "";
+    const cur = byAdvertiser.get(id);
+    if (!cur || c.rank.observedAt > cur) byAdvertiser.set(id, c.rank.observedAt);
+  }
+  const times = [...byAdvertiser.values()].sort();
+  return times.length ? { oldest: times[0]!, newest: times[times.length - 1]! } : null;
+}
+
+/**
  * One page of the Competitor ads browser, filtered and sorted on the server so the browser never holds every ad,
  * plus the page-wide numbers (stats, advertiser list) that are computed over all cards.
  */
@@ -369,6 +466,7 @@ export function adCardsPage(cards: AdCard[], f: AdFilters, favorites: ReadonlySe
       ranked: cards.filter((a) => a.rank).length,
       longest,
     },
+    ranksAsOf: ranksAsOf(matched),
     advertisers: [...advertisers.values()].sort((x, y) => y.ads - x.ads),
     adjacent: cards.filter((a) => a.relation === "inspiration").length,
     favCount: cards.filter((a) => a.memberIds.some((id) => favorites.has(id))).length,
