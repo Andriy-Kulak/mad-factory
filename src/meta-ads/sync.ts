@@ -19,7 +19,8 @@ export const SOURCE = "meta_ads";
 export const MAX_DAYS = 28;
 
 const CAMPAIGN_FIELDS = "id,name,objective,status,effective_status,daily_budget,lifetime_budget,bid_strategy,created_time,updated_time";
-const ADSET_FIELDS =
+// Exported: launch reads its ad set with these fields to mirror it.
+export const ADSET_FIELDS =
   "id,campaign_id,name,status,effective_status,optimization_goal,billing_event,bid_amount,daily_budget,lifetime_budget,targeting,promoted_object,learning_stage_info,is_skadnetwork_attribution";
 const CREATIVE_FIELDS = "id,name,title,body,call_to_action_type,video_id,image_hash,thumbnail_url,object_story_spec,asset_feed_spec";
 // Exported: launch mirrors freshly created ads with exactly the sync's fields.
