@@ -6,6 +6,7 @@ import type { TabData } from "@/lib/tab-data";
 import { adFiltersHref, type AdFilters, WINNER_MAX_RANK, WINNER_MIN_DAYS } from "@/lib/ad-cards";
 import { Shell } from "@/components/shell";
 import { Empty, Stat } from "@/components/ui";
+import { fmtAgo, fmtDateTime } from "@/lib/format";
 import { AdBrowser } from "@/components/ad-browser";
 import { PageSkeleton } from "@/components/skeleton";
 import { TabLoadError } from "@/components/tab-load-error";
@@ -30,6 +31,22 @@ function useAdPages(product: { id: string; slug: string }, f: AdFilters) {
   });
 }
 
+/** When the ranks in view were last read from the Ad Library; amber once the stalest advertiser is over a day and a half old. */
+function RanksAsOf({ asOf }: { asOf: AdsPage["ranksAsOf"] }) {
+  if (!asOf) return null;
+  const stale = Date.now() - Date.parse(asOf.oldest) > 36 * 3_600_000;
+  const mixed = Date.parse(asOf.newest) - Date.parse(asOf.oldest) > 12 * 3_600_000;
+  return (
+    <div
+      className={`text-[13px] text-right ${stale ? "text-warn" : "text-fg-3"}`}
+      title={`Read from the Ad Library ${fmtDateTime(asOf.oldest)}${mixed ? `; the freshest page ${fmtDateTime(asOf.newest)}` : ""}`}
+    >
+      Ranks updated {fmtAgo(asOf.oldest)}
+      {mixed && <> · newest page {fmtAgo(asOf.newest)}</>}
+    </div>
+  );
+}
+
 export function AdsTab({ product, initial, panel }: { product: { id: string; slug: string }; initial: AdFilters; panel: ReactNode }) {
   const [f, setF] = useState(initial);
   const pages = useAdPages(product, f);
@@ -42,6 +59,7 @@ export function AdsTab({ product, initial, panel }: { product: { id: string; slu
   return (
     <Shell
       title="Competitor ads"
+      action={<RanksAsOf asOf={first.ranksAsOf} />}
       subtitle={`${total} ads from ${first.advertisers.length} advertisers · ranked by the Ad Library's total-impressions sort · winner = top ${WINNER_MAX_RANK}, running ${WINNER_MIN_DAYS}+ days`}
     >
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">

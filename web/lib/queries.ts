@@ -3,7 +3,7 @@ import { deflateSync, inflateSync } from "node:zlib";
 import { cache } from "react";
 import { cachedByProduct } from "./cache";
 import { getDb } from "./db";
-import { groupAdCards, type AdCard, type AdSourceRow, type CardProfile, type ImpressionRank } from "./ad-cards.ts";
+import { RANK_MAX_AGE_DAYS, currentRanks, groupAdCards, pickRankRuns, type AdCard, type AdSourceRow, type CardProfile, type ImpressionRank, type RankObservation } from "./ad-cards.ts";
 import { mergeAdRelations } from "../../src/lib/tracked-source-input.ts";
 import { adSourceRelations } from "./tracked-sources";
 import { loadSlimProfiles } from "./creatives";
@@ -65,57 +65,41 @@ export async function getScrapeRuns(productId: string, limit = 20): Promise<Scra
 }
 
 /**
- * Latest total-impressions rank per ad for a product: per tracked source take the newest impressions-sorted
- * run (and the one before it for movement); an ad surfaced by several sources keeps its best rank.
+ * Current total-impressions rank per ad for a product, from each tracked source's newest scrape runs of the last
+ * RANK_MAX_AGE_DAYS days; a run that failed partway still counts for the ranks it reached (pickRankRuns).
  */
 export async function impressionRanks(productId: string): Promise<Map<string, ImpressionRank>> {
   const db = getDb();
   const runs = await db
     .from("scrape_runs")
-    .select("id,tracked_source_id,started_at")
+    .select("id,tracked_source_id,started_at,status,ads_seen")
     .eq("product_id", productId)
-    .eq("status", "done")
     .eq("collector", "scrapecreators")
+    .gte("started_at", new Date(Date.now() - RANK_MAX_AGE_DAYS * 86_400_000).toISOString())
     .order("started_at", { ascending: false })
-    .limit(500);
+    .limit(1000);
   if (runs.error) fail("scrape_runs", runs.error);
-  const latest = new Set<string>();
-  const previous = new Set<string>();
-  const seen = new Map<string, number>();
-  for (const r of runs.data ?? []) {
-    if (!r.tracked_source_id) continue;
-    const n = seen.get(r.tracked_source_id) ?? 0;
-    if (n === 0) latest.add(r.id);
-    else if (n === 1) previous.add(r.id);
-    seen.set(r.tracked_source_id, n + 1);
-  }
-  const out = new Map<string, ImpressionRank>();
-  const runIds = [...latest, ...previous];
-  if (!runIds.length) return out;
+  const picked = pickRankRuns(
+    (runs.data ?? []).flatMap((r) => (r.tracked_source_id ? [{ id: r.id, trackedSourceId: r.tracked_source_id, startedAt: r.started_at, status: r.status, adsSeen: r.ads_seen ?? 0 }] : [])),
+  );
+  const runIds = picked.flatMap((p) => [...p.current, ...(p.previous ? [p.previous] : [])].map((r) => r.id));
+  if (!runIds.length) return new Map();
 
-  const rows: { scrape_run_id: string; ad_id: string; rank: number; observed_at: string }[] = [];
+  const rows: RankObservation[] = [];
   for (let from = 0; ; from += 1000) {
     const res = await db
       .from("ad_library_observations")
       .select("scrape_run_id,ad_id,rank,observed_at")
       .in("scrape_run_id", runIds)
       .eq("sort_mode", "total_impressions")
+      .order("scrape_run_id")
+      .order("ad_id")
       .range(from, from + 999);
     if (res.error) fail("ad_library_observations", res.error);
-    rows.push(...(res.data ?? []));
+    rows.push(...(res.data ?? []).map((o) => ({ runId: o.scrape_run_id, adId: o.ad_id, rank: o.rank, observedAt: o.observed_at })));
     if ((res.data ?? []).length < 1000) break;
   }
-  const prev = new Map<string, number>();
-  for (const o of rows) {
-    if (previous.has(o.scrape_run_id)) prev.set(o.ad_id, Math.min(prev.get(o.ad_id) ?? Infinity, o.rank));
-  }
-  for (const o of rows) {
-    if (!latest.has(o.scrape_run_id)) continue;
-    const cur = out.get(o.ad_id);
-    if (!cur || o.rank < cur.rank) out.set(o.ad_id, { rank: o.rank, prevRank: null, observedAt: o.observed_at });
-  }
-  for (const [adId, r] of out) r.prevRank = prev.get(adId) ?? null;
-  return out;
+  return currentRanks(picked, rows);
 }
 
 /** Longest primary text sent to the browser per card; Ad Library copy rarely runs past it. */

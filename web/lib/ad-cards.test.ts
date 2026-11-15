@@ -4,6 +4,10 @@ import {
   adCardsPage,
   activeAdFilterCount,
   adFiltersHref,
+  currentRanks,
+  pickRankRuns,
+  ranksAsOf,
+  type RankRun,
   applyAdFilters,
   groupAdCards,
   hookOf,
@@ -228,4 +232,58 @@ test("searchParamsOf keeps repeated keys as arrays", () => {
   const sp = searchParamsOf(new URLSearchParams("adv=1&adv=2&sort=newest"));
   assert.deepEqual(sp, { adv: ["1", "2"], sort: "newest" });
   assert.deepEqual(parseAdFilters(sp).advertisers, ["1", "2"]);
+});
+
+const run = (id: string, startedAt: string, status: string, adsSeen: number, trackedSourceId = "s1"): RankRun => ({ id, trackedSourceId, startedAt, status, adsSeen });
+const obs = (runId: string, ranks: Record<string, number>) => Object.entries(ranks).map(([adId, r]) => ({ runId, adId, rank: r, observedAt: `${runId}-time` }));
+
+test("pickRankRuns uses a failed run for the ranks it reached and stops at the last finished run", () => {
+  const [picked] = pickRankRuns(
+    [
+      run("old-done", "2026-10-03T12:00:00Z", "done", 250),
+      run("done", "2026-10-05T12:00:00Z", "done", 250),
+      run("empty", "2026-10-06T12:00:00Z", "error", 0),
+      run("deep", "2026-10-08T10:00:00Z", "error", 150),
+      run("shallow", "2026-10-08T11:00:00Z", "error", 30),
+    ],
+    NOW,
+  );
+  assert.deepEqual(
+    picked!.current.map((r) => r.id),
+    ["shallow", "deep", "done"],
+  );
+  assert.equal(picked!.previous?.id, "done");
+});
+
+test("pickRankRuns ignores runs older than a week and sources with nothing usable", () => {
+  assert.deepEqual(pickRankRuns([run("stale", "2026-09-20T12:00:00Z", "done", 250), run("failed", "2026-10-08T10:00:00Z", "error", 0, "s2")], NOW), []);
+});
+
+test("currentRanks drops an ad that left the part of the list the newest run read", () => {
+  const picked = pickRankRuns([run("done", "2026-10-05T12:00:00Z", "done", 4), run("partial", "2026-10-08T10:00:00Z", "error", 2)], NOW);
+  const ranks = currentRanks(picked, [...obs("done", { gone: 1, a: 2, b: 3, deep: 4 }), ...obs("partial", { a: 1, b: 2 })]);
+  assert.equal(ranks.has("gone"), false);
+  assert.deepEqual(ranks.get("a"), { rank: 1, prevRank: 2, observedAt: "partial-time" });
+  assert.deepEqual(ranks.get("b"), { rank: 2, prevRank: 3, observedAt: "partial-time" });
+  assert.deepEqual(ranks.get("deep"), { rank: 4, prevRank: 4, observedAt: "done-time" });
+});
+
+test("currentRanks keeps an ad's best rank across sources", () => {
+  const picked = pickRankRuns([run("r1", "2026-10-08T10:00:00Z", "done", 5, "s1"), run("r2", "2026-10-08T10:00:00Z", "done", 5, "s2")], NOW);
+  assert.equal(currentRanks(picked, [...obs("r1", { a: 5 }), ...obs("r2", { a: 2 })]).get("a")?.rank, 2);
+});
+
+test("ranksAsOf reports the stalest and freshest advertiser", () => {
+  const at = (r: number, observedAt: string): ImpressionRank => ({ rank: r, prevRank: null, observedAt });
+  const cards = groupAdCards(
+    [row("a"), row("b"), row("c", { advertiserId: "p2" }), row("d", { advertiserId: "p3" })],
+    new Map([
+      ["a", at(1, "2026-10-08T10:00:00Z")],
+      ["b", at(200, "2026-10-05T10:00:00Z")],
+      ["c", at(1, "2026-10-06T10:00:00Z")],
+    ]),
+    NOW,
+  );
+  assert.deepEqual(ranksAsOf(cards), { oldest: "2026-10-06T10:00:00Z", newest: "2026-10-08T10:00:00Z" });
+  assert.equal(ranksAsOf(cards.filter((c) => !c.rank)), null);
 });
